@@ -1,13 +1,19 @@
 Smart-Todo 待办管理器
 ========================
 
-Smart-Todo 是简单, 智能的待办事项管理程序. Smart-Todo除了提供基本的创建和删除待办事项功能以外, 还提供自动优先级排序, 离线下载文件, 创建便签等重要的辅助功能.
+![](https://img.shields.io/github/license/LiZeC123/SmartTodo)
+![](https://img.shields.io/github/issues/LiZeC123/SmartTodo)
+![](https://img.shields.io/github/v/tag/LiZeC123/SmartTodo)
+
+
+
+Smart-Todo 是一个简单智能的待办事项管理程序. Smart-Todo除了提供基本的创建和删除待办事项功能以外, 还提供自动优先级排序, 离线下载文件, 创建便签等重要的辅助功能.
 
 
 依赖环境
 -------------
 
-本项目基于Python3开发, 请使用Python3.6+的解释权运行本项目. 对于基础功能, 本项目仅依赖Flask, 使用如下指令安装Flask
+本项目基于Python3开发, 请使用Python3.6+的解释器运行本项目. 对于基础功能, 本项目仅依赖Flask, 使用如下指令安装Flask
 
 ```bash
 pip3 install flask
