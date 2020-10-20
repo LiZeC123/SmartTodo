@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户登录</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}"/>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}"/>
+</head>
+<body>
+<div class="htmleaf-container">
+    <div class="wrapper">
+        <div class="container">
+            <h1>Welcome</h1>
+            <form class="form" method="post" action="/smart-todo/login" onsubmit="return doLogin();">
+                <input type="text" placeholder="Username" name="username" id="username">
+                <input type="password" placeholder="Password" name="password" id="password">
+                <button type="submit" id="login-button">Login</button>
+            </form>
+        </div>
+
+        <ul class="bg-bubbles">
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+        </ul>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/jquery-1.7.2.min.js') }} " type="text/javascript"></script>
+<script>
+    function doLogin() {
+        var login = false;
+        $.ajax({
+            url: '/smart-todo/login',
+            data: "username=" + $("#username").val() + "&password=" + $("#password").val(),
+            type: 'POST',
+            contentType: 'application/x-www-form-urlencoded',
+            async: false,
+            success: function () {
+                window.location = "/smart-todo/"
+            }
+        });
+        return login;
+    }
+
+</script>
+
+<div style="text-align:center;margin:50px 0; font:normal 14px/24px 'MicroSoft YaHei';color:#000000">
+    <h1>基于时空大数据的时间管理工具</h1>
+</div>
+</body>

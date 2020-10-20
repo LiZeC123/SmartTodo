@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- http-equiv指定文档的内容类型和编码类型 -->
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <!-- name属性 视图和描述 name+content -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>文件中心</title>
+    <script src="{{ url_for('static', filename='js/jquery-1.7.2.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/util.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/file.js') }}"></script>
+    <!-- 外接式css -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+</head>
+<body>
+<!-- 头部:在这添加任务 -->
+<div class="header">
+    <div class="box">
+        <form action="javascript:postAction()" id="form">
+            <!-- for将label标签绑定到input -->
+            <label for="title">下载中心</label>
+            <!-- required规定提交表单之前有必填字段  autocomplete:自动补齐-->
+            <div style="float: right;width: 60%;">
+                <select id="itemType">
+                    <option value="file">下载文件</option>
+                </select>
+                <input type="text" id="title" name="title" placeholder="输入文件链接" required="required" autocomplete="off"/>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- 主体：在这进行任务和已完成 -->
+<div class="content">
+    <h2>当前文件 <span id="todoCount"></span></h2>
+    <ol id="todoList" class="demo-box">
+    </ol>
+    <h2>回收站 <span id="doneCount"></span></h2>
+    <ul id="doneList">
+    </ul>
+</div>
+<!-- 脚部：印记和全清除按钮 -->
+<div class="footer">
+    Version {{ version }} Copyright &copy; {{ year }} LiZeC
+</div>
+</body>
+</html>
