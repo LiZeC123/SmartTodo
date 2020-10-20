@@ -21,7 +21,7 @@ class FileManager:
 
     def __init__(self):
         if not exists(FileManager._UPLOAD_FOLDER):
-            mkdir(FileManager._USER_FOLDER)
+            mkdir(FileManager._UPLOAD_FOLDER)
         if not exists(FileManager._DOWNLOAD_FOLDER):
             mkdir(FileManager._DOWNLOAD_FOLDER)
 
