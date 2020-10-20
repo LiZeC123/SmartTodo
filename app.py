@@ -205,7 +205,7 @@ def update_log():
 @logined
 def do_operation():
     cmd = request.form['cmd']
-    # interpreter.exec_set(cmd.replace("set", ""))
+    manager.exec_cmd(cmd.replace("set", ""))
 
 
 def check_id(xid: str) -> int:

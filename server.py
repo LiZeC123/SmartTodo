@@ -3,6 +3,7 @@ from typing import Dict
 from entity import Item
 from mapper import MemoryDataBase
 from service4file import FileManager
+from service4interpreter import OpInterpreter
 from service4note import NoteManager
 from tool4config import ConfigManager
 from tool4item import todo_item_key, done_item_key, old_item_key, map_item, map_file, \
@@ -18,6 +19,7 @@ class Manager:
         self.fileManager = FileManager()
         self.noteManager = NoteManager()
         self.configManager = ConfigManager()
+        self.opManager = OpInterpreter(self.database)
         self.create_strategy = [
             (lambda it: it.item_type == "file", self.__create_download_file),
             (lambda it: it.item_type == "note", self.__create_note),
@@ -100,6 +102,9 @@ class Manager:
 
     def back_up(self):
         return self.database.get_filename()
+
+    def exec_cmd(self, code):
+        return self.opManager.exec_set(code)
 
     def version(self):
         return self.configManager.version()
