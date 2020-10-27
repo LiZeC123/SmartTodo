@@ -1,7 +1,7 @@
 function postAction(nid) {
     if (title.value.trim() === "") {
         alert("内容不能为空");
-    } else if (/set (.+)/.test(title.value)) {
+    } else if (/set (.+)/.test(title.value) || /fun (.+)/.test(title.value)) {
         $.post("/smart-todo/op", {"cmd": title.value}, load)
     } else {
         const title = document.getElementById("title");

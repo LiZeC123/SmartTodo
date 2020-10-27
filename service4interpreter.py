@@ -1,7 +1,8 @@
+import os
 import re
-import traceback
 
 from mapper import MemoryDataBase
+from service4file import FileManager
 from tool4log import logger
 from tool4time import parse_deadline_str, get_datetime_from_str
 
@@ -51,11 +52,27 @@ def value_check(name, value):
     return True
 
 
-class OpInterpreter:
-    def __init__(self, mapper: MemoryDataBase):
-        self.mapper: MemoryDataBase = mapper
+def grammar_checked(parts):
+    if len(parts) < 2:
+        logger.error(f"Grammar Check: Function Name Not Found. Got {parts}")
+        return False
+    return True
 
-    def exec_set(self, code):
+
+class OpInterpreter:
+    def __init__(self, mapper: MemoryDataBase, file_manager: FileManager):
+        self.mapper: MemoryDataBase = mapper
+        self.fileManager: FileManager = file_manager
+
+    def exec_cmd(self, code: str):
+        if code.startswith("set"):
+            return self.exec_set(code)
+        elif code.startswith("fun"):
+            return self.exec_fun(code)
+        else:
+            logger.error("Unknown Command")
+
+    def exec_set(self, code: str):
         try:
             logger.info(f"OpInterpreter: Input Code --> {code}")
             names, attrs, values = re.split(op_pattern, code)
@@ -73,8 +90,21 @@ class OpInterpreter:
                             self.mapper.exec_set_cmd(iid, attr, value)
 
         except ValueError:
-            traceback.print_exc()
-            logger.error(f"OpInterpreter: Bad Code --> {code}")
+            logger.exception(f"OpInterpreter: Bad Code --> {code}")
+
+    def exec_fun(self, code: str):
+        try:
+            logger.info(f"OpInterpreter: Input Code --> {code}")
+            part = code.split()
+            if grammar_checked(part):
+                func_name = part[1]
+                if func_name == "public":
+                    return self.file2public(*part[2:])
+                elif func_name == 'private':
+                    return self.file2private(*part[2:])
+
+        except ValueError:
+            logger.exception(f"OpInterpreter: Bad Code --> {code}")
 
     def get_id_by_name(self, names):
         ids = []
@@ -110,3 +140,23 @@ class OpInterpreter:
             else:
                 real.append(value)
         return real
+
+    def file2public(self, args):
+        ids = self.get_id_by_name(args.split(","))
+        for iid in ids:
+            with self.mapper.select(iid) as item:
+                src = item['url']
+                _, filename = os.path.split(src)
+                self.fileManager.file2public(filename)
+                self.fileManager.remove(filename, filetype='private')
+                item['url'] = self.fileManager.get_file_url(filename, filetype='public')
+
+    def file2private(self, args):
+        ids = self.get_id_by_name(args.split(","))
+        for iid in ids:
+            with self.mapper.select(iid) as item:
+                src = item['url']
+                _, filename = os.path.split(src)
+                self.fileManager.file2private(filename)
+                self.fileManager.remove(filename, filetype='public')
+                item['url'] = self.fileManager.get_file_url(filename, filetype='private')

@@ -19,7 +19,7 @@ class Manager:
         self.fileManager = FileManager()
         self.noteManager = NoteManager()
         self.configManager = ConfigManager()
-        self.opManager = OpInterpreter(self.database)
+        self.opManager = OpInterpreter(self.database, self.fileManager)
         self.create_strategy = [
             (lambda it: it.item_type == "file", self.__create_download_file),
             (lambda it: it.item_type == "note", self.__create_note),
@@ -104,7 +104,7 @@ class Manager:
         return self.database.get_filename()
 
     def exec_cmd(self, code):
-        return self.opManager.exec_set(code)
+        return self.opManager.exec_cmd(code)
 
     def version(self):
         return self.configManager.version()
