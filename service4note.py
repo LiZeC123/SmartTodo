@@ -1,5 +1,4 @@
 import os
-import traceback
 from os import mkdir
 from os.path import exists
 
@@ -37,5 +36,4 @@ class NoteManager:
         try:
             os.remove(filename)
         except OSError:
-            logger.warn(f"Fail to Remove Note: Id = {nid}")
-            traceback.print_exc()
+            logger.exception(f"{NoteManager.__name__}:Fail to Remove Note: Id = {nid}")

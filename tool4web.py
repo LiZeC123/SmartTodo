@@ -1,7 +1,5 @@
-import traceback
 from urllib.parse import urlparse
 
-from entity import Item
 from tool4log import logger
 
 timeout = 10
@@ -17,6 +15,7 @@ def extract_host(url: str) -> str:
     return parse.netloc
 
 
+# noinspection PyBroadException
 def extract_title(url: str) -> str:
     import requests
     from requests import HTTPError
@@ -32,37 +31,18 @@ def extract_title(url: str) -> str:
         r.encoding = r.apparent_encoding
         obj = BeautifulSoup(r.text, "lxml")
         return obj.head.title.get_text()
-    except HTTPError as e:
-        traceback.print_exc()
-        return str(e.args).split(":")[0]
-    except Exception:
-        # 如果出现网络或者解析错误 返回Host
-        traceback.print_exc()
+    except HTTPError:
+        logger.exception("Tool4Web: unknown HttpError")
         return str(host)
-
-
-def create_url_item(it: Item) -> Item:
-    logger.info(f"Get Title for URL: {it.name}")
-    title = extract_title(it.name)
-    logger.info(f"Title: {title}")
-    it.url = it.name
-    it.name = title
-    return it
+    except Exception:
+        # 如果出现其他解析错误 返回Host
+        logger.exception("Tool4Web: unknown Error")
+        return str(host)
 
 
 def download(url: str, base_dir: str):
     import wget
     return wget.download(url=url, out=base_dir)
-
-
-def create_file_item(it: Item) -> Item:
-    import wget
-    logger.info(f"Get File for URL: {it.name}")
-    base_dir = "static/file"
-    outfile = wget.download(it.name, out=base_dir)
-    logger.info("Success to Get File")
-    it.url = outfile
-    return it
 
 
 def log_bar(current, total):
