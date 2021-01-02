@@ -2,7 +2,13 @@
   "USER_INFO": {
     "admin": {
       "password": "123456",
-      "email": "admin@example.com"
+      "email": "admin@example.com",
+      "role": ["ROLE_ADMIN", "ROLE_USER"]
+    },
+    "user": {
+      "password": "123456",
+      "email": "user@example.com",
+      "role": ["ROLE_USER"]
     }
   },
   "MAIL_INFO": {

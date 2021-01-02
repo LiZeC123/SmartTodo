@@ -1,108 +1,106 @@
 # -*- coding: UTF-8 -*-
+import functools
 import json
 import os
 from typing import Dict
 
-from flask import Flask, render_template, request, session, make_response, send_file, redirect
+from flask import Flask, render_template, request, session, make_response, send_file, redirect, abort
 
 from entity import Item
 from server import Manager
 from tool4log import logger
 from tool4time import parse_deadline_str, this_year_str
 
-app = Flask(__name__, static_url_path='/smart-todo/static')
+app = Flask(__name__)
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SECRET_KEY'] = os.urandom(24)
 
 manager = Manager()
 
 
-def logined(func):
+def logged(func=None, role='ROLE_USER'):
+    if func is None:
+        return functools.partial(logged, role=role)
+
+    @functools.wraps(func)  # 设置函数名称，否则由于函数同名导致Flask绑定失败
     def wrapper(*args, **kw):
         if 'username' in session:
-            response = func(*args, **kw)
-            if response is None:
-                return "Success"
+            if role in session['role']:
+                response = func(*args, **kw)
+                return response if response is not None else "Success"
             else:
-                return response
+                # 用户已经登录, 但是没有权限, 所以应该返回401 Unauthorized
+                return render_template("401.html"), 401
         else:
-            return render_template('login.html')
+            return redirect('/login')
 
-    # 设置函数名称，否则由于函数同名导致Flask绑定失败
-    wrapper.__name__ = func.__name__
     return wrapper
 
 
-@app.route('/smart-todo/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         if manager.try_login(username, password):
             session['username'] = username
-            # session['password'] = password
-            resp = make_response(render_template('index.html', name=username))
-            resp.set_cookie('username', username)
-            return redirect('/smart-todo/')
+            session['role'] = manager.get_roles(username)
+            return redirect('/')
         else:
             real_ip = request.headers.get("X-Real-IP")
-            logger.warn(f"已拒绝来自{real_ip}的请求, 此请求尝试以'{password}'为密码登录账号'{username}'")
+            logger.warning(f"已拒绝来自{real_ip}的请求, 此请求尝试以'{password}'为密码登录账号'{username}'")
             return redirect('/login')
     return render_template('login.html')
 
 
-@app.route('/smart-todo/logout', methods=['GET', 'POST'])
-@logined
+@app.route('/logout', methods=['GET', 'POST'])
+@logged
 def logout():
     if 'username' in session:
         session.clear()
-        return render_template('login.html')
-    # if request.method == 'POST' and session['username'] == request.form['username']:
-    #     session.clear()
-    #     return render_template('login.html')
-    return False
+    return render_template('login.html')
 
 
-@app.route('/smart-todo/', methods=['GET', 'POST'])
-@logined
+@app.route('/', methods=['GET', 'POST'])
+@logged
 def index():
-    if session['username'] == 'guest':
-        return render_template("file.html", year=this_year_str(), version=manager.version())
-    else:
-        return render_template("index.html", year=this_year_str(), version=manager.version())
+    data = {"year": this_year_str(), "version": manager.version(), "username": session['username'],
+            'role': session['role']}
+
+    return render_template('index.html', **data)
 
 
 # ####################### API For File #######################
 
-@app.route('/smart-todo/file')
-@logined
+@app.route('/file')
+@logged
 def file():
     return render_template("file.html", thisYear=this_year_str(), version=manager.version())
 
 
-@app.route('/smart-todo/file/list', methods=['POST'])
-@logined
+@app.route('/file/list', methods=['POST'])
+@logged
 def file_list():
     return json.dumps(manager.files())
 
 
-@app.route("/smart-todo/file/doUpload", methods=["POST"])
-@logined
+@app.route("/file/doUpload", methods=["POST"])
+@logged
 def do_upload():
     f = request.files['myFile']
     manager.save_file(f)
 
 
-@app.route('/smart-todo/file/toRemote', methods=['POST'])
-@logined
+@app.route('/file/toRemote', methods=['POST'])
+@logged(role='ROLE_ADMIN')
 def to_remote():
     raise NotImplementedError
     # iid = request.form["id"]
     # fileManager.file2remote(iid)
 
 
-@app.route("/smart-todo/file/<filename>", methods=['GET'])
-@logined
+@app.route("/file/<filename>", methods=['GET'])
+@logged
 def get_file(filename):
     resp = make_response(send_file(f"filebase/{filename}"))
     return resp
@@ -110,8 +108,8 @@ def get_file(filename):
 
 # ####################### API For Note #######################
 
-@app.route('/smart-todo/note/<nid>', methods=['GET'])
-@logined
+@app.route('/note/<nid>', methods=['GET'])
+@logged
 def note(nid):
     item_info = manager.item(iid=nid)
     base_info = dict(nid=nid, note=manager.note(nid), year=this_year_str(), version=manager.version())
@@ -119,8 +117,8 @@ def note(nid):
     return render_template("note.html", **item_info)
 
 
-@app.route('/smart-todo/note/update', methods=['POST'])
-@logined
+@app.route('/note/update', methods=['POST'])
+@logged
 def note_update():
     nid = request.form["nid"]
     text = request.form["text"]
@@ -129,23 +127,23 @@ def note_update():
 
 # ####################### API For Item #######################
 
-@app.route('/smart-todo/items/todo', methods=['POST'])
-@logined
+@app.route('/items/todo', methods=['POST'])
+@logged
 def todo_item():
     f = request.form
     nid = f.get("nid", default=None)
     return json.dumps(manager.todo(nid))
 
 
-@app.route("/smart-todo/item/delete", methods=["POST"])
-@logined
+@app.route("/item/delete", methods=["POST"])
+@logged
 def remove_item():
     iid = check_id(request.form["id"])
     manager.remove(iid)
 
 
-@app.route("/smart-todo/item/add", methods=["POST"])
-@logined
+@app.route("/item/add", methods=["POST"])
+@logged
 def add_item():
     f: Dict = request.form
     item: Item = Item(0, f['name'], f['itemType'], None)
@@ -170,30 +168,30 @@ def add_item():
     manager.create(item)
 
 
-@app.route("/smart-todo/item/update", methods=["POST"])
-@logined
+@app.route("/item/update", methods=["POST"])
+@logged
 def update_item():
     iid = check_id(request.form["id"])
     manager.update(item_type="item", xid=iid)
 
 
-@app.route("/smart-todo/item/old", methods=["POST"])
-@logined
+@app.route("/item/old", methods=["POST"])
+@logged
 def update_item_generation():
     iid = check_id(request.form["id"])
     manager.to_old(iid)
 
 
-@app.route("/smart-todo/backup", methods=["GET"])
-@logined
+@app.route("/backup", methods=["GET"])
+@logged(role='ROLE_ADMIN')
 def back_up():
     resp = make_response(send_file(manager.back_up()))
     resp.headers["Content-type"] = "text/plain;charset=UTF-8"
     return resp
 
 
-@app.route("/smart-todo/log.txt", methods=["GET"])
-@logined
+@app.route("/log.txt", methods=["GET"])
+@logged(role='ROLE_ADMIN')
 def update_log():
     # https://blog.csdn.net/weixin_33966095/article/details/94337270
     resp = make_response(send_file("log/log.txt"))
@@ -201,8 +199,8 @@ def update_log():
     return resp
 
 
-@app.route("/smart-todo/op", methods=["POST"])
-@logined
+@app.route("/op", methods=["POST"])
+@logged(role='ROLE_ADMIN')
 def do_operation():
     cmd = request.form['cmd']
     manager.exec_cmd(cmd.replace("set", ""))

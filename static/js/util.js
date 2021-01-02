@@ -40,7 +40,7 @@ function uploadFile() {
     // http://www.feingto.com/?p=14158
     const file_obj = document.getElementById("file_selector").files[0];
     if (file_obj) {
-        const url = "/smart-todo/file/doUpload";
+        const url = "/file/doUpload";
         const form = new FormData();
         form.append("myFile", file_obj);
         const xhr = new XMLHttpRequest();
@@ -54,13 +54,13 @@ function uploadFile() {
 }
 
 function backUpData() {
-    window.open("/smart-todo/backup");
+    window.open("/backup");
 }
 
 function updateLogs() {
-    window.open("/smart-todo/log.txt");
+    window.open("/log.txt");
 }
 
 function downCenter() {
-    window.open("/smart-todo/file");
+    window.open("/file");
 }

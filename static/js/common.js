@@ -2,7 +2,7 @@ function postAction(nid) {
     if (title.value.trim() === "") {
         alert("内容不能为空");
     } else if (/set (.+)/.test(title.value) || /fun (.+)/.test(title.value)) {
-        $.post("/smart-todo/op", {"cmd": title.value}, load)
+        $.post("/op", {"cmd": title.value}, load)
     } else {
         const title = document.getElementById("title");
         const select = document.getElementById("itemType");
@@ -11,7 +11,7 @@ function postAction(nid) {
             data.parent = nid;
         }
 
-        $.post("/smart-todo/item/add", data, function () {
+        $.post("/item/add", data, function () {
             load();
         });
 
@@ -52,15 +52,15 @@ function parseTitleToData(title, select) {
 }
 
 function remove(id) {
-    $.post("/smart-todo/item/delete", {"id": id}, load);
+    $.post("/item/delete", {"id": id}, load);
 }
 
 function update(id) {
-    $.post("/smart-todo/item/update", {"id": id}, load);
+    $.post("/item/update", {"id": id}, load);
 }
 
 function sticky(id) {
-    $.post("/smart-todo/item/old", {"id": id}, load);
+    $.post("/item/old", {"id": id}, load);
 }
 
 function edit(name) {
@@ -71,7 +71,7 @@ function edit(name) {
 }
 
 function toRemote(id) {
-    $.post("/smart-todo/file/toRemote", {"id": id}, load);
+    $.post("/file/toRemote", {"id": id}, load);
 }
 
 function load() {

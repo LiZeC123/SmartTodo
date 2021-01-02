@@ -50,9 +50,12 @@
 </div>
 <div class="footer">
     <a href="javascript:selectFile()">上传文件</a> &nbsp&nbsp
-    <a href="javascript:backUpData()">备份数据</a> &nbsp&nbsp
-    <a href="javascript:updateLogs()">查看日志</a> &nbsp&nbsp
-    <a href="javascript:downCenter()">下载中心</a> &nbsp&nbsp
+    {% if 'ROLE_ADMIN' in role %}
+        <a href="javascript:backUpData()">备份数据</a> &nbsp&nbsp
+        <a href="javascript:updateLogs()">查看日志</a> &nbsp&nbsp
+        <a href="javascript:downCenter()">下载中心</a> &nbsp&nbsp
+    {% endif %}
+    <a href="logout">退出登录</a>
 </div>
 
 <!-- 上传文件的控件 -->

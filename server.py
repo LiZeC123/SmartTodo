@@ -100,6 +100,10 @@ class Manager:
         users = self.configManager.users()
         return username in users and users[username]['password'] == password
 
+    def get_roles(self, username: str):
+        users = self.configManager.users()
+        return users[username]['role']
+
     def back_up(self):
         return self.database.get_filename()
 

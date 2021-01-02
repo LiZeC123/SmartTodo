@@ -34,5 +34,5 @@ function updateHTML(data) {
 }
 
 function fetchData(callBack) {
-    $.post("/smart-todo/items/todo", callBack);
+    $.post("/items/todo", callBack);
 }

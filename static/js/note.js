@@ -5,7 +5,7 @@ function save(nid, notShow) {
         "text": text
     };
 
-    $.post("/smart-todo/note/update", data, function () {
+    $.post("/note/update", data, function () {
         if (notShow !== true) {
             $('.alert').html('操作成功').addClass('alert-success').show().delay(500).fadeOut();
         }
@@ -36,7 +36,7 @@ function updateHTML(data) {
 
 function fetchData(callBack) {
     const nid = /note\/(\d+)/.exec(document.URL)[1];
-    $.post("/smart-todo/items/todo", {"nid": nid}, callBack);
+    $.post("/items/todo", {"nid": nid}, callBack);
 }
 
 

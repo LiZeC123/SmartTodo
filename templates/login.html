@@ -13,7 +13,7 @@
     <div class="wrapper">
         <div class="container">
             <h1>Welcome</h1>
-            <form class="form" method="post" action="/smart-todo/login" onsubmit="return doLogin();">
+            <form class="form" method="post"  onsubmit="return doLogin();">
                 <input type="text" placeholder="Username" name="username" id="username">
                 <input type="password" placeholder="Password" name="password" id="password">
                 <button type="submit" id="login-button">Login</button>
@@ -40,13 +40,13 @@
     function doLogin() {
         var login = false;
         $.ajax({
-            url: '/smart-todo/login',
+            url: '/login',
             data: "username=" + $("#username").val() + "&password=" + $("#password").val(),
             type: 'POST',
             contentType: 'application/x-www-form-urlencoded',
             async: false,
             success: function () {
-                window.location = "/smart-todo/"
+                window.location = "/"
             }
         });
         return login;
