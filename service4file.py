@@ -83,6 +83,5 @@ class FileManager:
         copy_file(src, dst)
         return dst
 
-
     def file2remote(self):
         pass

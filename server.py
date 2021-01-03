@@ -56,7 +56,7 @@ class Manager:
             self.fileManager.remove(item['url'])
         if item['itemType'] == "note":
             self.noteManager.remove(int(item['id']))
-        self.database.remove_by_item(item)
+        self.database.remove(item)
 
     def todo(self, parent: Optional[int], owner: str):
         data = {"todo": [], "done": [], "old": [], "delete": [], "miss": []}

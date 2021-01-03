@@ -51,16 +51,14 @@ class MemoryDataBase:
     def insert(self, item: Item):
         item.id = self.__next_id()
         item.create_time = now_str()
-        self.data.append(item.to_dict())
+        with self.lock:
+            self.data.append(item.to_dict())
         self.save2file()
         return item
 
-    def remove(self, iid: int):
-        with self.select(iid) as item:
+    def remove(self, item):
+        with self.lock:
             self.data.remove(item)
-
-    def remove_by_item(self, item):
-        self.data.remove(item)
 
     def items(self):
         return self.data
