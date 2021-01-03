@@ -15,9 +15,7 @@ def debug_time() -> str:
 
 def now() -> datetime.datetime:
     if is_time_debug():
-        r = datetime.datetime.strptime(debug_time(), "%Y-%m-%d %H:%M:%S")
-        logger.warning(f" now() is in DEBUG mode and now is {r}")
-        return r
+        return datetime.datetime.strptime(debug_time(), "%Y-%m-%d %H:%M:%S")
     else:
         return datetime.datetime.now()
 
@@ -32,9 +30,7 @@ def now_stamp() -> float:
 
 def today() -> datetime.date:
     if is_time_debug():
-        r = datetime.datetime.strptime(debug_time(), "%Y-%m-%d %H:%M:%S").date()
-        logger.warning(f" today() is in DEBUG mode and today is {r}")
-        return r
+        return datetime.datetime.strptime(debug_time(), "%Y-%m-%d %H:%M:%S").date()
     else:
         return datetime.date.today()
 
@@ -76,6 +72,11 @@ def is_work_time():
     # weekday返回的范围是0~6, 且周一返回0
     return 9 <= now().hour < 18 and 0 <= now().weekday() <= 4
 
+
+if is_time_debug():
+    # 对是否开启时间的DEBUG模式进行检测, 并给出警告
+    current_debug_time = datetime.datetime.strptime(debug_time(), "%Y-%m-%d %H:%M:%S")
+    logger.warning(f"Time API is in DEBUG mode and now is {current_debug_time}")
 
 if __name__ == '__main__':
     delta = get_datetime_from_str("2020-2-13 12:00:00") - get_datetime_from_str("2020-2-14 12:00:00")
