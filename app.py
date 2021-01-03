@@ -30,11 +30,16 @@ def logged(func=None, role='ROLE_USER'):
                 return response if response is not None else "Success"
             else:
                 # 用户已经登录, 但是没有权限, 所以应该返回401 Unauthorized
-                return render_template("401.html"), 401
+                abort(401)
         else:
             return redirect('/login')
 
     return wrapper
+
+
+@app.errorhandler(401)
+def handle_401(e):
+    return render_template("401.html", e=e), 401
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -88,7 +93,7 @@ def file_list():
 @logged
 def do_upload():
     f = request.files['myFile']
-    manager.save_file(f)
+    manager.save_file(f, owner=session['username'])
 
 
 @app.route('/file/toRemote', methods=['POST'])
@@ -122,7 +127,7 @@ def note(nid):
 def note_update():
     nid = request.form["nid"]
     text = request.form["text"]
-    manager.update("note", xid=nid, content=text)
+    manager.update("note", xid=nid, content=text, owner=session['username'])
 
 
 # ####################### API For Item #######################
@@ -132,14 +137,15 @@ def note_update():
 def todo_item():
     f = request.form
     nid = f.get("nid", default=None)
-    return json.dumps(manager.todo(nid))
+    return json.dumps(manager.todo(nid, owner=session['username']))
 
 
 @app.route("/item/delete", methods=["POST"])
 @logged
 def remove_item():
     iid = check_id(request.form["id"])
-    manager.remove(iid)
+
+    manager.remove(iid, owner=session['username'])
 
 
 @app.route("/item/add", methods=["POST"])
@@ -165,6 +171,8 @@ def add_item():
     if "parent" in f:
         item.parent = int(f["parent"])
 
+    item.owner = session['username']
+
     manager.create(item)
 
 
@@ -172,7 +180,7 @@ def add_item():
 @logged
 def update_item():
     iid = check_id(request.form["id"])
-    manager.update(item_type="item", xid=iid)
+    manager.update(item_type="item", xid=iid, owner=session['username'])
 
 
 @app.route("/item/old", methods=["POST"])

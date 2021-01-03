@@ -2,20 +2,9 @@
 from typing import Dict
 
 
-class AttrDisplayMixIn:
-    def gather_attrs(self):
-        return ",".join("{}={}".format(k, getattr(self, k)) for k in self.__dict__.keys())
-
-    def __str__(self):
-        return "[{}:{}]".format(self.__class__.__name__, self.gather_attrs())
-
-    def __repr__(self):
-        return "[{}:{}]".format(self.__class__.__name__, self.gather_attrs())
-
-
-class Item(AttrDisplayMixIn):
+class Item:
     def __init__(self, item_id, name, item_type, create_time=None, deadline=None, old=False,
-                 repeatable=False, specific=0, work=False, url=None, parent=None):
+                 repeatable=False, specific=0, work=False, url=None, parent=None, owner=None):
         self.id = item_id
         self.name = name
         self.item_type = item_type
@@ -30,6 +19,7 @@ class Item(AttrDisplayMixIn):
         self.work = work
         self.url = url
         self.parent = parent
+        self.owner = owner
 
     def to_dict(self) -> Dict:
         # 添加一个字典到对象的方法, 从而便于添加字段
@@ -47,7 +37,8 @@ class Item(AttrDisplayMixIn):
             "specific": self.specific,
             "work": self.work,
             "url": self.url,
-            "parent": self.parent
+            "parent": self.parent,
+            "owner": self.owner
         }
 
     def __str__(self) -> str:
@@ -78,4 +69,6 @@ def from_dict(raw: Dict) -> Item:
         item.url = raw['url']
     if "parent" in raw:
         item.parent = raw['parent']
+    if "owner" in raw:
+        item.owner = raw['owner']
     return item

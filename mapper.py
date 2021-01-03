@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 from contextlib import contextmanager
 from os.path import exists
 from typing import List
@@ -19,21 +20,19 @@ def load_data(filename):
 class MemoryDataBase:
     _DATABASE_FOLDER = "database"
 
-    def __repr__(self):
-        return "memoryDataBase"
-
-    def __init__(self, username):
-        self.username = username
-        self.filename = os.path.join(MemoryDataBase._DATABASE_FOLDER, f"{username}.json")
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.filename = os.path.join(MemoryDataBase._DATABASE_FOLDER, f"data.json")
         self.data: List = []
         if exists(self.filename):
             self.data = load_data(self.filename)
-            logger.info(f"{MemoryDataBase.__name__}: Load Data From {self.username}")
+            logger.info(f"{MemoryDataBase.__name__}: Load Data From File")
         self.current_id = max(map(lambda i: i['id'], self.data))
 
     def __next_id(self):
-        self.current_id = self.current_id + 1
-        return self.current_id
+        with self.lock:
+            self.current_id = self.current_id + 1
+            return self.current_id
 
     @contextmanager
     def select(self, iid):
@@ -59,6 +58,9 @@ class MemoryDataBase:
     def remove(self, iid: int):
         with self.select(iid) as item:
             self.data.remove(item)
+
+    def remove_by_item(self, item):
+        self.data.remove(item)
 
     def items(self):
         return self.data

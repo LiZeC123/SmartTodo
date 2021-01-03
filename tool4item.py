@@ -1,3 +1,5 @@
+from typing import Optional
+
 from tool4log import logger
 from tool4time import now, today, is_work_time, now_stamp, get_timestamp_from_str, \
     get_day_from_str, get_datetime_from_str
@@ -16,7 +18,9 @@ def check_specific_item_is_todo(item):
             return finish_day < today()
 
 
-def map_item(item, parent):
+def map_item(item, parent: Optional[int], owner: str):
+    if owner != item['owner']:
+        return "miss"
     if parent is None and item["parent"] is not None:
         # 如果是全局的请求, 则过滤在Note中创建的Item
         return "miss"

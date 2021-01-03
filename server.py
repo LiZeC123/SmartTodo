@@ -1,4 +1,6 @@
-from typing import Dict
+from typing import Dict, Optional
+
+from werkzeug.exceptions import abort
 
 from entity import Item
 from mapper import MemoryDataBase
@@ -15,7 +17,7 @@ from tool4web import extract_title
 
 class Manager:
     def __init__(self):
-        self.database = MemoryDataBase("admin")
+        self.database = MemoryDataBase()
         self.fileManager = FileManager()
         self.noteManager = NoteManager()
         self.configManager = ConfigManager()
@@ -37,26 +39,30 @@ class Manager:
                 return True
         return False
 
-    def update(self, item_type: str, xid: int, content: str = None):
+    def update(self, item_type: str, xid: int, owner: str, content: str = None):
+        self.__check_authority(xid, owner)
         if item_type == "item":
             return self.__update(xid)
         elif item_type == "note":
             return self.noteManager.update(xid, content=content)
 
-    def remove(self, iid):
+    def remove(self, iid, owner: str):
+        self.__check_authority(iid, owner)
         with self.database.select(iid) as item:
-            if item['itemType'] == "file":
-                self.fileManager.remove(item['url'])
-            if item['itemType'] == "note":
-                self.noteManager.remove(int(item['id']))
-        self.database.remove(iid)
+            self.__remove(item)
 
-    def todo(self, parent):
-        """获取待办事项的列表"""
+    def __remove(self, item):
+        if item['itemType'] == "file":
+            self.fileManager.remove(item['url'])
+        if item['itemType'] == "note":
+            self.noteManager.remove(int(item['id']))
+        self.database.remove_by_item(item)
+
+    def todo(self, parent: Optional[int], owner: str):
         data = {"todo": [], "done": [], "old": [], "delete": [], "miss": []}
         self.__update_state()  # 先更新状态, 然后处理请求
         for item in self.database.items():
-            data[map_item(item, parent)].append(item)
+            data[map_item(item, parent, owner)].append(item)
         self.__garbage_collection(data)  # 垃圾回收不要求实时处理, 因此最后处理
 
         return {
@@ -89,11 +95,12 @@ class Manager:
             item['old'] = True
             logger.info(f"DataManager: Move Item {iid} To Old Space")
 
-    def save_file(self, f):
+    def save_file(self, f, owner: str):
         """保存用户上传的文件"""
         filename, local_url = self.fileManager.save_upload_file(f)
         item = Item(0, filename, "file")
         item.url = local_url
+        item.owner = owner
         self.database.insert(item)
 
     def try_login(self, username: str, password: str) -> bool:
@@ -112,6 +119,12 @@ class Manager:
 
     def version(self):
         return self.configManager.version()
+
+    def __check_authority(self, xid: int, owner: str):
+        with self.database.select(xid) as item:
+            if item['owner'] != owner:
+                logger.warning(f"DataManager: User {owner} dose not have authority For xID {xid}")
+                abort(401)
 
     def __create_download_file(self, item: Item):
         self.fileManager.download_file(item)
@@ -145,8 +158,8 @@ class Manager:
 
     def __garbage_collection(self, data):
         for item in data['delete']:
-            self.remove(item['id'])
-            logger.info(f"Garbage Collection(Expire): {item}")
+            self.__remove(item)
+            logger.info(f"Garbage Collection(Expired): {item}")
 
         ids = list(map(lambda i: i['id'], self.database.items()))
         unreferenced = []
@@ -154,7 +167,7 @@ class Manager:
             if item['parent'] is not None and int(item['parent']) not in ids:
                 unreferenced.append(item)
         for item in unreferenced:
-            self.remove(item['id'])
+            self.__remove(item)
             logger.info(f"Garbage Collection(Unreferenced): {item}")
 
     def __update_state(self):
