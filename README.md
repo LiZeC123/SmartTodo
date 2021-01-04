@@ -14,11 +14,12 @@ Smart-Todo 是一个简单智能的待办事项管理程序. Smart-Todo除了提
 依赖环境
 -------------
 
-本项目基于Python3开发, 请使用Python3.6+的解释器运行本项目. 本项目以Flask作为Web框架, 因此运行本项目需要按照Flask.
-此外, 为了实现一些高级功能, 本项目还依赖一些第三方包, 使用如下的指令安装本项目需要的依赖.
+本项目基于Python3.8开发, 建议使用Python3.8+的解释器运行本项目. 由于并没有使用太多新的语法特性, 因此Python3.6+的解释器也可能可以运行本项目. 
+
+本项目以Flask作为Web框架, 因此运行本项目需要安装Flask. 此外, 为了实现一些高级功能, 本项目还依赖一些第三方包, 使用如下的指令安装本项目需要的依赖.
 
 ```bash
-pip3 install flask wget bz4 yagmail readerwriterlock
+pip3 install flask wget beautifulsoup4 yagmail readerwriterlock
 ```
 
 
@@ -27,7 +28,7 @@ pip3 install flask wget bz4 yagmail readerwriterlock
 第三方包             | 功能
 --------------------|------------------------------
 `wget`              | 离线下载
-`bz4`               | 解析HTML结构
+`beautifulsoup4`    | 解析HTML结构
 `yagmail`           | 发送备份邮件(此功能还处于开发阶段)
 `readerwriterlock`  | 实现读写锁
 
@@ -305,3 +306,19 @@ func <function_name> <arg>
 ### 版本号
 
 基于一般的版本号约定, 大版本号不同的程序可能存在不兼容的情况. 请注意程序的版本号, 不同版本号的程序可能对数据模型进行变更, 导致以往的数据无效.
+
+
+
+开源项目和组件
+----------------
+
+感谢以下的开源项目和免费组件:
+
+- [网站ico图标来源](https://www.iconfont.cn/search/index?q=todolist&page=1&fromCollection=1)
+- [svg转ico工具](https://www.aconvert.com/cn/icon/svg-to-ico/)
+
+
+参考资料
+--------------
+
+- [How to upgrade to python 3.7 on Ubuntu 18.10](https://www.itsupportwale.com/blog/how-to-upgrade-to-python-3-7-on-ubuntu-18-10/)
