@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <title>用户登录</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}"/>
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}"/>
@@ -13,7 +14,7 @@
     <div class="wrapper">
         <div class="container">
             <h1>Welcome</h1>
-            <form class="form" method="post"  onsubmit="return doLogin();">
+            <form class="form" method="post" onsubmit="return doLogin();">
                 <input type="text" placeholder="Username" name="username" id="username">
                 <input type="password" placeholder="Password" name="password" id="password">
                 <button type="submit" id="login-button">Login</button>
