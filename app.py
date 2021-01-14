@@ -118,8 +118,8 @@ def get_file(filename):
 def note(nid):
     item_info = manager.item(iid=nid)
     base_info = dict(nid=nid, note=manager.note(nid), year=this_year_str(), version=manager.version())
-    item_info.update(base_info)
-    return render_template("note.html", **item_info)
+    base_info.update(item_info)  # 不要修改item_info, 否则由于引用会影响内部数据
+    return render_template("note.html", **base_info)
 
 
 @app.route('/note/update', methods=['POST'])
