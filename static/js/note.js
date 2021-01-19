@@ -72,11 +72,13 @@ $(function () {
     });
 
     $(document).keydown(function (event) {
+        // Ctrl + S
         if (event.ctrlKey && event.keyCode === 83) {
             save(nid);
             event.preventDefault();
             content = document.getElementById("editor").innerHTML;
         }
+
     });
 
     setInterval(function () {
