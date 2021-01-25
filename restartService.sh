@@ -1,5 +1,5 @@
 echo "杀死当前的Python进程"
-pid=$(ps x | grep "python3.8 app.py" | grep -v grep | awk '{print $1}')
+pid=$(pgrep -f "python3.8 app.py")
 kill "$pid"
 
 echo "更新数据结构"
