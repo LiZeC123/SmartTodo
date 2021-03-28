@@ -14,6 +14,7 @@ from tool4time import parse_deadline_str, this_year_str
 app = Flask(__name__)
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SECRET_KEY'] = os.urandom(24)
+app.jinja_options.update(dict(variable_start_string='%%', variable_end_string='%%'))
 
 manager = Manager()
 
@@ -63,16 +64,13 @@ def login():
 def logout():
     if 'username' in session:
         session.clear()
-    return render_template('login.html')
+    return redirect('/login')
 
 
 @app.route('/', methods=['GET', 'POST'])
 @logged
 def index():
-    data = {"year": this_year_str(), "version": manager.version(), "username": session['username'],
-            'role': session['role']}
-
-    return render_template('index.html', **data)
+    return render_template("index.html")
 
 
 # ####################### API For File #######################
@@ -118,15 +116,16 @@ def get_file(filename):
 def note(nid):
     item_info = manager.item(iid=nid)
     base_info = dict(nid=nid, note=manager.note(nid), year=this_year_str(), version=manager.version())
-    item_info.update(base_info)
-    return render_template("note.html", **item_info)
+    base_info.update(item_info)  # 不要修改item_info, 否则由于引用会影响内部数据
+    return render_template("note.html", **base_info)
 
 
 @app.route('/note/update', methods=['POST'])
 @logged
 def note_update():
-    nid = request.form["nid"]
-    text = request.form["text"]
+    f = request.get_json()
+    nid = f["nid"]
+    text = f["text"]
     manager.update("note", xid=nid, content=text, owner=session['username'])
 
 
@@ -135,23 +134,22 @@ def note_update():
 @app.route('/items/todo', methods=['POST'])
 @logged
 def todo_item():
-    f = request.form
-    nid = f.get("nid", default=None)
+    f = request.get_json()
+    nid = f.get("nid") if f is not None else None
     return json.dumps(manager.todo(nid, owner=session['username']))
 
 
-@app.route("/item/delete", methods=["POST"])
+@app.route("/item/remove", methods=["POST"])
 @logged
 def remove_item():
-    iid = check_id(request.form["id"])
-
+    iid = check_id(request.get_json()["id"])
     manager.remove(iid, owner=session['username'])
 
 
 @app.route("/item/add", methods=["POST"])
 @logged
 def add_item():
-    f: Dict = request.form
+    f: Dict = request.get_json()
     item: Item = Item(0, f['name'], f['itemType'], None)
     item.deadline = parse_deadline_str(f["deadline"]) if "deadline" in f else None
 
@@ -179,14 +177,14 @@ def add_item():
 @app.route("/item/update", methods=["POST"])
 @logged
 def update_item():
-    iid = check_id(request.form["id"])
+    iid = check_id(request.get_json()['id'])
     manager.update(item_type="item", xid=iid, owner=session['username'])
 
 
 @app.route("/item/old", methods=["POST"])
 @logged
 def update_item_generation():
-    iid = check_id(request.form["id"])
+    iid = check_id(request.get_json()["id"])
     manager.to_old(iid)
 
 

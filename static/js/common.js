@@ -1,19 +1,26 @@
-function postAction(nid) {
+function commitGlobalTodo() {
+    commitNewTodo(undefined)
+}
+
+function commitNoteTodo() {
+    const nid = /note\/(\d+)/.exec(document.URL)[1];
+    commitNewTodo(nid);
+}
+
+function commitNewTodo(nid) {
+    const title = document.getElementById("title");
+    const select = document.getElementById("itemType");
     if (title.value.trim() === "") {
         alert("内容不能为空");
     } else if (/set (.+)/.test(title.value) || /fun (.+)/.test(title.value)) {
-        $.post("/op", {"cmd": title.value}, load)
+        //$.post("/op", {"cmd": title.value}, load)
     } else {
-        const title = document.getElementById("title");
-        const select = document.getElementById("itemType");
         let data = parseTitleToData(title, select);
         if (nid !== undefined) {
             data.parent = nid;
         }
 
-        $.post("/item/add", data, function () {
-            load();
-        });
+        axios.post("/item/add", data).then(reload)
 
         const form = document.getElementById("form");
         form.reset();
@@ -50,73 +57,6 @@ function parseTitleToData(title, select) {
 
     return data;
 }
-
-function remove(id) {
-    $.post("/item/delete", {"id": id}, load);
-}
-
-function update(id) {
-    $.post("/item/update", {"id": id}, load);
-}
-
-function sticky(id) {
-    $.post("/item/old", {"id": id}, load);
-}
-
-function edit(name) {
-    if (name !== "null") {
-        // 不指定任何参数才是正常的打开新标签页
-        window.open(name);
-    }
-}
-
-function toRemote(id) {
-    $.post("/file/toRemote", {"id": id}, load);
-}
-
-function load() {
-    const callBack = function (collection) {
-        const data = fillShowName(JSON.parse(collection));
-        console.log(data);
-        updateHTML(data);
-    };
-
-    fetchData(callBack);
-}
-
-
-function updateDone(data) {
-    const tStr = "<li id='li-normal'><input type='checkbox' onchange='update({id})' checked='checked' />" +
-        "<p id='p-{id}' onclick='edit(\"{url}\")'>{showName}</p>" +
-        "<a href='javascript:remove({id})'>-</a></li>";
-    const dictFunc = function (item) {
-        return {
-            "type": item.itemType, "id": item.id,
-            "url": item.url, "showName": item.showName,
-        }
-    };
-    updateTemplate(data, document.getElementById("doneCount"),
-        document.getElementById("doneList"), tStr, dictFunc);
-}
-
-function updateTemplate(data, dCount, dList, tStr, dictFunc) {
-    if (data !== null) {
-        let tCount = 0;
-        let todoString = "";
-        for (let i = 0; i < data.length; i++) {
-            const dict = dictFunc(data[i]);
-            todoString += tStr.format(dict);
-            tCount++;
-        }
-
-        dCount.innerHTML = tCount.toString();
-        dList.innerHTML = todoString;
-    } else {
-        dCount.innerHTML = "0";
-        dList.innerHTML = "";
-    }
-}
-
 
 function fillShowName(data) {
     for (let i = 0; i < data.length; i++) {
@@ -175,7 +115,64 @@ function getWeekByDay(dayValue) {
     return today[dayValue - 1];  //返一周中的某一天，其中1为周一
 }
 
+function reload(nid) {
+    axios.post("/items/todo").then(response => {
+        vm.todo = fillShowName(response.data.todo)
+        vm.done = fillShowName(response.data.done)
+        vm.old = fillShowName(response.data.old)
+    })
+}
 
-$(function () {
-    load();
-});
+
+function selectFile() {
+    document.getElementById("file_selector").click();
+}
+
+function uploadFile() {
+    // http://www.feingto.com/?p=14158
+    const file_obj = document.getElementById("file_selector").files[0];
+    if (file_obj) {
+        const url = "/file/doUpload";
+        const form = new FormData();
+        form.append("myFile", file_obj);
+        const xhr = new XMLHttpRequest();
+        xhr.onload = load; // 上传成功后的回调函数
+        xhr.onerror = load;// 上传失败后的回调函数
+        xhr.open("POST", url, true);
+        xhr.send(form);
+    } else {
+        alert("请先选择文件后再上传")
+    }
+}
+
+function backUpData() {
+    window.open("/backup");
+}
+
+function updateLogs() {
+    window.open("/log.txt");
+}
+
+function downCenter() {
+    window.open("/file");
+}
+
+function doLogout() {
+    window.location.href = '/logout'
+}
+
+
+new Vue({
+    el: "#footerContainer",
+    data: {
+        year: 2021,
+        version: "2.1.0"
+    }
+})
+
+new Vue({
+    el: "#footerFunctionContainer",
+    data: {
+        isAdmin: true
+    }
+})

@@ -1,28 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 <head>
-    <!-- http-equiv指定文档的内容类型和编码类型 -->
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <!-- name属性 视图和描述 name+content -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="shortcut icon" href="/static/favicon.ico">
     <title>待办事项列表</title>
-    <script src="{{ url_for('static', filename='js/jquery-1.7.2.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/util.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/index.js') }}"></script>
-    <!-- 外接式css -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="/static/css/index.css">
 </head>
 <body>
 <!-- 头部:在这添加任务 -->
 <div class="header">
     <div class="box">
-        <form action="javascript:postAction()" id="form">
+        <form action="javascript:commitGlobalTodo()" id="form">
             <!-- for将label标签绑定到input -->
             <label for="title">ToDoList</label>
             <!-- required规定提交表单之前有必填字段  autocomplete:自动补齐-->
             <div style="float: right;width: 60%;">
+                <label for="itemType"></label>
                 <select id="itemType">
                     <option value="single">创建待办</option>
                     <option value="file">下载文件</option>
@@ -34,33 +30,51 @@
     </div>
 </div>
 <!-- 主体：在这进行任务和已完成 -->
-<div class="content">
-    <h2>正在进行 <span id="todoCount"></span></h2>
+<div class="content" id="todoContent">
+    <h2>正在进行 <span id="todoCount"> {{  todo.length }}</span></h2>
     <ol id="todoList" class="demo-box">
+        <li v-for="item in todo" :key="item.id" :class="item.itemType" id="li-active">
+            <label><input type='checkbox' @change='update(item.id)'/></label>
+            <p @click='jumpTo(item.url)'>{{ item.showName }}</p>
+            <a @click='promotion(item.id)'>↓</a>
+        </li>
     </ol>
-    <h2>已经完成 <span id="doneCount"></span></h2>
+
+    <h2 v-if="done.length>0">已经完成 <span id="doneCount">{{ done.length }}</span></h2>
     <ul id="doneList">
+        <li v-for="item in done" :key="item.id" id="li-normal">
+            <label><input type='checkbox' @change='update(item.id)' checked='checked'/></label>
+            <p @click='jumpTo(item.url)'>{{ item.showName }}</p>
+            <a @click='remove(item.id)'>-</a>
+        </li>
     </ul>
-    <h2>长期任务 <span id="oldCount"></span></h2>
+
+    <h2 v-if="old.length > 0">长期任务 <span id="oldCount">{{ old.length }}</span></h2>
     <ol id="oldList">
+        <li v-for="item in old" :key="item.id" :class="item.itemType" id="li-active">
+            <label><input type='checkbox'/></label>
+            <p @click='jumpTo(item.url)'>{{ item.showName }}</p>
+            <a @click='remove(item.id)'>-</a>
+        </li>
     </ol>
 </div>
-<!-- 脚部：印记和全清除按钮 -->
-<div class="footer">
+
+<!-- 脚部：印记和功能按钮 -->
+<div class="footer" id="footerContainer">
     Version {{ version }} Copyright &copy; {{ year }} LiZeC
 </div>
-<div class="footer">
+<div class="footer" id="footerFunctionContainer">
     <a href="javascript:selectFile()">上传文件</a> &nbsp&nbsp
-    {% if 'ROLE_ADMIN' in role %}
-        <a href="javascript:backUpData()">备份数据</a> &nbsp&nbsp
-        <a href="javascript:updateLogs()">查看日志</a> &nbsp&nbsp
-        <a href="javascript:downCenter()">下载中心</a> &nbsp&nbsp
-    {% endif %}
-    <a href="logout">退出登录</a>
+    <a v-if="isAdmin" href="javascript:backUpData()">备份数据</a> &nbsp&nbsp
+    <a v-if="isAdmin" href="javascript:updateLogs()">查看日志</a> &nbsp&nbsp
+    <a v-if="isAdmin" href="javascript:downCenter()">下载中心</a> &nbsp&nbsp
+    <a href="javascript:doLogout()">退出登录</a>
 </div>
 
 <!-- 上传文件的控件 -->
 <input type="file" id="file_selector" style="display: none;" onchange="uploadFile()"/>
 
+<script src="/static/js/common.js"></script>
+<script src="/static/js/index.js"></script>
 </body>
 </html>

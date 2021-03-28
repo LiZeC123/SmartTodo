@@ -16,7 +16,10 @@ class NoteManager:
     def create(nid: int, title: str):
         filename = os.path.join(NoteManager._NOTE_FOLDER, str(nid))
         with open(filename, "w") as f:
-            f.write(title)
+            content = f"<h1>{title}</h1>" \
+                      f"<div>====================</div>" \
+                      f"<div><br></div><div><br></div><div><br></div><div><br></div>"
+            f.write(content)
 
     @staticmethod
     def get(nid: int):

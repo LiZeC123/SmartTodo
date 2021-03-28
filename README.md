@@ -7,7 +7,8 @@ Smart-Todo 待办管理器
 
 
 
-Smart-Todo 是一个简单智能的待办事项管理程序. Smart-Todo除了提供基本的创建和删除待办事项功能以外, 还提供自动优先级排序, 离线下载文件, 创建便签等重要的辅助功能.
+Smart-Todo 是一个简单智能的待办事项管理程序. Smart-Todo提供了创建和删除待办事项的基础功能,
+并在此基础上自动优先级排序, 离线下载文件, 创建便签等重要的辅助功能.
 
 ![SmartTodo项目截图](static/images/SmartTodo项目截图.PNG)
 
@@ -19,7 +20,7 @@ Smart-Todo 是一个简单智能的待办事项管理程序. Smart-Todo除了提
 本项目以Flask作为Web框架, 因此运行本项目需要安装Flask. 此外, 为了实现一些高级功能, 本项目还依赖一些第三方包, 使用如下的指令安装本项目需要的依赖.
 
 ```bash
-pip3 install flask wget beautifulsoup4 yagmail readerwriterlock
+pip3 install flask wget beautifulsoup4
 ```
 
 
@@ -29,8 +30,6 @@ pip3 install flask wget beautifulsoup4 yagmail readerwriterlock
 --------------------|------------------------------
 `wget`              | 离线下载
 `beautifulsoup4`    | 解析HTML结构
-`yagmail`           | 发送备份邮件(此功能还处于开发阶段)
-`readerwriterlock`  | 实现读写锁
 
 
 基本配置
@@ -146,10 +145,12 @@ Smart-Todo项目可以开箱即用, 在config文件夹中提供了一个默认�
 
 根据截止日期与当前时间, 可以计算出urgent等级, 并依据等级在页面上使用不同的颜色预警. 规则如下
 
-距离截止日期小于1天时, 标记为红色
-距离截止日期小于2天时, 标记为橙色
-距离截止日期小于3天时, 标记为黄色
-距离截止日期小于4天时, 标记为蓝色
+颜色  | 截止日期
+------|------------------------
+红色  | 距离截止日期小于1天
+橙色  | 距离截止日期小于2天
+黄色  | 距离截止日期小于3天
+蓝色  | 距离截止日期小于4天
 
 -----------
 
@@ -321,4 +322,9 @@ func <function_name> <arg>
 参考资料
 --------------
 
+### Python
 - [How to upgrade to python 3.7 on Ubuntu 18.10](https://www.itsupportwale.com/blog/how-to-upgrade-to-python-3-7-on-ubuntu-18-10/)
+
+### Vue.js
+- [Vue.js——60分钟快速入门](https://www.cnblogs.com/keepfool/p/5619070.html)
+- [使用 axios 访问 API](https://cn.vuejs.org/v2/cookbook/using-axios-to-consume-apis.html)
