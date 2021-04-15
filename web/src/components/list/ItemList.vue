@@ -2,10 +2,10 @@
   <div v-if="data.length > 0">
     <h2>{{ title }}<span id="todoCount"> {{ data.length }}</span></h2>
     <ol id="todoList" class="demo-box">
-      <li v-for="item in data" :key="item.id" :class="[done ? 'done' : '', item.itemType]" id="li-active">
+      <li v-for="item in data" :key="item.id" :class="[done ? 'done' : '', mapTypeToClass(item)]" id="li-active">
         <label><input type='checkbox' @change='change(item.id)'/></label>
-        <p @click='jumpTo(item.url)'>{{ item.name }}</p>
-        <a @click='click(item.id)'>{{btnName}}</a>
+        <p @click='jumpTo(item.url)'>{{ mapName(item) }}</p>
+        <a @click='click(item.id)'>{{ btnName }}</a>
       </li>
     </ol>
   </div>
@@ -32,8 +32,57 @@ export default {
     },
     click: function (id) {
       this.$emit('btn-click', id);
+    },
+    mapTypeToClass: function (item) {
+      if (item.repeatable) {
+        return "repeatable"
+      }
+
+      if (item.specific) {
+        return "specific";
+      }
+
+      // 如果是紧急任务, 则改变样式, 变成更醒目的红色
+      if (item.urgent > 0 && item.urgent <= 4) {
+        return "specific-" + item.urgent
+      }
+
+      return 'single';
+
+    },
+    mapName: function (item) {
+      let showName = item.name
+      if (item.url !== null) {
+        showName = "【链接】" + item.name;
+      } else if (item.item_type === "note") {
+        showName = "【便签】" + item.name;
+      } else if (item.item_type === "file") {
+        showName = "【文件】" + item.name;
+      }
+
+      // 如果有截止时间, 加入截止日期标记
+      if (item.deadline !== null) {
+        // 截止日期只展示日期部分
+        showName = "【" + item.deadline.split(" ")[0] + "】" + showName
+      }
+
+      // 如果是工作时间段, 加入工作时间段的标记
+      if (item.work) {
+        item.showName = "【工作】" + item.showName;
+      }
+
+      if (item.specific) {
+        item.showName = "【" + getWeekByDay(item.specific) + "】" + showName
+      }
+
+      return showName;
     }
   }
+}
+
+function getWeekByDay(dayValue) {
+  const today = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]; //创建星期数组
+  return today[dayValue - 1];  //返一周中的某一天，其中1为周一
 }
 </script>
 
@@ -65,7 +114,6 @@ span {
   color: #666;
   font-size: 14px;
 }
-
 
 
 label {
@@ -119,19 +167,19 @@ ol, ul {
   border-left: 5px solid #08bf02;
 }
 
-.specific-3 {
+.specific-4 {
   border-left: 5px solid #0020ee;
 }
 
-.specific-2 {
+.specific-3 {
   border-left: 5px solid #fff400;
 }
 
-.specific-1 {
+.specific-2 {
   border-left: 5px solid #ee8a00;
 }
 
-.specific-0 {
+.specific-1 {
   border-left: 5px solid #EE0000;
 }
 
@@ -152,8 +200,6 @@ li input {
 p {
   margin: 0;
 }
-
-
 
 
 /*勾选按钮*/
