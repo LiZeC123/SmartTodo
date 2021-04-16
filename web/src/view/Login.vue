@@ -2,7 +2,7 @@
   <div>
     <div class="wrapper">
       <div class="container">
-        <h1>Welcome</h1>
+        <h1>基于时空大数据的时间管理工具</h1>
         <form class="form" onsubmit="return false;">
           <input type="text" placeholder="Username" name="username" id="username" v-model="username">
           <input type="password" placeholder="Password" name="password" id="password" v-model="password">
@@ -23,10 +23,6 @@
         <li></li>
       </ul>
     </div>
-
-    <div style="text-align:center;margin:50px 0; font:normal 14px/24px 'MicroSoft YaHei';color:#000000">
-      <h1>基于时空大数据的时间管理工具</h1>
-    </div>
   </div>
 
 
@@ -44,17 +40,18 @@ export default {
   methods: {
     submit: function () {
       this.$axios({
-        method: 'post',
-        url: "user/login",
-        params: {
-          "email": this.email,
+        method: "post",
+        url: "/login",
+        data: {
+          "username": this.username,
           "password": this.password
         }
       }).then(response => {
+        console.log(response);
         if (response.data.success) {
           const token = response.data.data;
           this.$store.commit('set_token', token);
-          this.$router.push('/home/recent');
+          this.$router.push('/home/todo');
         }
       });
     }
