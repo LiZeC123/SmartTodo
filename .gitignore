@@ -1,6 +1,5 @@
 # User Config and Data
 database/*
-!database/default.json
 config/*
 !config/default.json
 filebase/*
