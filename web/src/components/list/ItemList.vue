@@ -53,12 +53,13 @@ export default {
     },
     mapName: function (item) {
       let showName = item.name
-      if (item.url !== null) {
-        showName = "【链接】" + item.name;
-      } else if (item.item_type === "note") {
+
+      if (item.item_type === "note") {
         showName = "【便签】" + item.name;
       } else if (item.item_type === "file") {
         showName = "【文件】" + item.name;
+      } else if (item.url !== null) {
+        showName = "【链接】" + item.name;
       }
 
       // 如果有截止时间, 加入截止日期标记
