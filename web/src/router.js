@@ -18,7 +18,7 @@ export default new VueRouter({
             path: '/home', component: Main,
             children: [
                 {path: 'todo', component: TodoComponent},
-                {path: 'note', component: NoteComponent},
+                {path: 'note/:nid', component: NoteComponent},
                 {path: 'file', component: FileComponent},
             ]
         },
