@@ -12,7 +12,7 @@ axios.defaults.baseURL = '/api'
 axios.interceptors.request.use(config => {
     // 这是一个函数, 因此并不会在定义时立即执行, 而是在每次发送请求时执行此操作
     if (store.state.token) {
-        config.headers.common['Authorization'] = store.state.token;
+        config.headers.common['Token'] = store.state.token;
     }
     return config;
 });
@@ -20,10 +20,8 @@ axios.interceptors.request.use(config => {
 
 // 页面刷新时，重新赋值token
 if (localStorage.getItem('token')) {
-    console.log(["Set Token From local, Token=", localStorage.getItem('token')])
     store.commit('set_token', localStorage.getItem('token'))
 }
-store.commit('set_token', "234342423")
 
 router.beforeEach((to, from, next) => {
     console.log(["In router beforeEach, Token = ", store.state.token])
@@ -31,6 +29,7 @@ router.beforeEach((to, from, next) => {
 
     if (!isLogin && to.path !== "/login") {
         // 未登录状态；跳转至login
+        console.log("GOTO Login Page")
         router.push({path: '/login'}).then(() => {
         });
     }
@@ -38,6 +37,7 @@ router.beforeEach((to, from, next) => {
     if (to.path === '/login') {
         // 已登录状态；当路由到login时，跳转至home
         if (isLogin) {
+            console.log("GOTO Home Page")
             router.push({path: '/home/todo'}).then(() => {
             });
         }

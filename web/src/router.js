@@ -22,6 +22,5 @@ export default new VueRouter({
                 {path: 'file', component: FileComponent},
             ]
         },
-
     ]
 })

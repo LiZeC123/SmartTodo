@@ -4,10 +4,10 @@ import Vuex from "vuex"
 Vue.use(Vuex)
 
 export default new Vuex.Store({
-    state:{
-        token:''
+    state: {
+        token: ''
     },
-    mutations:{
+    mutations: {
         set_token(state, token) {
             state.token = token
             localStorage.token = token

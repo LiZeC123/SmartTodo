@@ -2,10 +2,11 @@
   <div v-if="data.length > 0">
     <h2>{{ title }}<span id="todoCount"> {{ data.length }}</span></h2>
     <ol id="todoList" class="demo-box">
-      <li v-for="item in data" :key="item.id" :class="[done ? 'done' : '', mapTypeToClass(item)]" id="li-active">
-        <label><input type='checkbox' @change='change(item.id)'/></label>
+      <li v-for="(item, index) in data" :key="item.id" :class="[done ? 'done' : '', mapTypeToClass(item)]"
+          id="li-active">
+        <label><input type='checkbox' @change='change(index)' :checked="done"/></label>
         <p @click='jumpTo(item.url)'>{{ mapName(item) }}</p>
-        <a @click='click(item.id)'>{{ btnName }}</a>
+        <a @click='click(index)'>{{ btnName }}</a>
       </li>
     </ol>
   </div>
@@ -22,16 +23,16 @@ export default {
     data: Array,
   },
   methods: {
-    change: function (id) {
-      this.$emit('checkbox-change', id)
+    change: function (index) {
+      this.$emit('checkbox-change', index)
     },
     jumpTo: function (url) {
       if (url !== null) {
         window.open(url)
       }
     },
-    click: function (id) {
-      this.$emit('btn-click', id);
+    click: function (index) {
+      this.$emit('btn-click', index);
     },
     mapTypeToClass: function (item) {
       if (item.repeatable) {
@@ -68,11 +69,11 @@ export default {
 
       // 如果是工作时间段, 加入工作时间段的标记
       if (item.work) {
-        item.showName = "【工作】" + item.showName;
+        showName = "【工作】" + showName;
       }
 
       if (item.specific) {
-        item.showName = "【" + getWeekByDay(item.specific) + "】" + showName
+        showName = "【" + getWeekByDay(item.specific) + "】" + showName
       }
 
       return showName;
