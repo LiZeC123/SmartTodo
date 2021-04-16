@@ -2,33 +2,33 @@
   <div>
     <div class="header">
       <div class="box">
-        <form action="javascript:commitGlobalTodo()" id="form">
+        <div id="form" @keyup.enter="commitTodo">
           <label for="title">ToDoList</label>
           <div style="float: right;width: 60%;">
             <label for="itemType"></label>
-            <select id="itemType">
+            <select id="itemType" v-model="todoType">
               <option value="single">创建待办</option>
               <option value="file">下载文件</option>
               <option value="note">创建便签</option>
             </select>
-            <input type="text" id="title" name="title" placeholder="添加ToDo" required="required" autocomplete="off"/>
+            <input type="text" id="title" placeholder="添加ToDo" autocomplete="off" v-model="todoContent"/>
           </div>
-        </form>
+        </div>
       </div>
     </div>
 
-    <router-view class="container"></router-view>
+    <router-view class="container" :updateTodo="updateTodo"></router-view>
 
     <!-- 脚部：印记和功能按钮 -->
     <div class="footer" id="footerContainer">
-      Version {{ version }} Copyright &copy; {{ year }} LiZeC
+      Copyright &copy; {{ year }} LiZeC
     </div>
     <div class="footer" id="footerFunctionContainer">
       <a href="javascript:selectFile()">上传文件</a>
       <a v-if="isAdmin" href="javascript:backUpData()">备份数据</a>
       <a v-if="isAdmin" href="javascript:updateLogs()">查看日志</a>
       <a v-if="isAdmin" href="javascript:downCenter()">下载中心</a>
-      <a href="javascript:doLogout()">退出登录</a>
+      <a @click="doLogout">退出登录</a>
     </div>
 
     <!-- 上传文件的控件 -->
@@ -37,16 +37,83 @@
 </template>
 
 <script>
+import router from "@/router";
+
 export default {
   name: "Main",
   data: function () {
     return {
-      version: "2.0.0",
-      year: 2021,
+      todoContent: "",
+      todoType: "single",
+      updateTodo: 0,
+      year: new Date().getFullYear(),
       isAdmin: false
+    }
+  },
+  created() {
+  },
+  methods: {
+    commitTodo: function () {
+      console.log("Do CommitTodo")
+      if (this.todoContent.trim() === "") {
+        alert("TODO不能为空");
+      } else if (/set (.+)/.test(this.todoContent) || /fun (.+)/.test(this.todoContent)) {
+        // TODO: Operation Or Function
+      } else {
+        this.$axios({
+          method: "post",
+          url: "/item/create",
+          data: parseTitleToData(this.todoContent, this.todoType)
+        }).then(res => {
+          if (res.data.success) {
+            this.updateTodo += 1    // 通过此变量触发子组件的Todo部分更新操作
+            this.todoContent = ""
+          }
+        })
+      }
+    },
+    doLogout: function () {
+      this.$store.commit('del_token')
+      router.push({path: '/login'}).then(() => {
+      });
     }
   }
 }
+
+
+function parseTitleToData(todoContent, todoType) {
+  console.log(["DoParse", todoContent, todoType])
+  const values = todoContent.split(" ");
+
+  let data = {
+    "itemType": todoType,
+  };
+  if (values.length === 1) {
+    data.name = todoContent;
+  } else {
+    data.name = values[0];
+  }
+
+  for (let i = 1; i < values.length; i++) {
+    if (values[i].charAt(0) !== "-") {
+      data.name += " " + values[i];
+    } else if (values[i] === "-dl" && i + 1 < values.length) {
+      data.deadline = values[i + 1];
+      i++;
+    } else if (values[i] === "-wk") {
+      data.work = true;
+    } else if (values[i] === "-re") {
+      data.repeatable = true;
+    } else if (values[i] === "-sp" && i + 1 < values.length) {
+      data.specific = values[i + 1];
+      i++;
+    }
+  }
+  console.log(data);
+  return data;
+}
+
+
 </script>
 
 <style scoped>
