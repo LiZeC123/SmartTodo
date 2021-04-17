@@ -54,7 +54,6 @@ export default {
   },
   methods: {
     commitTodo: function () {
-      console.log("Do CommitTodo")
       if (this.todoContent.trim() === "") {
         alert("TODO不能为空");
       } else if (/set (.+)/.test(this.todoContent) || /fun (.+)/.test(this.todoContent)) {
@@ -63,7 +62,7 @@ export default {
         this.$axios({
           method: "post",
           url: "/item/create",
-          data: parseTitleToData(this.todoContent, this.todoType)
+          data: parseTitleToData(this.todoContent, this.todoType, this.$route.params.id)
         }).then(res => {
           if (res.data.success) {
             this.updateTodo += 1    // 通过此变量触发子组件的Todo部分更新操作
@@ -81,8 +80,7 @@ export default {
 }
 
 
-function parseTitleToData(todoContent, todoType) {
-  console.log(["DoParse", todoContent, todoType])
+function parseTitleToData(todoContent, todoType, parent) {
   const values = todoContent.split(" ");
 
   let data = {
@@ -92,6 +90,9 @@ function parseTitleToData(todoContent, todoType) {
     data.name = todoContent;
   } else {
     data.name = values[0];
+  }
+  if (parent !== undefined) {
+    data.parent = parent;
   }
 
   for (let i = 1; i < values.length; i++) {
@@ -109,7 +110,8 @@ function parseTitleToData(todoContent, todoType) {
       i++;
     }
   }
-  console.log(data);
+
+  console.log(["Commit Data", data]);
   return data;
 }
 
