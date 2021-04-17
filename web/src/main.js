@@ -17,6 +17,16 @@ axios.interceptors.request.use(config => {
     return config;
 });
 
+axios.interceptors.response.use(res => {
+    if (res.data.success) {
+        return res;
+    } else {
+        store.commit('del_token')
+        router.push({path: '/login'}).then(() => {
+        });
+    }
+});
+
 
 // 页面刷新时，重新赋值token
 if (localStorage.getItem('token')) {

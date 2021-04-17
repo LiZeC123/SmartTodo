@@ -29,12 +29,9 @@ export default {
       method: "post",
       url: "/item/getAll"
     }).then(res => {
-      console.log(["GetAll", res])
-      if (res.data.success) {
-        this.todo = res.data.data.todo
-        this.done = res.data.data.done
-        this.old = res.data.data.old
-      }
+      this.todo = res.data.data.todo
+      this.done = res.data.data.done
+      this.old = res.data.data.old
     })
   },
   methods: {
@@ -46,10 +43,8 @@ export default {
           "id": this.todo[index].id
         }
       }).then(res => {
-        if (res.data.success) {
-          this.done.unshift(this.todo[index]);
-          this.todo = res.data.data;
-        }
+        this.done.unshift(this.todo[index]);
+        this.todo = res.data.data;
       });
     },
     resetTodoItem: function (index) {
@@ -60,10 +55,8 @@ export default {
           "id": this.done[index].id
         }
       }).then(res => {
-        if (res.data.success) {
-          this.done.splice(index, 1);
-          this.todo = res.data.data;
-        }
+        this.done.splice(index, 1);
+        this.todo = res.data.data;
       });
     },
     removeDone: function (index) {
@@ -73,11 +66,8 @@ export default {
         data: {
           "id": this.done[index].id
         }
-      }).then(res => {
-        console.log(['removeDone', res])
-        if (res.data.success) {
-          this.done.splice(index, 1);
-        }
+      }).then(() => {
+        this.done.splice(index, 1);
       });
     },
     removeOld: function (index) {
@@ -87,10 +77,8 @@ export default {
         data: {
           "id": this.old[index].id
         }
-      }).then(res => {
-        if (res.data.success) {
-          this.old.splice(index, 1);
-        }
+      }).then(() => {
+        this.old.splice(index, 1);
       });
     },
     promotion: function (index) {
@@ -100,12 +88,9 @@ export default {
         data: {
           "id": this.todo[index].id
         }
-      }).then(res => {
-        if (res.data.success) {
-          this.todo.splice(index, 1);
-          this.old.unshift(this.todo[index]);
-
-        }
+      }).then(() => {
+        this.todo.splice(index, 1);
+        this.old.unshift(this.todo[index]);
       });
     },
   },
@@ -115,10 +100,7 @@ export default {
         method: "post",
         url: "/item/getTodo"
       }).then(res => {
-        console.log(["Update Todo", res])
-        if (res.data.success) {
-          this.todo = res.data.data
-        }
+        this.todo = res.data.data
       })
     }
   }

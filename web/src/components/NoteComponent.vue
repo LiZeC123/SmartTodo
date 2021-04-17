@@ -65,11 +65,9 @@ export default {
         "id": this.$route.params.id
       }
     }).then(res => {
-      if (res.data.success) {
-        this.todo = res.data.data.todo
-        this.done = res.data.data.done
-        this.old = res.data.data.old
-      }
+      this.todo = res.data.data.todo
+      this.done = res.data.data.done
+      this.old = res.data.data.old
     });
 
     // 获取note的正文内容
@@ -80,10 +78,7 @@ export default {
         "id": this.$route.params.id
       }
     }).then(res => {
-      console.log(["Get Content", res])
-      if (res.data.success) {
-        this.content = res.data.data;
-      }
+      this.content = res.data.data;
     });
 
     //绑定保存按键
@@ -99,10 +94,8 @@ export default {
           "parent": this.$route.params.id
         }
       }).then(res => {
-        if (res.data.success) {
-          this.done.unshift(this.todo[index]);
-          this.todo = res.data.data;
-        }
+        this.done.unshift(this.todo[index]);
+        this.todo = res.data.data;
       });
     },
     resetTodoItem: function (index) {
@@ -114,10 +107,8 @@ export default {
           "parent": this.$route.params.id
         }
       }).then(res => {
-        if (res.data.success) {
-          this.done.splice(index, 1);
-          this.todo = res.data.data;
-        }
+        this.done.splice(index, 1);
+        this.todo = res.data.data;
       });
     },
     removeTodo: function (index) {
@@ -128,11 +119,8 @@ export default {
           "id": this.todo[index].id,
           "parent": this.$route.params.id
         }
-      }).then(res => {
-        console.log(['removeDone', res])
-        if (res.data.success) {
-          this.todo.splice(index, 1);
-        }
+      }).then(() => {
+        this.todo.splice(index, 1);
       });
     },
     removeDone: function (index) {
@@ -143,11 +131,8 @@ export default {
           "id": this.done[index].id,
           "parent": this.$route.params.id
         }
-      }).then(res => {
-        console.log(['removeDone', res])
-        if (res.data.success) {
-          this.done.splice(index, 1);
-        }
+      }).then(() => {
+        this.done.splice(index, 1);
       });
     },
 
@@ -163,11 +148,9 @@ export default {
             "id": this.$route.params.id,
             "content": document.getElementById("editor").innerHTML
           }
-        }).then(res => {
-          if (res.data.success) {
-            showAlert();
-            setTimeout(hideAlert, 500);
-          }
+        }).then(() => {
+          showAlert();
+          setTimeout(hideAlert, 500);
         });
       }
     },
@@ -181,9 +164,7 @@ export default {
           "id": this.$route.params.id
         }
       }).then(res => {
-        if (res.data.success) {
-          this.todo = res.data.data
-        }
+        this.todo = res.data.data
       })
     }
   }
