@@ -16,11 +16,13 @@ class ConfigManager:
             logger.warn("Load Default Config")
             self.config = json.load(open(default_config))
 
-    def users(self):
-        return self.config['USER_INFO']
+    def try_login(self, username: str, password: str) -> bool:
+        users = self.config['USER_INFO']
+        return username in users and users[username]['password'] == password
 
-    def mails(self):
-        return self.config['MAIL_INFO']
-
-    def version(self):
-        return self.config['VERSION']
+    def get_roles(self, username: str):
+        users: dict = self.config['USER_INFO']
+        if username in users:
+            return users[username]['role']
+        else:
+            return None

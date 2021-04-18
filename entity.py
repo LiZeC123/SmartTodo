@@ -1,74 +1,55 @@
-# -*- coding: UTF-8 -*-
-from typing import Dict
+from typing import Dict, Optional
+
+from tool4time import now_str
 
 
 class Item:
-    def __init__(self, item_id, name, item_type, create_time=None, deadline=None, old=False,
-                 repeatable=False, specific=0, work=False, url=None, parent=None, owner=None):
-        self.id = item_id
-        self.name = name
-        self.item_type = item_type
-        self.create_time = create_time
-        self.finish_time = None
-        self.auto_priority = None
-        self.urgent = -1  # 表示紧急程度的等级,一共0~3四个等级
-        self.deadline = deadline
-        self.old = old
-        self.repeatable = repeatable
-        self.specific = specific
-        self.work = work
-        self.url = url
-        self.parent = parent
-        self.owner = owner
+    def __init__(self, item_id, name, item_type, owner, /,
+                 deadline: Optional[str] = None, old: bool = False, repeatable: bool = False, specific: int = 0,
+                 work: bool = False, url: Optional[str] = None, parent: int = 0):
+        self.id: int = item_id
+        self.name: str = name
+        self.item_type: str = item_type  # single, file, note 共三种类型
+        self.create_time: str = now_str()
+        self.finish_time: Optional[str] = None
+        self.urgent: int = 0  # 表示紧急程度的等级, 1~4共四个等级, 0表示此字段无效
+        self.deadline: Optional[str] = deadline
+        self.old: bool = old
+        self.repeatable: bool = repeatable
+        self.specific: int = specific
+        self.work: bool = work
+        self.url: Optional[str] = url
+        self.parent: int = parent  # 指示此Item是否附属于某个note, 0表示不附属任何note
+        self.owner: str = owner
 
     def to_dict(self) -> Dict:
         # 添加一个字典到对象的方法, 从而便于添加字段
-        return {
-            "id": self.id,
-            "name": self.name,
-            "itemType": self.item_type,
-            "createTime": self.create_time,
-            "finishTime": self.finish_time,
-            "autoPriority": self.auto_priority,
-            "urgent": self.urgent,
-            "deadline": self.deadline,
-            "old": self.old,
-            "repeatable": self.repeatable,
-            "specific": self.specific,
-            "work": self.work,
-            "url": self.url,
-            "parent": self.parent,
-            "owner": self.owner
-        }
+        return self.__dict__
 
     def __str__(self) -> str:
         return str(self.to_dict())
 
 
 def from_dict(raw: Dict) -> Item:
-    item = Item(raw['id'], raw['name'], raw['itemType'], None)
-    if "createTime" in raw:
-        item.create_time = raw['createTime']
-    if "finishTime" in raw:
-        item.finish_time = raw['finishTime']
-    if "autoPriority" in raw:
-        item.auto_priority = raw['autoPriority']
+    item = Item(int(raw['id']), raw['name'], raw['item_type'], raw['owner'])
+    if "create_time" in raw:
+        item.create_time = raw['create_time']
+    if "finish_time" in raw:
+        item.finish_time = raw['finish_time']
     if "urgent" in raw:
-        item.urgent = raw['urgent']
+        item.urgent = int(raw['urgent'])
     if "deadline" in raw:
         item.deadline = raw['deadline']
     if "old" in raw:
-        item.old = raw['old']
+        item.old = bool(raw['old'])
     if "repeatable" in raw:
-        item.repeatable = raw['repeatable']
+        item.repeatable = bool(raw['repeatable'])
     if "specific" in raw:
-        item.specific = raw['specific']
+        item.specific = int(raw['specific'])
     if "work" in raw:
-        item.work = raw["work"]
+        item.work = bool(raw["work"])
     if "url" in raw:
         item.url = raw['url']
     if "parent" in raw:
-        item.parent = raw['parent']
-    if "owner" in raw:
-        item.owner = raw['owner']
+        item.parent = int(raw['parent'])
     return item

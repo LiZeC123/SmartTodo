@@ -3,9 +3,6 @@ from logging import handlers
 from os import mkdir
 from os.path import exists
 
-# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-#                     filename="log.txt")
-
 _LOG_FILE = "log"
 
 if not exists(_LOG_FILE):
