@@ -24,10 +24,11 @@
       Copyright &copy; {{ year }} LiZeC
     </div>
     <div class="footer" id="footerFunctionContainer">
-      <a href="javascript:selectFile()">上传文件</a>
-      <a v-if="isAdmin" href="javascript:backUpData()">备份数据</a>
-      <a v-if="isAdmin" href="javascript:updateLogs()">查看日志</a>
-      <a v-if="isAdmin" href="javascript:downCenter()">下载中心</a>
+      <a @click="selectFile">上传文件</a>
+      <a @click="downCenter">文件中心</a>
+      <!--      <a v-if="isAdmin" href="javascript:backUpData()">备份数据</a>-->
+      <!--      <a v-if="isAdmin" href="javascript:updateLogs()">查看日志</a>-->
+      <!--      <a v-if="isAdmin" href="javascript:downCenter()">下载中心</a>-->
       <a @click="doLogout">退出登录</a>
     </div>
 
@@ -75,6 +76,12 @@ export default {
       this.$store.commit('del_token')
       router.push({path: '/login'}).then(() => {
       });
+    },
+    selectFile: function () {
+
+    },
+    downCenter: function () {
+      window.location = 'file';
     }
   }
 }
@@ -114,7 +121,6 @@ function parseTitleToData(todoContent, todoType, parent) {
   console.log(["Commit Data", data]);
   return data;
 }
-
 
 </script>
 

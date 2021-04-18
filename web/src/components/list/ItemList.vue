@@ -28,7 +28,8 @@ export default {
     },
     jumpTo: function (url) {
       if (url !== null) {
-        window.open(url)
+        let fullURL = window.location.host + url
+        window.open(fullURL)
       }
     },
     click: function (index) {
