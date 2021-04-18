@@ -53,87 +53,69 @@ export default {
       done: [],
       todo: [],
       old: [],
-      content: ""
+      content: "",
+      lastContent: undefined
     }
   },
   created() {
     // 获取Note私有的Item列表
-    this.$axios({
-      method: "post",
-      url: "/note/getAll",
-      data: {
-        "id": this.$route.params.id
-      }
-    }).then(res => {
+    this.$axios.post("/note/getAll", {"id": this.$route.params.id}).then(res => {
       this.todo = res.data.data.todo
       this.done = res.data.data.done
       this.old = res.data.data.old
     });
 
     // 获取note的正文内容
-    this.$axios({
-      method: "post",
-      url: "/note/content",
-      data: {
-        "id": this.$route.params.id
-      }
-    }).then(res => {
-      this.content = res.data.data;
-    });
+    this.$axios.post("/note/content", {"id": this.$route.params.id})
+        .then(res => this.content = res.data.data)
 
     //绑定保存按键
     document.onkeydown = this.save;
+
+    // 设置自动保存
+    setInterval(() => {
+      const currentHTML = document.getElementById("editor").innerHTML;
+      if (currentHTML !== this.lastContent) {
+        console.log(["autoSave", currentHTML])
+        this.lastContent = currentHTML
+        this.$axios.post("note/update", {
+          "id": this.$route.params.id,
+          "content": currentHTML
+        });
+      }
+    }, 60 * 1000)
+
   },
   methods: {
     finishTodoItem: function (index) {
-      this.$axios({
-        method: "post",
-        url: "/item/done",
-        data: {
-          "id": this.todo[index].id,
-          "parent": this.$route.params.id
-        }
+      this.$axios.post("/item/done", {
+        "id": this.todo[index].id,
+        "parent": this.$route.params.id
       }).then(res => {
         this.done.unshift(this.todo[index]);
         this.todo = res.data.data;
       });
     },
     resetTodoItem: function (index) {
-      this.$axios({
-        method: "post",
-        url: "/item/undone",
-        data: {
-          "id": this.done[index].id,
-          "parent": this.$route.params.id
-        }
+      this.$axios.post("/item/undone", {
+        "id": this.done[index].id,
+        "parent": this.$route.params.id
       }).then(res => {
         this.done.splice(index, 1);
         this.todo = res.data.data;
       });
     },
     removeTodo: function (index) {
-      this.$axios({
-        method: "post",
-        url: "/item/remove",
-        data: {
-          "id": this.todo[index].id,
-          "parent": this.$route.params.id
-        }
-      }).then(() => {
-        this.todo.splice(index, 1);
-      });
+      this.$axios.post("/item/remove", {
+        "id": this.todo[index].id,
+        "parent": this.$route.params.id
+      }).then(() => this.todo.splice(index, 1));
     },
     removeDone: function (index) {
-      this.$axios({
-        method: "post",
-        url: "/item/remove",
-        data: {
-          "id": this.done[index].id,
-          "parent": this.$route.params.id
-        }
-      }).then(() => {
-        this.done.splice(index, 1);
-      });
+      this.$axios.post("/item/remove", {
+        "id": this.done[index].id,
+        "parent": this.$route.params.id
+      }).then(() => this.done.splice(index, 1));
     },
 
     save: function (event) {
@@ -141,13 +123,9 @@ export default {
       if (event.ctrlKey && event.keyCode === 83) {
         event.preventDefault();
 
-        this.$axios({
-          method: "post",
-          url: "note/update",
-          data: {
-            "id": this.$route.params.id,
-            "content": document.getElementById("editor").innerHTML
-          }
+        this.$axios.post("note/update", {
+          "id": this.$route.params.id,
+          "content": document.getElementById("editor").innerHTML
         }).then(() => {
           showAlert();
           setTimeout(hideAlert, 500);
@@ -157,15 +135,8 @@ export default {
   },
   watch: {
     "updateTodo": function () {
-      this.$axios({
-        method: "post",
-        url: "/note/getTodo",
-        data: {
-          "id": this.$route.params.id
-        }
-      }).then(res => {
-        this.todo = res.data.data
-      })
+      this.$axios.post("/note/getTodo", {"id": this.$route.params.id})
+          .then(res => this.todo = res.data.data);
     }
   }
 }

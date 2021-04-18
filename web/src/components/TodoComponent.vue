@@ -25,10 +25,7 @@ export default {
     }
   },
   created() {
-    this.$axios({
-      method: "post",
-      url: "/item/getAll"
-    }).then(res => {
+    this.$axios.post("/item/getAll").then(res => {
       this.todo = res.data.data.todo
       this.done = res.data.data.done
       this.old = res.data.data.old
@@ -36,59 +33,27 @@ export default {
   },
   methods: {
     finishTodoItem: function (index) {
-      this.$axios({
-        method: "post",
-        url: "/item/done",
-        data: {
-          "id": this.todo[index].id
-        }
-      }).then(res => {
+      this.$axios.post("/item/done", {"id": this.todo[index].id}).then(res => {
         this.done.unshift(this.todo[index]);
         this.todo = res.data.data;
       });
     },
     resetTodoItem: function (index) {
-      this.$axios({
-        method: "post",
-        url: "/item/undone",
-        data: {
-          "id": this.done[index].id
-        }
-      }).then(res => {
+      this.$axios.post("/item/undone", {"id": this.done[index].id}).then(res => {
         this.done.splice(index, 1);
         this.todo = res.data.data;
       });
     },
     removeDone: function (index) {
-      this.$axios({
-        method: "post",
-        url: "/item/remove",
-        data: {
-          "id": this.done[index].id
-        }
-      }).then(() => {
-        this.done.splice(index, 1);
-      });
+      this.$axios.post("/item/remove", {"id": this.done[index].id})
+          .then(() => this.done.splice(index, 1));
     },
     removeOld: function (index) {
-      this.$axios({
-        method: "post",
-        url: "/item/remove",
-        data: {
-          "id": this.old[index].id
-        }
-      }).then(() => {
-        this.old.splice(index, 1);
-      });
+      this.$axios.post("/item/remove", {"id": this.old[index].id})
+          .then(() => this.old.splice(index, 1));
     },
     promotion: function (index) {
-      this.$axios({
-        method: "post",
-        url: "/item/toOld",
-        data: {
-          "id": this.todo[index].id
-        }
-      }).then(() => {
+      this.$axios.post("/item/toOld", {"id": this.todo[index].id}).then(() => {
         this.todo.splice(index, 1);
         this.old.unshift(this.todo[index]);
       });
@@ -96,12 +61,7 @@ export default {
   },
   watch: {
     "updateTodo": function () {
-      this.$axios({
-        method: "post",
-        url: "/item/getTodo"
-      }).then(res => {
-        this.todo = res.data.data
-      })
+      this.$axios.post("/item/getTodo").then(res => this.todo = res.data.data);
     }
   }
 }
