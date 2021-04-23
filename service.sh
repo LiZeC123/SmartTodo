@@ -1,8 +1,8 @@
-echo "更新数据结构"
-python3 ./tool4convert.py -c
+#!/usr/bin/env bash
 
 function compileService() {
   true
+  # python3 ./tool4convert.py -c
 }
 
 function runService() {
