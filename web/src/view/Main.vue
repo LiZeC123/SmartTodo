@@ -33,7 +33,7 @@
     </div>
 
     <!-- 上传文件的控件 -->
-    <input type="file" id="file_selector" style="display: none;" onchange="uploadFile()"/>
+    <input type="file" id="file_selector" style="display: none;" @change="uploadFile"/>
   </div>
 </template>
 
@@ -78,7 +78,23 @@ export default {
       });
     },
     selectFile: function () {
+      document.getElementById("file_selector").click();
 
+    },
+    uploadFile: function () {
+      // http://www.feingto.com/?p=14158
+      const file_obj = document.getElementById("file_selector").files[0];
+      if (file_obj) {
+        const url = "/file/upload";
+        const form = new FormData();
+        form.append("myFile", file_obj);
+        let config = {
+          headers:{'Content-Type':'multipart/form-data'}
+        };
+        this.$axios.post(url, form, config).then(()=> {this.updateTodo += 1;console.log("Do Reload")})
+      } else {
+        alert("请先选择文件后再上传")
+      }
     },
     downCenter: function () {
       window.location = 'file';
