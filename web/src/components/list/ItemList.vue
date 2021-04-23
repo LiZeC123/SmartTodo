@@ -28,8 +28,11 @@ export default {
     },
     jumpTo: function (url) {
       if (url !== null) {
-        let fullURL = window.location.host + url
-        window.open(fullURL)
+        if (url.indexOf("http")) {
+          window.open(url);
+        } else {
+          this.$router.push({path: '/home/' + url})
+        }
       }
     },
     click: function (index) {
