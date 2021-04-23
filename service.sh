@@ -1,14 +1,13 @@
 echo "更新数据结构"
 python3 ./tool4convert.py -c
 
-
 function compileService() {
-  true;
+  true
 }
 
 function runService() {
   echo "Run Service In Background"
-  nohup python3.8 app.py > log.txt 2>&1 &
+  nohup python3.8 app.py >log.txt 2>&1 &
   exit
 }
 
