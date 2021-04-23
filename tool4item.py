@@ -98,11 +98,11 @@ def update_urgent_level(item: dict) -> NoReturn:
     item['deadline'] = delta
 
 
-def where_update_repeatable_item(item) -> bool:
+def where_update_repeatable_item(item: dict) -> bool:
     return item['repeatable'] is True and item['finish_time'] is not None
 
 
-def update_repeatable_item(item) -> NoReturn:
+def update_repeatable_item(item: dict) -> NoReturn:
     finish_day = get_day_from_str(item['finish_time'])
     # 如果小于当前日期, 则重置
     if finish_day < today():
@@ -111,5 +111,5 @@ def update_repeatable_item(item) -> NoReturn:
         logger.info(f"DataManager: Reset Repeatable Item {item['name']} To Todo")
 
 
-def update_note_url(item) -> NoReturn:
-    item['url'] = f"note/{item.id}"
+def update_note_url(item: dict) -> NoReturn:
+    item['url'] = f"note/{item['id']}"
