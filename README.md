@@ -7,10 +7,9 @@ Smart-Todo 待办管理器
 
 
 
-Smart-Todo 是一个简单智能的待办事项管理程序. Smart-Todo提供了创建和删除待办事项的基础功能,
-并在此基础上自动优先级排序, 离线下载文件, 创建便签等重要的辅助功能.
+Smart-Todo 是一个简单智能的待办事项管理程序. Smart-Todo提供了创建和删除待办事项的基础功能, 并在此基础上自动优先级排序, 离线下载文件, 创建便签等重要的辅助功能.
 
-![SmartTodo项目截图](static/images/SmartTodo项目截图.PNG)
+![SmartTodo项目截图](doc/image/SmartTodo项目截图.PNG)
 
 依赖环境
 -------------

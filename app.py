@@ -1,22 +1,28 @@
-# -*- coding: UTF-8 -*-
 import functools
 import json
-import os
 from typing import Dict
 
-from flask import Flask, render_template, request, session, make_response, send_file, redirect, abort
+from flask import Flask, request, abort
 
 from entity import Item
-from server import Manager
+from server import Manager, TokenManager
+from service4config import ConfigManager
 from tool4log import logger
-from tool4time import parse_deadline_str, this_year_str
+from tool4time import parse_deadline_str
 
 app = Flask(__name__)
-app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SECRET_KEY'] = os.urandom(24)
-app.jinja_options.update(dict(variable_start_string='%%', variable_end_string='%%'))
 
 manager = Manager()
+token = TokenManager()
+config = ConfigManager()
+
+
+def make_success(data=None) -> str:
+    return json.dumps({"success": True, "data": data})
+
+
+def make_fail(data=None) -> str:
+    return json.dumps({"success": False, "data": data})
 
 
 def logged(func=None, role='ROLE_USER'):
@@ -25,195 +31,198 @@ def logged(func=None, role='ROLE_USER'):
 
     @functools.wraps(func)  # 设置函数名称，否则由于函数同名导致Flask绑定失败
     def wrapper(*args, **kw):
-        if 'username' in session:
-            if role in session['role']:
-                response = func(*args, **kw)
-                return response if response is not None else "Success"
-            else:
-                # 用户已经登录, 但是没有权限, 所以应该返回401 Unauthorized
-                abort(401)
+        if token.check_token(request, role):
+            return make_success(func(*args, **kw))
         else:
-            return redirect('/login')
+            abort(401)
 
     return wrapper
 
 
 @app.errorhandler(401)
 def handle_401(e):
-    return render_template("401.html", e=e), 401
+    return make_fail("未授权操作")
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/api/login', methods=['POST'])
 def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        if manager.try_login(username, password):
-            session['username'] = username
-            session['role'] = manager.get_roles(username)
-            return redirect('/')
-        else:
-            real_ip = request.headers.get("X-Real-IP")
-            logger.warning(f"已拒绝来自{real_ip}的请求, 此请求尝试以'{password}'为密码登录账号'{username}'")
-            return redirect('/login')
-    return render_template('login.html')
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    if config.try_login(username, password):
+        return make_success(token.create_token({"username": username, "role": config.get_roles(username)}))
+    else:
+        real_ip = request.headers.get("X-Real-IP")
+        logger.warning(f"已拒绝来自{real_ip}的请求, 此请求尝试以'{password}'为密码登录账号'{username}'")
+        return make_fail()
 
 
-@app.route('/logout', methods=['GET', 'POST'])
+@app.route('/api/logout', methods=['POST'])
 @logged
 def logout():
-    if 'username' in session:
-        session.clear()
-    return redirect('/login')
-
-
-@app.route('/', methods=['GET', 'POST'])
-@logged
-def index():
-    return render_template("index.html")
-
-
-# ####################### API For File #######################
-
-@app.route('/file')
-@logged
-def file():
-    return render_template("file.html", thisYear=this_year_str(), version=manager.version())
-
-
-@app.route('/file/list', methods=['POST'])
-@logged
-def file_list():
-    return json.dumps(manager.files())
-
-
-@app.route("/file/doUpload", methods=["POST"])
-@logged
-def do_upload():
-    f = request.files['myFile']
-    manager.save_file(f, owner=session['username'])
-
-
-@app.route('/file/toRemote', methods=['POST'])
-@logged(role='ROLE_ADMIN')
-def to_remote():
-    raise NotImplementedError
-    # iid = request.form["id"]
-    # fileManager.file2remote(iid)
-
-
-@app.route("/file/<filename>", methods=['GET'])
-@logged
-def get_file(filename):
-    resp = make_response(send_file(f"filebase/{filename}"))
-    return resp
-
-
-# ####################### API For Note #######################
-
-@app.route('/note/<nid>', methods=['GET'])
-@logged
-def note(nid):
-    item_info = manager.item(iid=nid)
-    base_info = dict(nid=nid, note=manager.note(nid), year=this_year_str(), version=manager.version())
-    base_info.update(item_info)  # 不要修改item_info, 否则由于引用会影响内部数据
-    return render_template("note.html", **base_info)
-
-
-@app.route('/note/update', methods=['POST'])
-@logged
-def note_update():
-    f = request.get_json()
-    nid = f["nid"]
-    text = f["text"]
-    manager.update("note", xid=nid, content=text, owner=session['username'])
+    token.remove_token(request.form.get('token'))
 
 
 # ####################### API For Item #######################
-
-@app.route('/items/todo', methods=['POST'])
+@app.route('/api/item/getAll', methods=['POST'])
 @logged
-def todo_item():
-    f = request.get_json()
-    nid = f.get("nid") if f is not None else None
-    return json.dumps(manager.todo(nid, owner=session['username']))
+def get_all_item():
+    owner: str = token.get_username(request)
+    return manager.all_items(owner, parent=0)
 
 
-@app.route("/item/remove", methods=["POST"])
+@app.route('/api/item/getTodo', methods=['POST'])
 @logged
-def remove_item():
-    iid = check_id(request.get_json()["id"])
-    manager.remove(iid, owner=session['username'])
+def get_todo_item():
+    owner: str = token.get_username(request)
+    return manager.todo_items(owner, parent=0)
 
 
-@app.route("/item/add", methods=["POST"])
+@app.route('/api/item/done', methods=['POST'])
 @logged
-def add_item():
+def done_item() -> bool:
+    xid = get_xid_from_request()
+    owner = token.get_username(request)
+    parent = try_get_parent_from_request()
+    return manager.done(xid=xid, owner=owner, parent=parent)
+
+
+@app.route('/api/item/undone', methods=['POST'])
+@logged
+def undone_item() -> bool:
+    xid = get_xid_from_request()
+    owner = token.get_username(request)
+    parent = try_get_parent_from_request()
+    return manager.undo(xid=xid, owner=owner, parent=parent)
+
+
+@app.route('/api/item/toOld', methods=['POST'])
+@logged
+def to_old():
+    xid = get_xid_from_request()
+    return manager.to_old(xid=xid, owner=token.get_username(request))
+
+
+@app.route("/api/item/create", methods=["POST"])
+@logged
+def create_item():
     f: Dict = request.get_json()
-    item: Item = Item(0, f['name'], f['itemType'], None)
-    item.deadline = parse_deadline_str(f["deadline"]) if "deadline" in f else None
+    item: Item = Item(0, f['name'], f['itemType'], token.get_username(request))
 
-    item.work = False
+    if "deadline" in f:
+        item.deadline = parse_deadline_str(f["deadline"])
+
     if "work" in f:
-        item.work = (str(f["work"]).lower() == "true")
+        item.work = bool(f["work"])
 
-    item.repeatable = False
     if "repeatable" in f:
-        item.repeatable = (str(f["repeatable"]).lower() == "true")
+        item.repeatable = bool(f["repeatable"])
 
-    item.specific = 0
     if "specific" in f:
         item.specific = int(f["specific"])
 
-    item.parent = None
     if "parent" in f:
         item.parent = int(f["parent"])
-
-    item.owner = session['username']
 
     manager.create(item)
 
 
-@app.route("/item/update", methods=["POST"])
+@app.route("/api/item/remove", methods=["POST"])
 @logged
-def update_item():
-    iid = check_id(request.get_json()['id'])
-    manager.update(item_type="item", xid=iid, owner=session['username'])
+def remove_item():
+    iid = get_xid_from_request()
+    owner = token.get_username(request)
+    manager.remove(iid, owner)
 
 
-@app.route("/item/old", methods=["POST"])
-@logged
-def update_item_generation():
-    iid = check_id(request.get_json()["id"])
-    manager.to_old(iid)
+def get_xid_from_request() -> int:
+    f: Dict = request.get_json()
+    xid = int(f.get('id'))
+    return xid
 
 
-@app.route("/backup", methods=["GET"])
+def try_get_parent_from_request() -> int:
+    f: Dict = request.get_json()
+    return int(f.get("parent", "0"))
+
+
+# ####################### API For Functions #######################
+# 使用一个单独的页面来展示这些文本内容, 由于文字量不大, 因此可以直接放入一个textarea中
+
+@app.route("/admin/backup", methods=["GET"])
 @logged(role='ROLE_ADMIN')
 def back_up():
-    resp = make_response(send_file(manager.back_up()))
-    resp.headers["Content-type"] = "text/plain;charset=UTF-8"
-    return resp
+    pass
+
+    # resp = make_response(send_file(manager.back_up()))
+    # resp.headers["Content-type"] = "text/plain;charset=UTF-8"
+    # return resp
 
 
-@app.route("/log.txt", methods=["GET"])
+@app.route("/admin/log.txt", methods=["GET"])
 @logged(role='ROLE_ADMIN')
 def update_log():
+    pass
+    # 将文件的内容取出来, 直接返回, 因为log文件长度有限, 因此问题不大
     # https://blog.csdn.net/weixin_33966095/article/details/94337270
-    resp = make_response(send_file("log/log.txt"))
-    resp.headers["Content-type"] = "text/plain;charset=UTF-8"
-    return resp
+    # resp = make_response(send_file("log/log.txt"))
+    # resp.headers["Content-type"] = "text/plain;charset=UTF-8"
+    # return resp
 
 
-@app.route("/op", methods=["POST"])
+@app.route("/admin/op", methods=["POST"])
 @logged(role='ROLE_ADMIN')
 def do_operation():
-    cmd = request.form['cmd']
-    manager.exec_cmd(cmd.replace("set", ""))
+    pass
+    # cmd = request.form['cmd']
+    # manager.exec_cmd(cmd.replace("set", ""))
 
 
-def check_id(xid: str) -> int:
-    return int(xid)
+# ####################### API For File #######################
+
+@app.route("/api/file/getAll", methods=["POST"])
+@logged
+def file_get_all_items():
+    return manager.files()
+
+
+@app.route("/api/file/upload", methods=["POST"])
+@logged
+def file_do_upload():
+    pass
+
+
+# ####################### API For Note #######################
+
+@app.route('/api/note/content', methods=['POST'])
+@logged
+def note_content():
+    nid = get_xid_from_request()
+    return manager.get_note(nid, owner=token.get_username(request))
+
+
+@app.route('/api/note/update', methods=['POST'])
+@logged
+def note_update():
+    nid = get_xid_from_request()
+    content = request.get_json().get("content")
+    manager.update_note(nid, owner=token.get_username(request), content=content)
+
+
+@app.route('/api/note/getAll', methods=['POST'])
+@logged
+def note_get_all_item():
+    owner: str = token.get_username(request)
+    nid = get_xid_from_request()
+    return manager.all_items(owner, parent=nid)
+
+
+@app.route('/api/note/getTodo', methods=['POST'])
+@logged
+def note_get_todo_item():
+    owner: str = token.get_username(request)
+    nid = get_xid_from_request()
+    return manager.todo_items(owner, parent=nid)
 
 
 if __name__ == '__main__':

@@ -1,6 +1,5 @@
 # User Config and Data
 database/*
-!database/default.json
 config/*
 !config/default.json
 filebase/*
@@ -13,6 +12,11 @@ log/*
 
 # Download File
 static/file/
+
+# Web File
+web/.idea
+web/node_modules
+web/dist
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
