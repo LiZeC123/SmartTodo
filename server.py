@@ -12,7 +12,7 @@ from mapper import MemoryDataBase
 from tool4item import update_urgent_level, where_can_delete, \
     where_update_repeatable_item, update_repeatable_item, where_update_urgent_level, where_id_equal, finish_item, \
     undo_item, where_equal, old_item, group_all_item_with, where_select_todo_with, update_note_url, \
-    where_select_all_file
+    where_select_all_file, where_unreferenced, select_id
 from tool4key import todo_item_key, done_item_key, old_item_key
 from tool4log import logger
 from tool4web import extract_title, download
@@ -141,14 +141,13 @@ class Manager:
 
     # 垃圾收集的条件  1. 达到计数次数 2. 零点定时处理
     def __garbage_collection(self):
-        # TODO: 设置合适的垃圾回收时机
         items = self.database.select_by(where_can_delete)
         for item in items:
             self.manager[item.item_type].remove(item)
             logger.info(f"Garbage Collection(Expired): {item.name}")
 
-        ids = self.database.select_by(select=lambda it: it['id'])
-        unreferenced = self.database.select_by(where=lambda it: it['parent'] not in ids)
+        ids = self.database.select_by(select=select_id)
+        unreferenced = self.database.select_by(where=where_unreferenced(ids))
         for item in unreferenced:
             self.manager[item.item_type].remove(item)
             logger.info(f"Garbage Collection(Unreferenced): {item}")

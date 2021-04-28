@@ -72,6 +72,14 @@ def where_equal(xid: int, owner: str):
     return lambda item: item['id'] == xid and item['owner'] == owner
 
 
+def select_id(item: dict):
+    return item['id']
+
+
+def where_unreferenced(parent: list):
+    return lambda item: item['parent'] != 0 and item['parent'] not in parent
+
+
 def finish_item(item: dict):
     item['finish_time'] = now_str()
     logger.info(f"Move Item {item['name']} To Done Lists")
