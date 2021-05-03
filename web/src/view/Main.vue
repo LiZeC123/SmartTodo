@@ -60,16 +60,10 @@ export default {
       } else if (/set (.+)/.test(this.todoContent) || /fun (.+)/.test(this.todoContent)) {
         // TODO: Operation Or Function
       } else {
-        this.$axios({
-          method: "post",
-          url: "/item/create",
-          data: parseTitleToData(this.todoContent, this.todoType, this.$route.params.id)
-        }).then(res => {
-          if (res.data.success) {
-            this.updateTodo += 1    // 通过此变量触发子组件的Todo部分更新操作
-            this.todoContent = ""
-          }
-        })
+        this.$axios.post("/item/create", parseTitleToData(this.todoContent, this.todoType, this.$route.params.id))
+            .then(() => this.updateTodo += 1) // 通过此变量触发子组件的Todo部分更新操作
+        // 提交请求后直接清空内容, 而不必等待请求返回, 提高响应速度, 避免重复提交
+        this.todoContent = ""
       }
     },
     doLogout: function () {
@@ -89,9 +83,12 @@ export default {
         const form = new FormData();
         form.append("myFile", file_obj);
         let config = {
-          headers:{'Content-Type':'multipart/form-data'}
+          headers: {'Content-Type': 'multipart/form-data'}
         };
-        this.$axios.post(url, form, config).then(()=> {this.updateTodo += 1;console.log("Do Reload")})
+        this.$axios.post(url, form, config).then(() => {
+          this.updateTodo += 1;
+          console.log("Do Reload")
+        })
       } else {
         alert("请先选择文件后再上传")
       }
