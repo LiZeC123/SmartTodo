@@ -82,7 +82,7 @@ class Manager:
     def __init_observer(self):
         self.op_count = OpCount(10)
         self.op_count.add_observer(self.__update_state)
-        self.op_count.add_observer(self.__garbage_collection)
+        self.op_count.add_observer(self.garbage_collection)
 
     def check_authority(self, xid: int, owner: str):
         # select_by 方法返回一个数组, 因此需要取出其中的值
@@ -140,7 +140,7 @@ class Manager:
         self.note_manager.update(nid, content)
 
     # 垃圾收集的条件  1. 达到计数次数 2. 零点定时处理
-    def __garbage_collection(self):
+    def garbage_collection(self):
         items = self.database.select_by(where_can_delete)
         for item in items:
             self.manager[item.item_type].remove(item)

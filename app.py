@@ -197,6 +197,14 @@ def note_get_todo_item():
 
 
 # ####################### API For Functions #######################
+
+@app.route("/api/meta/isAdmin", methods=["GET"])
+@logged
+def is_admin():
+    username = token.get_username(request)
+    return config.get_roles(username)
+
+
 @app.route("/api/log/data", methods=["GET"])
 @logged(role='ROLE_ADMIN')
 def back_up():
@@ -211,6 +219,13 @@ def get_log():
     # 文本中可能包含中文字符, 音粗需要指定合适的编码
     with open("log/log.txt", encoding='utf-8') as f:
         return "".join(f.readlines())
+
+
+@app.route("/api/admin/gc", methods=["POST"])
+@logged(role='ROLE_ADMIN')
+def gc():
+    """手动触发垃圾回收操作"""
+    manager.garbage_collection()
 
 
 @app.route("/admin/op", methods=["POST"])
