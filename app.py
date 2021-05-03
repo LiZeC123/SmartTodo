@@ -146,38 +146,6 @@ def try_get_parent_from_request() -> int:
     return int(f.get("parent", "0"))
 
 
-# ####################### API For Functions #######################
-# 使用一个单独的页面来展示这些文本内容, 由于文字量不大, 因此可以直接放入一个textarea中
-
-@app.route("/admin/backup", methods=["GET"])
-@logged(role='ROLE_ADMIN')
-def back_up():
-    pass
-
-    # resp = make_response(send_file(manager.back_up()))
-    # resp.headers["Content-type"] = "text/plain;charset=UTF-8"
-    # return resp
-
-
-@app.route("/admin/log.txt", methods=["GET"])
-@logged(role='ROLE_ADMIN')
-def update_log():
-    pass
-    # 将文件的内容取出来, 直接返回, 因为log文件长度有限, 因此问题不大
-    # https://blog.csdn.net/weixin_33966095/article/details/94337270
-    # resp = make_response(send_file("log/log.txt"))
-    # resp.headers["Content-type"] = "text/plain;charset=UTF-8"
-    # return resp
-
-
-@app.route("/admin/op", methods=["POST"])
-@logged(role='ROLE_ADMIN')
-def do_operation():
-    pass
-    # cmd = request.form['cmd']
-    # manager.exec_cmd(cmd.replace("set", ""))
-
-
 # ####################### API For File #######################
 
 @app.route("/api/file/getAll", methods=["POST"])
@@ -223,6 +191,29 @@ def note_get_todo_item():
     owner: str = token.get_username(request)
     nid = get_xid_from_request()
     return manager.todo_items(owner, parent=nid)
+
+
+# ####################### API For Functions #######################
+@app.route("/admin/backup", methods=["GET"])
+@logged(role='ROLE_ADMIN')
+def back_up():
+    with open("database/data.json") as f:
+        # data数据是不换行存储的JSON数据, 因此只需要取值第一行
+        return f.readline()
+
+
+@app.route("/admin/log", methods=["GET"])
+@logged(role='ROLE_ADMIN')
+def get_log():
+    # 文本中可能包含中文字符, 音粗需要指定合适的编码
+    with open("log/log.txt", encoding='utf-8') as f:
+        return "".join(f.readlines())
+
+
+@app.route("/admin/op", methods=["POST"])
+@logged(role='ROLE_ADMIN')
+def do_operation():
+    pass
 
 
 if __name__ == '__main__':

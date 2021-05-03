@@ -227,34 +227,6 @@ class FileItemManager(ItemManager):
         except OSError:
             logger.exception(f"{FileItemManager.__name__}: Fail to Remove File: Name = {filename}")
 
-    @staticmethod
-    def backup_database_file(username):
-        # 这个地方不能复制到公共空间, 最多复制到私有空间
-        # 且通过返回文件的方式返回用户数据
-        pass
-        # src = join(FileManager._USER_FOLDER, f"{username}.json")
-        # dst = join(FileManager._DOWNLOAD_FOLDER, f"{username}.json")
-        # copy_file(src, dst)
-
-    @staticmethod
-    def file2public(filename):
-        pass
-        # src = join(FileManager._UPLOAD_FOLDER, filename)
-        # dst = join(FileManager._DOWNLOAD_FOLDER, filename)
-        # copy_file(src, dst)
-        # return dst
-
-    @staticmethod
-    def file2private(filename):
-        pass
-        # src = join(FileManager._DOWNLOAD_FOLDER, filename)
-        # dst = join(FileManager._UPLOAD_FOLDER, filename)
-        # copy_file(src, dst)
-        # return dst
-
-    def file2remote(self):
-        pass
-
 
 class NoteItemManager(ItemManager):
     _NOTE_FOLDER = "notebase"
