@@ -54,8 +54,8 @@ export default {
     },
     promotion: function (index) {
       this.$axios.post("/item/toOld", {"id": this.todo[index].id}).then(() => {
-        this.todo.splice(index, 1);
         this.old.unshift(this.todo[index]);
+        this.todo.splice(index, 1);
       });
     },
   },
