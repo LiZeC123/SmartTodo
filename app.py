@@ -157,7 +157,10 @@ def file_get_all_items():
 @app.route("/api/file/upload", methods=["POST"])
 @logged
 def file_do_upload():
-    pass
+    print("Do api file upload")
+    f = request.files['myFile']
+    owner = token.get_username(request)
+    return manager.create_upload_file(f, owner)
 
 
 # ####################### API For Note #######################
@@ -194,7 +197,7 @@ def note_get_todo_item():
 
 
 # ####################### API For Functions #######################
-@app.route("/admin/backup", methods=["GET"])
+@app.route("/api/log/data", methods=["GET"])
 @logged(role='ROLE_ADMIN')
 def back_up():
     with open("database/data.json") as f:
@@ -202,7 +205,7 @@ def back_up():
         return f.readline()
 
 
-@app.route("/admin/log", methods=["GET"])
+@app.route("/api/log/log", methods=["GET"])
 @logged(role='ROLE_ADMIN')
 def get_log():
     # 文本中可能包含中文字符, 音粗需要指定合适的编码
