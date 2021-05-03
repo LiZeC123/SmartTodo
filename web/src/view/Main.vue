@@ -26,9 +26,9 @@
     <div class="footer" id="footerFunctionContainer">
       <a @click="selectFile">上传文件</a>
       <a @click="downCenter">文件中心</a>
-      <!--      <a v-if="isAdmin" href="javascript:backUpData()">备份数据</a>-->
-      <!--      <a v-if="isAdmin" href="javascript:updateLogs()">查看日志</a>-->
-      <!--      <a v-if="isAdmin" href="javascript:downCenter()">下载中心</a>-->
+      <a v-if="isAdmin" @click="backUpData">备份数据</a>
+      <a v-if="isAdmin" @click="updateLogs">查看日志</a>
+      <a v-if="isAdmin" @click="gc">垃圾回收</a>
       <a @click="doLogout">退出登录</a>
     </div>
 
@@ -52,6 +52,7 @@ export default {
     }
   },
   created() {
+    this.$axios.get('/meta/isAdmin').then(rep => this.isAdmin = rep.data.data);
   },
   methods: {
     commitTodo: function () {
@@ -95,6 +96,15 @@ export default {
     },
     downCenter: function () {
       window.location = 'file';
+    },
+    backUpData: function () {
+      window.location = 'log/data'
+    },
+    updateLogs: function () {
+      window.location = 'log/log'
+    },
+    gc: function () {
+
     }
   }
 }
