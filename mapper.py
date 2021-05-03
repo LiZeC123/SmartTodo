@@ -19,23 +19,21 @@ class OpCount:
         self.op_count = 0
         self.last_count = 0
         self.delta = delta
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()  # 可能递归调用, 因此需要包装锁可重入
         self.finish = True
         self.observer_list = []
 
     def inc(self):
         with self.lock:
-            self.op_count += 1
-            self.__do_when_need()
+            if self.finish:
+                # 检查是否完成一次调用, 避免递归
+                self.op_count += 1
+                self.__do_when_need()
 
     def add_observer(self, f):
         self.observer_list.append(f)
 
     def __do_when_need(self):
-        if not self.finish:
-            # 检查是否完成一次调用, 避免递归
-            return
-
         self.finish = False
         if self.op_count - self.last_count >= self.delta:
             for f in self.observer_list:
@@ -58,7 +56,8 @@ class MemoryDataBase:
         if self.data:
             self.current_id = max(map(lambda i: i['id'], self.data))
         else:
-            self.current_id = 0
+            # 默认从1开始, 避免0值产生问题
+            self.current_id = 1
 
     def __next_id(self):
         with self.lock:
