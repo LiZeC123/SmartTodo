@@ -106,7 +106,8 @@ class MemoryDataBase:
     def remove(self, item: Item):
         with self.lock:
             idx = self.__get_idx(item)
-            if idx:
+            # 判断None和直接判断大部分时候都是一致的, 但当idx等于0时会产生错误
+            if idx is not None:
                 self.data.pop(idx)
                 self.save2file()
 
