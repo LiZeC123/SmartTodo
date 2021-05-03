@@ -48,27 +48,6 @@ class TokenManager:
             del self.data[token]
 
 
-class OpCount:
-    def __init__(self, delta: int):
-        self.op_count = 0
-        self.last_count = 0
-        self.delta = delta
-        self.observer_list = []
-
-    def inc(self):
-        self.op_count += 1
-        self.__do_when_need()
-
-    def add_observer(self, f):
-        self.observer_list.append(f)
-
-    def __do_when_need(self):
-        if self.op_count - self.last_count >= self.delta:
-            for f in self.observer_list:
-                f()
-            self.last_count = self.op_count
-
-
 class Manager:
     def __init__(self):
         database = MemoryDataBase()
@@ -80,9 +59,8 @@ class Manager:
         self.__init_observer()
 
     def __init_observer(self):
-        self.op_count = OpCount(10)
-        self.op_count.add_observer(self.__update_state)
-        self.op_count.add_observer(self.garbage_collection)
+        self.database.add_modify_observer(self.__update_state)
+        self.database.add_modify_observer(self.garbage_collection)
 
     def check_authority(self, xid: int, owner: str):
         # select_by 方法返回一个数组, 因此需要取出其中的值
@@ -94,7 +72,6 @@ class Manager:
 
     def create(self, item: Item):
         self.manager[item.item_type].create(item)
-        self.op_count.inc()
 
     def create_upload_file(self, f, owner: str):
         name, url = self.file_manager.create_upload_file(f)

@@ -14,12 +14,43 @@ def load_data(filename):
         return json.load(f)
 
 
+class OpCount:
+    def __init__(self, delta: int):
+        self.op_count = 0
+        self.last_count = 0
+        self.delta = delta
+        self.lock = threading.Lock()
+        self.finish = True
+        self.observer_list = []
+
+    def inc(self):
+        with self.lock:
+            self.op_count += 1
+            self.__do_when_need()
+
+    def add_observer(self, f):
+        self.observer_list.append(f)
+
+    def __do_when_need(self):
+        if not self.finish:
+            # 检查是否完成一次调用, 避免递归
+            return
+
+        self.finish = False
+        if self.op_count - self.last_count >= self.delta:
+            for f in self.observer_list:
+                f()
+            self.last_count = self.op_count
+        self.finish = True
+
+
 class MemoryDataBase:
     _DATABASE_FOLDER = "database"
 
     def __init__(self):
         self.lock = threading.Lock()
         self.filename = os.path.join(MemoryDataBase._DATABASE_FOLDER, f"data.json")
+        self.counter = OpCount(10)
         self.data: List = []
         if exists(self.filename):
             self.data = load_data(self.filename)
@@ -33,6 +64,9 @@ class MemoryDataBase:
         with self.lock:
             self.current_id = self.current_id + 1
             return self.current_id
+
+    def add_modify_observer(self, f):
+        self.counter.add_observer(f)
 
     def select(self, iid: int) -> Optional[dict]:
         for item in self.data:
@@ -78,24 +112,8 @@ class MemoryDataBase:
                 self.save2file()
 
     def save2file(self):
+        self.counter.inc()  # 在保存操作之前检查是否达到计数
         json_data = json.dumps(self.data)
         with open(self.filename, "w", encoding="utf8") as f:
             f.write(json_data)
         logger.info(f"{MemoryDataBase.__name__}: Success Save Date to File")
-
-    def get_id_by_name(self, name: str):
-        pass
-        # query_id = None
-        # for item in self.data:
-        #     if name in item["name"]:
-        #         if query_id is None:
-        #             query_id = item['id']
-        #         else:
-        #             raise ValueError("More than one item have the same name")
-        # return query_id
-
-    def exec_set_cmd(self, iid: str, attr: str, value):
-        pass
-        # with self.select(iid) as item:
-        #     item[attr] = value
-        #     logger.info(f"{MemoryDataBase.__name__}: Do Command [{iid}] --> [{attr}] = [{value}]")
