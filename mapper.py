@@ -45,7 +45,9 @@ class MemoryDataBase:
         return list(map(select, filter(where, self.data)))
 
     def update_by(self, where: Callable[[dict], bool], update: Callable[[dict], None]) -> int:
-        return len(list(map(update, filter(where, self.data))))
+        ans = len(list(map(update, filter(where, self.data))))
+        self.save2file()
+        return ans
 
     def select_group_by(self, ans: Dict[str, List], f: Callable[[dict], str]) -> Dict[str, List]:
         for item in self.data:
