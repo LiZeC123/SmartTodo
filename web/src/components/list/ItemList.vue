@@ -28,7 +28,7 @@ export default {
     },
     jumpTo: function (url) {
       if (url !== null) {
-        if (url.indexOf("http")) {
+        if (url.indexOf("http") === 0) {
           window.open(url);
         } else {
           this.$router.push({path: '/home/' + url})
