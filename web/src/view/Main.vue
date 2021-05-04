@@ -63,8 +63,10 @@ export default {
       } else {
         this.$axios.post("/item/create", parseTitleToData(this.todoContent, this.todoType, this.$route.params.id))
             .then(() => this.updateTodo += 1) // 通过此变量触发子组件的Todo部分更新操作
+
         // 提交请求后直接清空内容, 而不必等待请求返回, 提高响应速度, 避免重复提交
         this.todoContent = ""
+        this.todoType = "single"
       }
     },
     doLogout: function () {
@@ -74,7 +76,6 @@ export default {
     },
     selectFile: function () {
       document.getElementById("file_selector").click();
-
     },
     uploadFile: function () {
       // http://www.feingto.com/?p=14158
