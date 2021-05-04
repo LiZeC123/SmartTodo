@@ -31,7 +31,7 @@ export default {
         if (url.indexOf("http") === 0) {
           window.open(url);
         } else {
-          this.$router.push({path: '/home/' + url})
+          window.open('/home/'+url)
         }
       }
     },
