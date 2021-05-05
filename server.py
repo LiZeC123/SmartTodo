@@ -175,8 +175,7 @@ class ItemManager:
 
 class FileItemManager(ItemManager):
     _USER_FOLDER = "database"
-    _PRIVATE_FOLDER = "filebase"
-    _PUBLIC_FOLDER = join("static", "file")
+    _FILE_FOLDER = "filebase"
 
     def __init__(self, database: MemoryDataBase):
         super().__init__(database)
@@ -185,14 +184,14 @@ class FileItemManager(ItemManager):
     def create(self, item: Item):
         """将指定URL对应的文件下载到公共空间"""
         remote_url = item.name
-        path = download(remote_url, FileItemManager._PUBLIC_FOLDER).replace("\\", "/")
-        item.url = "/" + path
+        path = download(remote_url, FileItemManager._FILE_FOLDER)
+        item.url = path.replace("\\", "/").replace("filebase", '/file')
         return self.database.insert(item)
 
     @staticmethod
     def create_upload_file(f):
         """将上传的文件保存到私有空间"""
-        path = join(FileItemManager._PRIVATE_FOLDER, f.filename)
+        path = join(FileItemManager._FILE_FOLDER, f.filename)
         f.save(path)
         return f.filename, path
 
