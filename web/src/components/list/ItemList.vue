@@ -28,11 +28,7 @@ export default {
     },
     jumpTo: function (url) {
       if (url !== null) {
-        if (url.indexOf("http") === 0) {
-          window.open(url);
-        } else {
-          window.open('/home/'+url)
-        }
+        window.open(url);
       }
     },
     click: function (index) {
