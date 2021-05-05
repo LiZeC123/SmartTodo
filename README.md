@@ -53,7 +53,7 @@ server {
 
     # 上传和下载的文件, 直接由Nginx进行代理
     location /file {
-        root /home/git/projects/smart-todo/filebase;
+        alias /home/git/projects/smart-todo/filebase/;
     }
 }
 ```
