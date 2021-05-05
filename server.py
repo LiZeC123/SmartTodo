@@ -196,7 +196,7 @@ class FileItemManager(ItemManager):
         return f.filename, path
 
     def remove(self, item: Item):
-        filename = item.url[1:]  # 移除开头的 /
+        filename = item.url.replace("/file", "filebase")
         try:
             os.remove(filename)
             self.database.remove(item)
