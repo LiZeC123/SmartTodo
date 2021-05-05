@@ -128,7 +128,7 @@ function parseTitleToData(todoContent, todoType, parent) {
   }
 
   // 更新任务名称重新分析人物类型
-  data.itemType = inferFileType(data.name);
+  data.itemType = inferFileType(data.name, data.itemType);
 
 
   // 分析参数
@@ -154,14 +154,17 @@ function parseTitleToData(todoContent, todoType, parent) {
   return data;
 }
 
-function inferFileType(name) {
+function inferFileType(name, itemType) {
+  if(itemType !== "single") {
+      return itemType;
+  }
+
   const dot = name.lastIndexOf(".");
-  const type = name.substring(dot + 1);
+  const fileType = name.substring(dot + 1);
 
   const knowTypes = ["zip", "jpg", "png", "exe", "rar"];
 
-  console.log(["name", name, knowTypes.indexOf(type), name.indexOf("http")]);
-  if (knowTypes.indexOf(type) !== -1 && name.indexOf("http") !== -1) {
+  if (knowTypes.indexOf(fileType) !== -1 && name.indexOf("http") !== -1) {
     return confirm("检测到链接类型为文件, 是否按照文件类型进行下载?") ? "file" : "single";
   }
 
