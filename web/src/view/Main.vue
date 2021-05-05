@@ -114,18 +114,27 @@ export default {
 function parseTitleToData(todoContent, todoType, parent) {
   const values = todoContent.split(" ");
 
+  // 分析类型
   let data = {
     "itemType": todoType,
   };
+
+
+  // 分析任务名称
   if (values.length === 1) {
     data.name = todoContent;
   } else {
     data.name = values[0];
   }
+
+  // 更新任务名称重新分析人物类型
+  data.itemType = inferFileType(data.name);
+
+
+  // 分析参数
   if (parent !== undefined) {
     data.parent = parent;
   }
-
   for (let i = 1; i < values.length; i++) {
     if (values[i].charAt(0) !== "-") {
       data.name += " " + values[i];
@@ -142,9 +151,23 @@ function parseTitleToData(todoContent, todoType, parent) {
     }
   }
 
-  console.log(["Commit Data", data]);
   return data;
 }
+
+function inferFileType(name) {
+  const dot = name.lastIndexOf(".");
+  const type = name.substring(dot + 1);
+
+  const knowTypes = ["zip", "jpg", "png", "exe", "rar"];
+
+  console.log(["name", name, knowTypes.indexOf(type), name.indexOf("http")]);
+  if (knowTypes.indexOf(type) !== -1 && name.indexOf("http") !== -1) {
+    return confirm("检测到链接类型为文件, 是否按照文件类型进行下载?") ? "file" : "single";
+  }
+
+  return "single";
+}
+
 
 </script>
 
