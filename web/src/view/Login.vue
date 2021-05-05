@@ -47,11 +47,12 @@ export default {
           "password": this.password
         }
       }).then(response => {
-        console.log(response);
         if (response.data.success) {
           const token = response.data.data;
           this.$store.commit('set_token', token);
           this.$router.push('/home/todo');
+        } else {
+          alert("用户名或密码错误, 请检查后重新输入");
         }
       });
     }
