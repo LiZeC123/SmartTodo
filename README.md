@@ -5,9 +5,7 @@ Smart-Todo 待办管理器
 ![](https://img.shields.io/github/issues/LiZeC123/SmartTodo)
 ![](https://img.shields.io/github/v/tag/LiZeC123/SmartTodo)
 
-
-
-Smart-Todo 是一个简单智能的待办事项管理程序. Smart-Todo提供了创建和删除待办事项的基础功能, 并在此基础上自动优先级排序, 离线下载文件, 创建便签等重要的辅助功能.
+Smart-Todo是一个简单智能的待办事项管理程序. Smart-Todo提供了创建和删除待办事项的基础功能, 并在此基础上自动优先级排序, 离线下载文件, 创建便签等重要的辅助功能.
 
 ![SmartTodo项目截图](doc/image/SmartTodo项目截图.PNG)
 
@@ -22,7 +20,6 @@ Smart-Todo 是一个简单智能的待办事项管理程序. Smart-Todo提供了
 pip3 install flask wget beautifulsoup4
 ```
 
-
 各项依赖与功能的对应关系如下表所示
 
 第三方包             | 功能
@@ -30,15 +27,45 @@ pip3 install flask wget beautifulsoup4
 `wget`              | 离线下载
 `beautifulsoup4`    | 解析HTML结构
 
+前后端配置
+------------
+
+本项目前端采用Vue.js开发, 源代码位于web文件夹中, 编译后的文件位于static文件夹中. 本项目采取前后端分离架构, 因此需要使用Nginx做请求分发, 具体配置如下所示
+
+```
+# Smart-Todo
+server {
+    server_name <指定服务名称>;
+    
+    # 所有的请求默认转发到前端的index文件, 由Vue进行代理 
+    location / {
+        root /home/git/projects/smart-todo/static;
+        try_files $uri $uri/ /index.html;
+    }  
+    
+    # API相关的路径是后端的接口, 转发给后端
+    location /api {
+        proxy_pass http://localhost:4231;
+        proxy_set_header User-Agent $http_user_agent;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    # 上传和下载的文件, 直接由Nginx进行代理
+    location /file {
+        root /home/git/projects/smart-todo/filebase;
+    }
+}
+```
 
 基本配置
 -------------
 
-Smart-Todo项目可以开箱即用, 在config文件夹中提供了一个默认配置文件(`config/default.json`), 在本地运行或者测试时可以直接使用默认配置.
+本项目在config文件夹中提供了一个默认配置文件(`config/default.json`), 在本地运行或者测试时可以直接使用默认配置.
 
 默认提供了两个测试用户, 信息如下
 
-用户名       | 密码           | 权限    
+用户名       | 密码           | 权限
 ------------|---------------|---------------------------
 `admin`     | `123456`      | `ROLE_ADMIN`, `ROLE_USER`
 `user`      | `123456`      | `ROLE_USER`  
