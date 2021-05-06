@@ -3,17 +3,17 @@
     <!-- 主体：文本编辑器控制按钮 -->
     <div id='editControls' class='span12' style='text-align:center; padding:5px;'>
       <div class='btn-group'>
-        <a class='btn' data-role='h1' href='#'>h<sup>1</sup></a>
-        <a class='btn' data-role='h2' href='#'>h<sup>2</sup></a>
-        <a class='btn' data-role='p' href='#'>p</a>
-        <a class='btn' data-role='bold' href='#'><b>Bold</b></a>
-        <a class='btn' data-role='italic' href='#'><em>Italic</em></a>
-        <a class='btn' data-role='underline' href='#'><u><b>U</b></u></a>
-        <a class='btn' data-role='strikeThrough' href='#'>
+        <a class='btn' @click="doAction('h1')" href='#'>h<sup>1</sup></a>
+        <a class='btn' @click="doAction('h2')" href='#'>h<sup>2</sup></a>
+        <a class='btn' @click="doAction('p')" href='#'>p</a>
+        <a class='btn' @click="doAction('bold')" href='#'><b>Bold</b></a>
+        <a class='btn' @click="doAction('italic')" href='#'><em>Italic</em></a>
+        <a class='btn' @click="doAction('underline')" href='#'><u><b>U</b></u></a>
+        <a class='btn' @click="doAction('strikeThrough')" href='#'>
           <del>abc</del>
         </a>
-        <a class='btn' data-role='undo' href='#'>Undo</a>
-        <a class='btn' data-role='redo' href='#'>Redo</a>
+        <a class='btn' @click="doAction('undo')" href='#'>Undo</a>
+        <a class='btn' @click="doAction('redo')" href='#'>Redo</a>
       </div>
     </div>
 
@@ -66,7 +66,7 @@ export default {
     });
 
     // 获取Note的标题并设置为页面的标题
-    this.$axios.post("/item/getTitle", {"id": this.$route.params.id}).then(res => document.title  = res.data.data);
+    this.$axios.post("/item/getTitle", {"id": this.$route.params.id}).then(res => document.title = res.data.data);
     // 获取note的正文
     this.$axios.post("/note/content", {"id": this.$route.params.id}).then(res => this.content = res.data.data);
 
@@ -118,7 +118,6 @@ export default {
         "parent": this.$route.params.id
       }).then(() => this.done.splice(index, 1));
     },
-
     save: function (event) {
       // Ctrl + S
       if (event.ctrlKey && event.keyCode === 83) {
@@ -131,6 +130,15 @@ export default {
           showAlert();
           setTimeout(hideAlert, 500);
         });
+      }
+    },
+    doAction: function (role) {
+      const baseAction = ['h1', 'h2', 'p'];
+
+      if (baseAction.indexOf(role) !== -1) {
+        document.execCommand('formatBlock', false, '<' + role + '>');
+      } else {
+        document.execCommand(role, false, null);
       }
     },
   },
