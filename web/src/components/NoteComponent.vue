@@ -46,7 +46,7 @@ export default {
   name: "NoteComponent",
   components: {ItemList},
   props: {
-    updateTodo: Number
+    updateTodo: Number,
   },
   data: function () {
     return {
@@ -65,9 +65,11 @@ export default {
       this.old = res.data.data.old
     });
 
-    // 获取note的正文内容
-    this.$axios.post("/note/content", {"id": this.$route.params.id})
-        .then(res => this.content = res.data.data)
+    // 获取Note的标题并设置为页面的标题
+    this.$axios.post("/item/getTitle", {"id": this.$route.params.id}).then(res => document.title  = res.data.data);
+    // 获取note的正文
+    this.$axios.post("/note/content", {"id": this.$route.params.id}).then(res => this.content = res.data.data);
+
 
     //绑定保存按键
     document.onkeydown = this.save;
@@ -83,8 +85,7 @@ export default {
           "content": currentHTML
         });
       }
-    }, 60 * 1000)
-
+    }, 60 * 1000);
   },
   methods: {
     finishTodoItem: function (index) {

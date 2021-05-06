@@ -27,6 +27,7 @@ export default {
         console.warn("无效的类型");
         this.title = "数据";
     }
+    document.title = this.title;
     this.$axios.get("/log/" + type).then(rep => this.content = rep.data.data);
   }
 }
