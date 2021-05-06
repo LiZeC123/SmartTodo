@@ -127,8 +127,8 @@ function parseTitleToData(todoContent, todoType, parent) {
     data.name = values[0];
   }
 
-  // 更新任务名称重新分析人物类型
-  data.itemType = inferFileType(data.name, data.itemType);
+  // 更新任务名称重新分析任务类型
+  data.itemType = inferType(data.name, data.itemType);
 
 
   // 分析参数
@@ -154,11 +154,15 @@ function parseTitleToData(todoContent, todoType, parent) {
   return data;
 }
 
-function inferFileType(name, itemType) {
-  if(itemType !== "single") {
-      return itemType;
+function inferType(name, itemType) {
+  if (itemType !== "single") {
+    return itemType;
   }
 
+  return inferFileType(name) === 'single' ? inferNoteType(name) : 'single';
+}
+
+function inferFileType(name) {
   const dot = name.lastIndexOf(".");
   const fileType = name.substring(dot + 1);
 
@@ -171,6 +175,17 @@ function inferFileType(name, itemType) {
   return "single";
 }
 
+function inferNoteType(name) {
+  const knowType = ['计划', '规划'];
+
+  for (const type of knowType) {
+    if (name.indexOf(type) !== -1) {
+      return confirm("检测到代办类型包含关键词, 是否按照便签类型进行创建?") ? "note" : "single";
+    }
+  }
+
+  return 'single';
+}
 
 </script>
 
