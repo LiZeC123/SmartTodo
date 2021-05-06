@@ -12,7 +12,7 @@ from mapper import MemoryDataBase
 from tool4item import update_urgent_level, where_can_delete, \
     where_update_repeatable_item, update_repeatable_item, where_update_urgent_level, where_id_equal, finish_item, \
     undo_item, where_equal, old_item, group_all_item_with, where_select_todo_with, update_note_url, \
-    where_select_all_file, where_unreferenced, select_id
+    where_select_all_file, where_unreferenced, select_id, select_title
 from tool4key import todo_item_key, done_item_key, old_item_key
 from tool4log import logger
 from tool4web import extract_title, download
@@ -107,6 +107,9 @@ class Manager:
 
     def to_old(self, xid: int, owner: str) -> bool:
         return self.database.update_by(where_equal(xid, owner), old_item) == 1
+
+    def get_title(self, xid: int, owner: str) -> str:
+        return self.database.select_one(where_equal(xid, owner), select_title)
 
     def get_note(self, nid: int, owner: str) -> str:
         self.check_authority(nid, owner)

@@ -135,6 +135,15 @@ def remove_item():
     manager.remove(iid, owner)
 
 
+@app.route("/api/item/getTitle", methods=["POST"])
+@logged
+def get_title():
+    iid = get_xid_from_request()
+    owner = token.get_username(request)
+    title = manager.get_title(iid, owner)
+    return title
+
+
 def get_xid_from_request() -> int:
     f: Dict = request.get_json()
     xid = int(f.get('id'))

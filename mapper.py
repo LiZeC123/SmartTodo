@@ -77,6 +77,10 @@ class MemoryDataBase:
                   select: Callable[[dict], tuple] = lambda x: from_dict(x)) -> list:
         return list(map(select, filter(where, self.data)))
 
+    def select_one(self, where: Callable[[dict], bool] = lambda _: True,
+                   select: Callable[[dict], tuple] = lambda x: from_dict(x)):
+        return self.select_by(where, select)[0]
+
     def update_by(self, where: Callable[[dict], bool], update: Callable[[dict], None]) -> int:
         ans = len(list(map(update, filter(where, self.data))))
         self.save2file()

@@ -76,6 +76,10 @@ def select_id(item: dict):
     return item['id']
 
 
+def select_title(item: dict):
+    return item['name']
+
+
 def where_unreferenced(parent: list):
     return lambda item: item['parent'] != 0 and item['parent'] not in parent
 
