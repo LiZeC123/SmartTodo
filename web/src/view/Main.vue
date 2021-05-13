@@ -96,13 +96,13 @@ export default {
       }
     },
     downCenter: function () {
-      window.location = 'file';
+      this.$router.push("/file");
     },
     backUpData: function () {
-      window.location = 'log/data'
+      this.$router.push("/home/log/data");
     },
     updateLogs: function () {
-      window.location = 'log/log'
+      this.$router.push("/home/log/log");
     },
     gc: function () {
 
