@@ -130,7 +130,7 @@ class Manager:
         unreferenced = self.database.select_by(where=where_unreferenced(ids))
         for item in unreferenced:
             self.manager[item.item_type].remove(item)
-            logger.info(f"Garbage Collection(Unreferenced): {item}")
+            logger.info(f"Garbage Collection(Unreferenced): {item.name}")
 
     def __update_state(self):
         self.database.update_by(where_update_urgent_level, update_urgent_level)
