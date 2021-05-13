@@ -105,7 +105,7 @@ export default {
       this.$router.push("/home/log/log");
     },
     gc: function () {
-
+      this.$axios.post("/admin/gc").then(() => alert("垃圾回收完毕"))
     }
   }
 }
