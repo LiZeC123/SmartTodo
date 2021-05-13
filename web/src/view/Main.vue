@@ -71,8 +71,7 @@ export default {
     },
     doLogout: function () {
       this.$store.commit('del_token')
-      router.push({path: '/login'}).then(() => {
-      });
+      router.push({path: '/login'});
     },
     selectFile: function () {
       document.getElementById("file_selector").click();
