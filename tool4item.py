@@ -51,7 +51,7 @@ def where_select_all_file(item: dict) -> bool:
 
 
 def where_can_delete(item: dict) -> bool:
-    return item['item_type'] == 'single' and item['finish_time'] is not None \
+    return item['repeatable'] is False and item['specific'] == 0 and item['finish_time'] is not None \
            and get_day_from_str(item['finish_time']) != today()
 
 
