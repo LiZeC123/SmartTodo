@@ -203,8 +203,13 @@ class FileItemManager(ItemManager):
         try:
             os.remove(filename)
             self.database.remove(item)
+        except FileNotFoundError:
+            # 对于文件没有找到这种情况, 可以删除记录
+            logger.exception(f"{FileItemManager.__name__}: File Not Found: {filename}")
+            self.database.remove(item)
         except OSError:
-            logger.exception(f"{FileItemManager.__name__}: Fail to Remove File: Name = {filename}")
+            # 其他的异常情况下, 则保留记录
+            logger.exception(f"{FileItemManager.__name__}: Fail To Remove the File: {filename}")
 
 
 class NoteItemManager(ItemManager):
@@ -229,8 +234,11 @@ class NoteItemManager(ItemManager):
         try:
             os.remove(filename)
             self.database.remove(item)
+        except FileNotFoundError:
+            self.database.remove(item)
+            logger.exception(f"{NoteItemManager.__name__}: Note Not Found: {nid}")
         except OSError:
-            logger.exception(f"{NoteItemManager.__name__}:Fail to Remove Note: Id = {nid}")
+            logger.exception(f"{NoteItemManager.__name__}: Fail To Remove Note: {nid}")
 
     @staticmethod
     def get(nid: int) -> str:
