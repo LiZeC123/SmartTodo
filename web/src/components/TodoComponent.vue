@@ -15,7 +15,8 @@ export default {
   name: "TodoComponent",
   components: {ItemList},
   props: {
-    updateTodo: Number
+    updateTodo: Number,
+    createPlaceHold: Number
   },
   data: function () {
     return {
@@ -62,6 +63,20 @@ export default {
   watch: {
     "updateTodo": function () {
       this.$axios.post("/item/getTodo").then(res => this.todo = res.data.data);
+    },
+    "createPlaceHold": function () {
+      this.todo.unshift({
+        "id": 1,
+        "name": "文件正在下载,请稍等...",
+        "item_type": "file",
+        "urgent": 0,
+        "deadline": null,
+        "old": false,
+        "repeatable": false,
+        "specific": 0,
+        "work": false,
+        "url": "#",
+      })
     }
   }
 }

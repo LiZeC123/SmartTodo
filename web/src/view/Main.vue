@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <router-view class="container" :updateTodo="updateTodo"></router-view>
+    <router-view class="container" :updateTodo="updateTodo" :createPlaceHold="createPlaceHold"></router-view>
 
     <!-- 脚部：印记和功能按钮 -->
     <div class="footer" id="footerContainer">
@@ -25,7 +25,6 @@
     </div>
     <div class="footer" id="footerFunctionContainer">
       <a @click="selectFile">上传文件</a>
-      <a @click="downCenter">文件中心</a>
       <a v-if="isAdmin" @click="backUpData">备份数据</a>
       <a v-if="isAdmin" @click="updateLogs">查看日志</a>
       <a v-if="isAdmin" @click="gc">垃圾回收</a>
@@ -47,6 +46,7 @@ export default {
       todoContent: "",
       todoType: "single",
       updateTodo: 0,
+      createPlaceHold: 0,
       year: new Date().getFullYear(),
       isAdmin: false
     }
@@ -61,12 +61,18 @@ export default {
       } else if (/set (.+)/.test(this.todoContent) || /fun (.+)/.test(this.todoContent)) {
         // TODO: Operation Or Function
       } else {
-        this.$axios.post("/item/create", parseTitleToData(this.todoContent, this.todoType, this.$route.params.id))
-            .then(() => this.updateTodo += 1) // 通过此变量触发子组件的Todo部分更新操作
+        const data = parseTitleToData(this.todoContent, this.todoType, this.$route.params.id)
+        // 通过修改updateTodo变量触发子组件的Todo部分更新操作
+        this.$axios.post("/item/create", data).then(() => this.updateTodo += 1)
 
         // 提交请求后直接清空内容, 而不必等待请求返回, 提高响应速度, 避免重复提交
         this.todoContent = ""
         this.todoType = "single"
+
+        //根据需要判断是否需要先创建一个占位Item
+        if (data.itemType === 'file') {
+          this.createPlaceHold += 1
+        }
       }
     },
     doLogout: function () {
@@ -93,9 +99,6 @@ export default {
       } else {
         alert("请先选择文件后再上传")
       }
-    },
-    downCenter: function () {
-      this.$router.push("/file");
     },
     backUpData: function () {
       this.$router.push("/home/log/data");
