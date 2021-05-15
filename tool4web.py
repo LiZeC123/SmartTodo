@@ -45,11 +45,5 @@ def download(url: str, base_dir: str):
     return wget.download(url=url, out=base_dir)
 
 
-def log_bar(current, total):
-    import wget
-    logger.info(f"")
-    return wget.bar_adaptive(current=current, total=total)
-
-
 if __name__ == '__main__':
     pass
