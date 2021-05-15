@@ -158,7 +158,13 @@ function inferType(name, itemType) {
     return itemType;
   }
 
-  return inferFileType(name) === 'single' ? inferNoteType(name) : 'single';
+  if (inferFileType(name)) {
+    return "file";
+  } else if (inferNoteType(name)) {
+    return 'note'
+  } else {
+    return "single"
+  }
 }
 
 function inferFileType(name) {
@@ -168,10 +174,10 @@ function inferFileType(name) {
   const knowTypes = ["zip", "jpg", "png", "exe", "rar"];
 
   if (knowTypes.indexOf(fileType) !== -1 && name.indexOf("http") !== -1) {
-    return confirm("检测到链接类型为文件, 是否按照文件类型进行下载?") ? "file" : "single";
+    return confirm("检测到链接类型为文件, 是否按照文件类型进行下载?");
   }
 
-  return "single";
+  return false;
 }
 
 function inferNoteType(name) {
@@ -179,11 +185,11 @@ function inferNoteType(name) {
 
   for (const type of knowType) {
     if (name.indexOf(type) !== -1) {
-      return confirm("检测到代办类型包含关键词, 是否按照便签类型进行创建?") ? "note" : "single";
+      return confirm("检测到代办类型包含关键词, 是否按照便签类型进行创建?")
     }
   }
 
-  return 'single';
+  return false;
 }
 
 </script>
