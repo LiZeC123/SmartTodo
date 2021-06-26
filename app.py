@@ -25,13 +25,15 @@ def make_fail(data=None) -> str:
     return json.dumps({"success": False, "data": data})
 
 
-def logged(func=None, role='ROLE_USER'):
+def logged(func=None, role='ROLE_USER', wrap=True):
     if func is None:
         return functools.partial(logged, role=role)
 
     @functools.wraps(func)  # 设置函数名称，否则由于函数同名导致Flask绑定失败
     def wrapper(*args, **kw):
-        if token.check_token(request, role):
+        if not wrap:
+            return func(*args, **kw)
+        elif token.check_token(request, role):
             return make_success(func(*args, **kw))
         else:
             abort(401)
@@ -166,7 +168,6 @@ def file_get_all_items():
 @app.route("/api/file/upload", methods=["POST"])
 @logged
 def file_do_upload():
-    print("Do api file upload")
     f = request.files['myFile']
     owner = token.get_username(request)
     return manager.create_upload_file(f, owner)
@@ -225,7 +226,7 @@ def back_up():
 @app.route("/api/log/log", methods=["GET"])
 @logged(role='ROLE_ADMIN')
 def get_log():
-    # 文本中可能包含中文字符, 音粗需要指定合适的编码
+    # 文本中可能包含中文字符, 因此需要指定合适的编码
     with open("log/log.txt", encoding='utf-8') as f:
         return "".join(f.readlines())
 
