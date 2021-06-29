@@ -1,10 +1,11 @@
+import datetime
 import os
 import random
 import string
 from os import mkdir
 from os.path import join, exists
 from typing import Optional
-
+from threading import Timer
 from werkzeug.exceptions import abort
 
 from entity import Item, from_dict
@@ -48,6 +49,34 @@ class TokenManager:
             del self.data[token]
 
 
+class TaskManager:
+    def __init__(self) -> None:
+        self.tasks = [[] for i in range(24)]
+        self.ONE_HOUR = 60 * 60
+
+    def add_task(self, task, hour: int):
+        self.tasks[hour].append(task)
+
+    def start(self):
+        now = datetime.datetime.now()
+        t0 = datetime.timedelta(hours=now.hour, minutes=now.minute, seconds=now.second)
+        t1 = datetime.timedelta(hours=now.hour + 1)
+        dt = t1 - t0
+
+        logger.info(f"TimeTask: Now is {now}\nSleep {dt.seconds} seconds to the hour")
+        # 等待到下一个整点时刻再开始执行任务
+        Timer(dt.seconds, self.__start0).start()
+
+    def __start0(self):
+        now_hour = datetime.datetime.now().hour
+        logger.info(f"TimeTask: Do Task For Hour {now_hour}")
+
+        for task in self.tasks[now_hour]:
+            task()
+
+        Timer(self.ONE_HOUR, self.__start0).start()
+
+
 class Manager:
     def __init__(self):
         database = MemoryDataBase()
@@ -55,12 +84,14 @@ class Manager:
         self.item_manager = ItemManager(database)
         self.file_manager = FileItemManager(database)
         self.note_manager = NoteItemManager(database)
+        self.task_manager = TaskManager()
         self.manager = {"single": self.item_manager, "file": self.file_manager, "note": self.note_manager}
-        self.__init_observer()
+        self.__init_task()
 
-    def __init_observer(self):
-        self.database.add_modify_observer(self.__update_state)
-        self.database.add_modify_observer(self.garbage_collection)
+    def __init_task(self):
+        self.task_manager.add_task(self.__update_state, 1)
+        self.task_manager.add_task(self.garbage_collection, 2)
+        self.task_manager.start()
 
     def check_authority(self, xid: int, owner: str):
         # select_by 方法返回一个数组, 因此需要取出其中的值
