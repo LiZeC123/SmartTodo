@@ -168,9 +168,10 @@ def file_get_all_items():
 @app.route("/api/file/upload", methods=["POST"])
 @logged
 def file_do_upload():
-    f = request.files['myFile']
+    file = request.files['myFile']
+    parent = int(request.form['parent'])
     owner = token.get_username(request)
-    return manager.create_upload_file(f, owner)
+    return manager.create_upload_file(file, parent, owner)
 
 
 # ####################### API For Note #######################

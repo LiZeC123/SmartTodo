@@ -89,6 +89,15 @@ export default {
         const url = "/file/upload";
         const form = new FormData();
         form.append("myFile", file_obj);
+
+        let parent = 0
+        if (this.$route.params.id) {
+          parent = this.$route.params.id
+        }
+        form.append("parent", parent)
+        console.log(parent)
+
+
         let config = {
           headers: {'Content-Type': 'multipart/form-data'}
         };

@@ -104,9 +104,9 @@ class Manager:
     def create(self, item: Item):
         self.manager[item.item_type].create(item)
 
-    def create_upload_file(self, f, owner: str):
+    def create_upload_file(self, f, parent: int, owner: str):
         name, url = self.file_manager.create_upload_file(f)
-        item = Item(0, name, 'file', owner)
+        item = Item(0, name, 'file', owner, parent=parent)
         item.url = url
         self.item_manager.create(item)
 
@@ -177,6 +177,7 @@ class ItemManager:
             title = extract_title(item.name)
             item.url = item.name
             item.name = title
+        logger.info(f"{ItemManager.__name__}: Insert Item: {item}")
         return self.database.insert(item)
 
     def select(self, iid: int) -> Item:
