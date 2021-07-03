@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 import getopt
+import os
 import sys
 
 
@@ -7,6 +8,10 @@ def update_web_files():
     import shutil
     shutil.rmtree('static')
     shutil.copytree("web/dist", "static")
+
+
+def commit_web_file():
+    os.system('git commit -m "更新前端文件"')
 
 
 def print_help():
@@ -22,6 +27,7 @@ if __name__ == '__main__':
             exit()
         if opt_name in ('-u',):
             update_web_files()
+            commit_web_file()
             exit()
     # 如果没有执行以上的任何一个分支, 则输入帮助信息
     print_help()
