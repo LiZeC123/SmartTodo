@@ -52,7 +52,7 @@ export default {
     }
   },
   created() {
-    this.$axios.get('/meta/isAdmin').then(rep => this.isAdmin = rep.data.data);
+    this.axios.get('/meta/isAdmin').then(rep => this.isAdmin = rep.data.data);
   },
   methods: {
     commitTodo: function () {
@@ -63,7 +63,7 @@ export default {
       } else {
         const data = parseTitleToData(this.todoContent, this.todoType, this.$route.params.id)
         // 通过修改updateTodo变量触发子组件的Todo部分更新操作
-        this.$axios.post("/item/create", data).then(() => this.updateTodo += 1)
+        this.axios.post("/item/create", data).then(() => this.updateTodo += 1)
 
         // 提交请求后直接清空内容, 而不必等待请求返回, 提高响应速度, 避免重复提交
         this.todoContent = ""
@@ -92,7 +92,7 @@ export default {
         let config = {
           headers: {'Content-Type': 'multipart/form-data'}
         };
-        this.$axios.post(url, form, config).then(() => {
+        this.axios.post(url, form, config).then(() => {
           this.updateTodo += 1;
           console.log("Do Reload")
         })
@@ -107,7 +107,7 @@ export default {
       this.$router.push("/home/log/log");
     },
     gc: function () {
-      this.$axios.post("/admin/gc").then(() => alert("垃圾回收完毕"))
+      this.axios.post("/admin/gc").then(() => alert("垃圾回收完毕"))
     }
   }
 }
@@ -184,7 +184,7 @@ function inferFileType(name) {
 }
 
 function inferNoteType(name) {
-  const knowType = ['计划', '规划'];
+  const knowType = ['计划', '规划', '事项', '分析', '笔记'];
 
   for (const type of knowType) {
     if (name.indexOf(type) !== -1) {

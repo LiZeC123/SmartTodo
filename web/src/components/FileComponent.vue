@@ -22,20 +22,20 @@ export default {
     }
   },
   created() {
-    this.$axios.post("/file/getAll").then(res => this.publicFiles = res.data.data);
+    this.axios.post("/file/getAll").then(res => this.publicFiles = res.data.data);
   },
   methods: {
     refresh: function () {
       console.warn("刷新功能不可用");
     },
     remove: function (index) {
-      this.$axios.post("/item/remove", {"id": this.publicFiles[index].id})
+      this.axios.post("/item/remove", {"id": this.publicFiles[index].id})
           .then(() => this.publicFiles.splice(index, 1));
     },
   },
   watch: {
     "updateTodo": function () {
-      this.$axios.post("/file/getAll").then(res => this.publicFiles = res.data.data);
+      this.axios.post("/file/getAll").then(res => this.publicFiles = res.data.data);
     }
   }
 }

@@ -39,7 +39,7 @@ export default {
   },
   methods: {
     submit: function () {
-      this.$axios({
+      this.axios({
         method: "post",
         url: "/login",
         data: {

@@ -60,16 +60,16 @@ export default {
   },
   created() {
     // 获取Note私有的Item列表
-    this.$axios.post("/note/getAll", {"id": this.$route.params.id}).then(res => {
+    this.axios.post("/note/getAll", {"id": this.$route.params.id}).then(res => {
       this.todo = res.data.data.todo
       this.done = res.data.data.done
       this.old = res.data.data.old
     });
 
     // 获取Note的标题并设置为页面的标题
-    this.$axios.post("/item/getTitle", {"id": this.$route.params.id}).then(res => document.title = res.data.data);
+    this.axios.post("/item/getTitle", {"id": this.$route.params.id}).then(res => document.title = res.data.data);
     // 获取note的正文
-    this.$axios.post("/note/content", {"id": this.$route.params.id}).then(res => this.content = res.data.data);
+    this.axios.post("/note/content", {"id": this.$route.params.id}).then(res => this.content = res.data.data);
 
 
     //绑定保存按键
@@ -81,7 +81,7 @@ export default {
       if (currentHTML !== this.lastContent) {
         console.log(["autoSave", currentHTML])
         this.lastContent = currentHTML
-        this.$axios.post("note/update", {
+        this.axios.post("note/update", {
           "id": this.$route.params.id,
           "content": currentHTML
         });
@@ -90,7 +90,7 @@ export default {
   },
   methods: {
     finishTodoItem: function (index) {
-      this.$axios.post("/item/done", {
+      this.axios.post("/item/done", {
         "id": this.todo[index].id,
         "parent": this.$route.params.id
       }).then(res => {
@@ -99,7 +99,7 @@ export default {
       });
     },
     resetTodoItem: function (index) {
-      this.$axios.post("/item/undone", {
+      this.axios.post("/item/undone", {
         "id": this.done[index].id,
         "parent": this.$route.params.id
       }).then(res => {
@@ -108,13 +108,13 @@ export default {
       });
     },
     removeTodo: function (index) {
-      this.$axios.post("/item/remove", {
+      this.axios.post("/item/remove", {
         "id": this.todo[index].id,
         "parent": this.$route.params.id
       }).then(() => this.todo.splice(index, 1));
     },
     removeDone: function (index) {
-      this.$axios.post("/item/remove", {
+      this.axios.post("/item/remove", {
         "id": this.done[index].id,
         "parent": this.$route.params.id
       }).then(() => this.done.splice(index, 1));
@@ -124,7 +124,7 @@ export default {
       if (event.ctrlKey && event.keyCode === 83) {
         event.preventDefault();
 
-        this.$axios.post("note/update", {
+        this.axios.post("note/update", {
           "id": this.$route.params.id,
           "content": document.getElementById("editor").innerHTML
         }).then(() => {
@@ -145,7 +145,7 @@ export default {
   },
   watch: {
     "updateTodo": function () {
-      this.$axios.post("/note/getTodo", {"id": this.$route.params.id})
+      this.axios.post("/note/getTodo", {"id": this.$route.params.id})
           .then(res => this.todo = res.data.data);
     },
     "createPlaceHold": function () {

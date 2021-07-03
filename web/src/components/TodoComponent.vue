@@ -26,7 +26,7 @@ export default {
     }
   },
   created() {
-    this.$axios.post("/item/getAll").then(res => {
+    this.axios.post("/item/getAll").then(res => {
       this.todo = res.data.data.todo
       this.done = res.data.data.done
       this.old = res.data.data.old
@@ -34,27 +34,27 @@ export default {
   },
   methods: {
     finishTodoItem: function (index) {
-      this.$axios.post("/item/done", {"id": this.todo[index].id}).then(res => {
+      this.axios.post("/item/done", {"id": this.todo[index].id}).then(res => {
         this.done.unshift(this.todo[index]);
         this.todo = res.data.data;
       });
     },
     resetTodoItem: function (index) {
-      this.$axios.post("/item/undone", {"id": this.done[index].id}).then(res => {
+      this.axios.post("/item/undone", {"id": this.done[index].id}).then(res => {
         this.done.splice(index, 1);
         this.todo = res.data.data;
       });
     },
     removeDone: function (index) {
-      this.$axios.post("/item/remove", {"id": this.done[index].id})
+      this.axios.post("/item/remove", {"id": this.done[index].id})
           .then(() => this.done.splice(index, 1));
     },
     removeOld: function (index) {
-      this.$axios.post("/item/remove", {"id": this.old[index].id})
+      this.axios.post("/item/remove", {"id": this.old[index].id})
           .then(() => this.old.splice(index, 1));
     },
     promotion: function (index) {
-      this.$axios.post("/item/toOld", {"id": this.todo[index].id}).then(() => {
+      this.axios.post("/item/toOld", {"id": this.todo[index].id}).then(() => {
         this.old.unshift(this.todo[index]);
         this.todo.splice(index, 1);
       });
@@ -62,7 +62,7 @@ export default {
   },
   watch: {
     "updateTodo": function () {
-      this.$axios.post("/item/getTodo").then(res => this.todo = res.data.data);
+      this.axios.post("/item/getTodo").then(res => this.todo = res.data.data);
     },
     "createPlaceHold": function () {
       this.todo.unshift({
