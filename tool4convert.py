@@ -11,6 +11,7 @@ def update_web_files():
 
 
 def commit_web_file():
+    os.system('git add static/')
     os.system('git commit -m "更新前端文件"')
 
 
