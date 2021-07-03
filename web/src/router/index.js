@@ -1,4 +1,4 @@
-import {createRouter, createRouterMatcher, createWebHashHistory, createWebHistory} from 'vue-router'
+import {createRouter, createWebHistory} from 'vue-router'
 import Login from "@/view/Login";
 import Main from "@/view/Main";
 import NoteComponent from "@/components/NoteComponent";
