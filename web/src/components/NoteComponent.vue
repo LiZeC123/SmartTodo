@@ -55,7 +55,8 @@ export default {
       todo: [],
       old: [],
       content: "",
-      lastContent: undefined
+      lastContent: undefined,
+      lastUpdateDate: new Date().getDate()
     }
   },
   created() {
@@ -142,6 +143,17 @@ export default {
         document.execCommand(role, false, null);
       }
     },
+    checkUpdateStatus: function () {
+      const today = new Date().getDate();
+      if (today !== this.lastUpdateDate) {
+        this.axios.post("/note/getAll", {"id": this.$route.params.id}).then(res => {
+          this.todo = res.data.data.todo
+          this.done = res.data.data.done
+          this.old = res.data.data.old
+        });
+        this.lastUpdateDate = today;
+      }
+    }
   },
   watch: {
     "updateTodo": function () {

@@ -90,7 +90,7 @@ export default {
         const form = new FormData();
         form.append("myFile", file_obj);
 
-        let parent = 0
+        let parent = '0'
         if (this.$route.params.id) {
           parent = this.$route.params.id
         }

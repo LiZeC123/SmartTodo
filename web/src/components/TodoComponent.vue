@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div @focus="checkUpdateStatus">
     <item-list title="正在进行" btn-name="↓" :data="todo" :done="false" @checkbox-change="finishTodoItem"
                @btn-click="promotion"></item-list>
     <item-list title="已经完成" btn-name="-" :data="done" :done="true" @checkbox-change="resetTodoItem"
@@ -22,17 +22,21 @@ export default {
     return {
       done: [],
       todo: [],
-      old: []
+      old: [],
+      lastUpdateDate: new Date().getDate() - 1,
     }
   },
   created() {
-    this.axios.post("/item/getAll").then(res => {
-      this.todo = res.data.data.todo
-      this.done = res.data.data.done
-      this.old = res.data.data.old
-    })
+    this.reload();
   },
   methods: {
+    reload: function () {
+      this.axios.post("/item/getAll").then(res => {
+        this.todo = res.data.data.todo
+        this.done = res.data.data.done
+        this.old = res.data.data.old
+      })
+    },
     finishTodoItem: function (index) {
       this.axios.post("/item/done", {"id": this.todo[index].id}).then(res => {
         this.done.unshift(this.todo[index]);
@@ -59,6 +63,16 @@ export default {
         this.todo.splice(index, 1);
       });
     },
+    checkUpdateStatus: function () {
+      const today = new Date().getDate();
+      if (today !== this.lastUpdateDate) {
+        this.reload();
+        this.lastUpdateDate = today;
+      }
+    }
+  },
+  mounted() {
+    window.onfocus = this.checkUpdateStatus
   },
   watch: {
     "updateTodo": function () {
