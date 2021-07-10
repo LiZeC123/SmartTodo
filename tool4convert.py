@@ -25,7 +25,7 @@ def static_file_updated():
                 st = max(os.path.getmtime(full_path), st)
 
         # 2. 比对目标目录的修改时间
-        dt = os.path.getmtime("static")
+        dt = os.path.getmtime("web/dist")
         return dt > st
     except FileNotFoundError as e:
         print(f"Check Static File Update Time Error: {e}")
