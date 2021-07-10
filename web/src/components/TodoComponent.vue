@@ -1,5 +1,5 @@
 <template>
-  <div @focus="checkUpdateStatus">
+  <div>
     <item-list title="正在进行" btn-name="↓" :data="todo" :done="false" @checkbox-change="finishTodoItem"
                @btn-click="promotion"></item-list>
     <item-list title="已经完成" btn-name="-" :data="done" :done="true" @checkbox-change="resetTodoItem"
@@ -66,6 +66,7 @@ export default {
     checkUpdateStatus: function () {
       const today = new Date().getDate();
       if (today !== this.lastUpdateDate) {
+        console.log("Update State!")
         this.reload();
         this.lastUpdateDate = today;
       }
