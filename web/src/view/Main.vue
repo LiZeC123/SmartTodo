@@ -56,7 +56,8 @@ export default {
   },
   methods: {
     commitTodo: function () {
-      if (this.todoContent.trim() === "") {
+      this.todoContent = this.todoContent.trim();
+      if (this.todoContent === "") {
         alert("TODO不能为空");
       } else if (/set (.+)/.test(this.todoContent) || /fun (.+)/.test(this.todoContent)) {
         // TODO: Operation Or Function
