@@ -120,10 +120,10 @@ export default {
         "parent": this.$route.params.id
       }).then(() => this.done.splice(index, 1));
     },
-    save: function (event) {
+    save: function (e) {
       // Ctrl + S
-      if (event.ctrlKey && event.keyCode === 83) {
-        event.preventDefault();
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
 
         this.axios.post("note/update", {
           "id": this.$route.params.id,
