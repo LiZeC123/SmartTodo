@@ -108,6 +108,7 @@ def update_urgent_level(item: dict) -> NoReturn:
     # 时间相减后的形式是 xx days, xx:xx:xx, 直接忽略不足一天的部分
     delta = (deadline - now()).days
     item['deadline'] = delta
+    logger.info(f"Update Deadline For Item: {item}")
 
 
 def where_update_repeatable_item(item: dict) -> bool:
@@ -120,7 +121,7 @@ def update_repeatable_item(item: dict) -> NoReturn:
     if finish_day < today():
         item['create_time'] = now_str()
         item['finish_time'] = None
-        logger.info(f"DataManager: Reset Repeatable Item {item['name']} To Todo")
+        logger.info(f"Reset Repeatable Item {item['name']} To Todo")
 
 
 def update_note_url(item: dict) -> NoReturn:
