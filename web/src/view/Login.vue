@@ -39,6 +39,13 @@ export default {
   },
   methods: {
     submit: function () {
+      this.username = this.username.trim();
+      this.password = this.password.trim();
+      if(this.username === "" || this.password === "") {
+        alert("用户名或密码不可为空");
+        return;
+      }
+
       this.axios({
         method: "post",
         url: "/login",
