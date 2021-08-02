@@ -17,7 +17,7 @@ Smart-Todo是一个简单智能的待办事项管理程序. Smart-Todo提供了�
 本项目以Flask作为Web框架, 因此运行本项目需要安装Flask. 此外, 为了实现一些高级功能, 本项目还依赖一些第三方包, 使用如下的指令安装本项目需要的依赖.
 
 ```bash
-pip3 install flask wget beautifulsoup4
+pip3 install flask wget 
 ```
 
 各项依赖与功能的对应关系如下表所示
