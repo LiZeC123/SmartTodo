@@ -14,7 +14,7 @@ services:
       - ./log:/app/log
   web:
     container_name: web-app
-    restart: true
+    restart: always
     build: 
       context: ./
       dockerfile: docker/web/Dockerfile
