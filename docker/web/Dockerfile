@@ -1,10 +1,10 @@
 FROM node:14.17-alpine as build-stage
 
-WORKDIR /
-COPY web/package.json /app/package.json
+WORKDIR /app
+COPY web/package.json package.json
 RUN npm install
 
-COPY web /app
+COPY web .
 RUN npm run build
 
 # =====================
