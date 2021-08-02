@@ -1,4 +1,5 @@
 FROM node:14.17-alpine as build-stage
+LABEL stage=builder
 
 WORKDIR /app
 COPY web/package.json web/package-lock.json ./
