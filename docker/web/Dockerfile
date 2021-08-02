@@ -1,7 +1,7 @@
 FROM node:14.17-alpine as build-stage
 
 WORKDIR /app
-COPY web/package.json package.json
+COPY web/package.json web/package-lock.json ./
 RUN npm install
 
 COPY web .
