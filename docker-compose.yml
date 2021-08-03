@@ -1,6 +1,6 @@
-version: '3'
+version: '3.9'
 services:
-  app:
+  backend:
     container_name: flask-app
     restart: always
     build:
@@ -9,9 +9,14 @@ services:
     working_dir: /app
     environment: 
       TZ: Asia/Shanghai
+    ports: 
+      - "4231:4231"
     volumes:
-      - ./app:/app
+      - ./config:/app/config
+      - ./database:/app/database
+      - ./filebase:/app/filebase
       - ./log:/app/log
+      - ./notebase:/app/notebase
   web:
     container_name: web-app
     restart: always
@@ -21,6 +26,8 @@ services:
     environment:
       TZ: Asia/Shanghai
     ports: 
-      - "8101:8101"
+      - "8080:80"
+    volumes: 
+      - ./filebase:/app/filebase
     depends_on: 
-      - app
+      - backend

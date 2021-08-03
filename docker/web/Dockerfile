@@ -12,7 +12,9 @@ RUN npm run build
 
 FROM nginx:1.21.1-alpine as production-stage
 COPY ./docker/web/nginx.conf /etc/nginx/
-COPY --from=build-stage /app/dist /usr/share/nginx/html
+COPY --from=build-stage /app/dist /app
+
+VOLUME [ "/app/filebase" ]
 
 EXPOSE 80
 
