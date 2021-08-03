@@ -1,7 +1,10 @@
 from urllib.parse import urlparse
 import re
 
+import requests
+from requests import HTTPError
 from requests import Response
+import wget
 
 from tool4log import logger
 
@@ -12,7 +15,7 @@ headers = {"User-Agent": "Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN; rv:1.9
            "Connection": "keep-alive",
            "Accept-Charset": "GB2312,utf-8;q=0.7,*;q=0.7"}
 
-title_pattern = re.compile("<title>(.*?)</title>")
+title_pattern = re.compile("<title.*?>(.*?)</title>")
 encoding_pattern = re.compile('<meta charset=(.*?)>')
 
 
@@ -23,10 +26,6 @@ def extract_host(url: str) -> str:
 
 # noinspection PyBroadException
 def extract_title(url: str) -> str:
-    import requests
-    from requests import HTTPError
-    from bs4 import BeautifulSoup
-
     host = extract_host(url)
     if host != "":
         headers['Host'] = host
@@ -65,7 +64,6 @@ def parse_title(r: Response) -> str:
 
 
 def download(url: str, base_dir: str):
-    import wget
     return wget.download(url=url, out=base_dir)
 
 
