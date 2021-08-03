@@ -12,7 +12,7 @@ headers = {"User-Agent": "Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN; rv:1.9
            "Connection": "keep-alive",
            "Accept-Charset": "GB2312,utf-8;q=0.7,*;q=0.7"}
 
-title_pattern = re.compile("<title>(.*?)</title>")
+title_pattern = re.compile("<title.*?>(.*?)</title>")
 encoding_pattern = re.compile('<meta charset=(.*?)>')
 
 
