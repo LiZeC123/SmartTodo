@@ -13,7 +13,10 @@ services:
       - "4231"
     volumes:
       - ./config:/app/config
-      - ./data:/app/data
+      - ./data/filebase:/app/data/filebase
+      - ./data/notebase:/app/data/notebase
+      - ./data/database:/app/data/database
+      - ./data/log:/app/data/log
   web:
     container_name: web-app
     restart: always
