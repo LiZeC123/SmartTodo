@@ -9,8 +9,8 @@ services:
     working_dir: /app
     environment: 
       TZ: Asia/Shanghai
-    ports: 
-      - "4231:4231"
+    expose: 
+      - "4231"
     volumes:
       - ./config:/app/config
       - ./data:/app/data
