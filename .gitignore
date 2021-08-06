@@ -1,17 +1,16 @@
 # User Config and Data
-database/*
+data/*
+app/data/*
 config/*
+app/config
 !config/default.json
-filebase/*
-notebase/*
 
-# log file
-log/*
 
-.idea/
+# App File
+app/__pycache__
+app/.idea
 
-# Download File
-static/file/
+
 
 # Web File
 web/.idea

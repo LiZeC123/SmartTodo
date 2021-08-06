@@ -13,10 +13,7 @@ services:
       - "4231"
     volumes:
       - ./config:/app/config
-      - ./database:/app/database
-      - ./filebase:/app/filebase
-      - ./log:/app/log
-      - ./notebase:/app/notebase
+      - ./data:/app/data
   web:
     container_name: web-app
     restart: always
@@ -28,6 +25,6 @@ services:
     ports: 
       - "8080:80"
     volumes: 
-      - ./filebase:/app/filebase
+      - ./data/filebase:/app/filebase
     depends_on: 
       - backend

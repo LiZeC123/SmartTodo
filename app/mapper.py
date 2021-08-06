@@ -1,7 +1,7 @@
 import json
 import os
 import threading
-from os.path import exists
+from os.path import exists, join
 from typing import List, Optional, Callable, Dict
 
 from entity import Item, from_dict
@@ -15,11 +15,13 @@ def load_data(filename):
 
 
 class MemoryDataBase:
-    _DATABASE_FOLDER = "database"
+    DATABASE_FOLDER = "data/database"
+    DATA_FILE = join(DATABASE_FOLDER, "data.json")
 
     def __init__(self):
         self.lock = threading.Lock()
-        self.filename = os.path.join(MemoryDataBase._DATABASE_FOLDER, f"data.json")
+        self.__init_folder()
+        self.filename = MemoryDataBase.DATA_FILE
         self.data: List = []
         if exists(self.filename):
             self.data = load_data(self.filename)
@@ -29,6 +31,10 @@ class MemoryDataBase:
         else:
             # 默认从1开始, 避免0值产生问题
             self.current_id = 1
+
+    def __init_folder(self):
+        if not exists(self.DATABASE_FOLDER):
+            os.mkdir(self.DATABASE_FOLDER)
 
     def __next_id(self):
         with self.lock:

@@ -7,7 +7,7 @@ from flask import Flask, request, abort
 from entity import Item
 from server import Manager, TokenManager
 from service4config import ConfigManager
-from tool4log import logger
+from tool4log import logger, Log_File
 from tool4time import parse_deadline_str
 
 app = Flask(__name__)
@@ -219,7 +219,7 @@ def is_admin():
 @app.route("/api/log/data", methods=["GET"])
 @logged(role='ROLE_ADMIN')
 def back_up():
-    with open("database/data.json") as f:
+    with open(manager.database.DATA_FILE) as f:
         # data数据是不换行存储的JSON数据, 因此只需要取值第一行
         return f.readline()
 
@@ -228,7 +228,7 @@ def back_up():
 @logged(role='ROLE_ADMIN')
 def get_log():
     # 文本中可能包含中文字符, 因此需要指定合适的编码
-    with open("log/log.txt", encoding='utf-8') as f:
+    with open(Log_File, encoding='utf-8') as f:
         return "".join(f.readlines())
 
 
