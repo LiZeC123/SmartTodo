@@ -25,8 +25,8 @@
     </div>
     <div class="footer" id="footerFunctionContainer">
       <a @click="selectFile">上传文件</a>
-      <a v-if="isAdmin" @click="backUpData">备份数据</a>
-      <a v-if="isAdmin" @click="updateLogs">查看日志</a>
+      <a v-if="isAdmin && isMainPage" @click="backUpData">备份数据</a>
+      <a v-if="isAdmin && isMainPage" @click="updateLogs">查看日志</a>
       <a v-if="isAdmin" @click="gc">垃圾回收</a>
       <a @click="doLogout">退出登录</a>
     </div>
@@ -53,6 +53,11 @@ export default {
   },
   created() {
     this.axios.get('/meta/isAdmin').then(rep => this.isAdmin = rep.data.data);
+  },
+  computed: {
+    isMainPage: function () {
+      return this.$route.params.id === undefined;
+    }
   },
   methods: {
     commitTodo: function () {
