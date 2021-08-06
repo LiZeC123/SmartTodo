@@ -10,7 +10,7 @@ RUN pip3 install -r requirements.txt
 # 复制项目代码到容器的app目录
 COPY app /app
 
-VOLUME [ "/app/config", "/app/log", "/app/filebase", "/app/notebase"]
+VOLUME [ "/app/config", "/app/data"]
 
 EXPOSE 4231
 
