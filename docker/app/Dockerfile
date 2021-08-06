@@ -8,7 +8,7 @@ COPY app/requirements.txt /app/requirements.txt
 RUN pip3 install -r requirements.txt
 
 # 复制项目代码到容器的app目录
-COPY app /app
+COPY app .
 
 VOLUME [ "/app/config", "/app/data"]
 
