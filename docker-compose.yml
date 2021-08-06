@@ -14,7 +14,6 @@ services:
     volumes:
       - ./config:/app/config
       - ./data:/app/data
-      - filebase-volumes:/app/data/filebase
   web:
     container_name: web-app
     restart: always
@@ -26,8 +25,6 @@ services:
     ports: 
       - "8080:80"
     volumes: 
-      - filebase-volumes:/app/filebase
+      - ./data/filebase:/app/filebase
     depends_on: 
       - backend
-volumes: 
-  filebase-volumes:
