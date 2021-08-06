@@ -3,7 +3,7 @@ data/*
 app/data/*
 config/*
 app/config/*
-!app/config/default.json
+!config/default.json
 
 
 # App File
