@@ -209,12 +209,17 @@ class ItemManager:
 
 
 class FileItemManager(ItemManager):
-    _USER_FOLDER = "database"
-    _FILE_FOLDER = "filebase"
+    _USER_FOLDER = "data/database"
+    _FILE_FOLDER = "data/filebase"
 
     def __init__(self, database: MemoryDataBase):
         super().__init__(database)
+        self.__init_folder()
         self.database = database
+
+    def __init_folder(self):
+        if not exists(self._FILE_FOLDER):
+            mkdir(self._FILE_FOLDER)
 
     def create(self, item: Item):
         """将指定URL对应的文件下载到公共空间"""
@@ -246,13 +251,18 @@ class FileItemManager(ItemManager):
 
 
 class NoteItemManager(ItemManager):
-    _NOTE_FOLDER = "notebase"
+    _NOTE_FOLDER = "data/notebase"
 
     def __init__(self, database: MemoryDataBase):
         super().__init__(database)
+        self.__init_folder()
         self.database = database
         if not exists(NoteItemManager._NOTE_FOLDER):
             mkdir(NoteItemManager._NOTE_FOLDER)
+
+    def __init_folder(self):
+        if not exists(self._NOTE_FOLDER):
+            mkdir(self._NOTE_FOLDER)
 
     def create(self, item: Item):
         nid = self.database.insert(item)
