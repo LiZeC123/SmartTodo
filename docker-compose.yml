@@ -25,6 +25,6 @@ services:
     ports: 
       - "8080:80"
     volumes: 
-      - ./data/filebase:/app/data/filebase
+      - ./data/filebase:/app/filebase
     depends_on: 
       - backend
