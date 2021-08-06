@@ -225,7 +225,7 @@ class FileItemManager(ItemManager):
         """将指定URL对应的文件下载到公共空间"""
         remote_url = item.name
         path = download(remote_url, FileItemManager._FILE_FOLDER)
-        item.url = path.replace("\\", "/").replace("filebase", '/file')
+        item.url = path.replace(FileItemManager._FILE_FOLDER, '/file').replace("\\", "/")
         return self.database.insert(item)
 
     @staticmethod
