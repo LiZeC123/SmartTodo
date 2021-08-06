@@ -2,7 +2,7 @@
 data/*
 app/data/*
 config/*
-app/config/*
+app/config
 !config/default.json
 
 
