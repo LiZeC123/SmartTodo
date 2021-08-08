@@ -3,7 +3,7 @@ function compileService() {
 }
 
 function runService() {
-  docker-compose up
+  docker-compose up -d
 }
 
 function stopService() {
