@@ -1,20 +1,17 @@
-#!/usr/bin/env bash
-
 function compileService() {
-  true
-  # python3 ./tool4convert.py -c
+  docker-compose build
 }
 
 function runService() {
-  echo "Run Service In Background"
-  nohup python3.8 app.py >log.txt 2>&1 &
-  exit
+  docker-compose up
 }
 
-stopService() {
-  echo "Kill Current Service"
-  pid=$(pgrep -f "python3.8 app.py")
-  kill "$pid"
+function stopService() {
+  docker-compose down
+}
+
+function backup() {
+  zip -r SmartReveiew.zip config/ data/database data/log data/notebase
 }
 
 if [ "$1"x == "start"x ]; then
@@ -30,6 +27,8 @@ elif [ "$1"x == "restart"x ]; then
   stopService
   compileService
   runService
+elif [ "$1"x == "backup"x ]; then
+  backup
 else
   echo "无效的参数: $1"
   echo ""
@@ -40,5 +39,6 @@ else
   echo "restart   重启项目"
   echo "compile   只编译项目"
   echo "run       直接运行项目"
+  echo "backup    备份数据文件"
   echo ""
 fi
