@@ -11,7 +11,7 @@ function stopService() {
 }
 
 function backup() {
-  zip -r SmartReveiew.zip config/ data/database data/log data/notebase
+  zip -r SmartTodo.zip config/ data/database data/log data/notebase
 }
 
 if [ "$1"x == "start"x ]; then
