@@ -14,6 +14,10 @@ function backup() {
   zip -r SmartTodo.zip config/ data/database data/log data/notebase
 }
 
+function update() {
+  git pull
+}
+
 if [ "$1"x == "start"x ]; then
   compileService
   runService
@@ -29,6 +33,8 @@ elif [ "$1"x == "restart"x ]; then
   runService
 elif [ "$1"x == "backup"x ]; then
   backup
+elif [ "$1"x == "update"x ]; then
+  update
 else
   echo "无效的参数: $1"
   echo ""
