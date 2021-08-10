@@ -1,7 +1,7 @@
-import datetime
 import os
 import random
 import string
+from datetime import timedelta
 from os import mkdir
 from os.path import join, exists
 from typing import Optional
@@ -16,6 +16,7 @@ from tool4item import update_urgent_level, where_can_delete, \
     where_select_all_file, where_unreferenced, select_id, select_title
 from tool4key import todo_item_key, done_item_key, old_item_key
 from tool4log import logger
+from tool4time import now
 from tool4web import extract_title, download
 
 
@@ -58,17 +59,17 @@ class TaskManager:
         self.tasks[hour].append(task)
 
     def start(self):
-        now = datetime.datetime.now()
-        t0 = datetime.timedelta(hours=now.hour, minutes=now.minute, seconds=now.second)
-        t1 = datetime.timedelta(hours=now.hour + 1)
+        now_time = now()
+        t0 = timedelta(hours=now_time.hour, minutes=now_time.minute, seconds=now_time.second)
+        t1 = timedelta(hours=now_time.hour + 1)
         dt = t1 - t0
 
-        logger.info(f"TimeTask: Now is {now}\nSleep {dt.seconds} seconds to the hour")
+        logger.info(f"TimeTask: Now is {now_time}\nSleep {dt.seconds} seconds to the hour")
         # 等待到下一个整点时刻再开始执行任务
         Timer(dt.seconds, self.__start0).start()
 
     def __start0(self):
-        now_hour = datetime.datetime.now().hour
+        now_hour = now().hour
         logger.info(f"TimeTask: Do Task For Hour {now_hour}")
 
         for task in self.tasks[now_hour]:
