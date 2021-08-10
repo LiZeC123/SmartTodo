@@ -10,14 +10,14 @@ def is_time_debug() -> bool:
     return os.path.exists("database/time.debug")
 
 
-def debug_time() -> str:
+def debug_time() -> datetime:
     with open("database/time.debug") as f:
-        return f.readline()
+        return datetime.strptime(f.readline(), "%Y-%m-%d %H:%M:%S").astimezone(tz)
 
 
 def now() -> datetime:
     if is_time_debug():
-        return datetime.strptime(debug_time(), "%Y-%m-%d %H:%M:%S").astimezone(tz)
+        return debug_time()
     else:
         return datetime.now().astimezone(tz)
 
@@ -59,8 +59,8 @@ def parse_deadline_str(date_str: str) -> str:
         time_pattern = "%Y.%m.%d:%H"
     else:
         time_pattern = "%Y.%m.%d"
-    this_year = datetime.strptime(f"{now().year}.{date_str}", time_pattern)
-    next_year = datetime.strptime(f"{now().year + 1}.{date_str}", time_pattern)
+    this_year = datetime.strptime(f"{now().year}.{date_str}", time_pattern).astimezone(tz)
+    next_year = datetime.strptime(f"{now().year + 1}.{date_str}", time_pattern).astimezone(tz)
     if now() < this_year:
         return this_year.strftime("%Y-%m-%d %H:%M:%S")
     else:
