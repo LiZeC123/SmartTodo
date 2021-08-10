@@ -1,7 +1,9 @@
-import datetime
+from datetime import datetime, timedelta, timezone, date
 import os
 
 from tool4log import logger
+
+tz = timezone(timedelta(hours=+8))
 
 
 def is_time_debug() -> bool:
@@ -13,11 +15,11 @@ def debug_time() -> str:
         return f.readline()
 
 
-def now() -> datetime.datetime:
+def now() -> datetime:
     if is_time_debug():
-        return datetime.datetime.strptime(debug_time(), "%Y-%m-%d %H:%M:%S")
+        return datetime.strptime(debug_time(), "%Y-%m-%d %H:%M:%S").astimezone(tz)
     else:
-        return datetime.datetime.now()
+        return datetime.now().astimezone(tz)
 
 
 def now_str() -> str:
@@ -28,27 +30,24 @@ def now_stamp() -> float:
     return now().timestamp()
 
 
-def today() -> datetime.date:
-    if is_time_debug():
-        return datetime.datetime.strptime(debug_time(), "%Y-%m-%d %H:%M:%S").date()
-    else:
-        return datetime.date.today()
+def today() -> datetime:
+    return now().today()
 
 
 def this_year_str() -> str:
     return now().strftime("%Y")
 
 
-def get_datetime_from_str(time: str) -> datetime.datetime:
-    return datetime.datetime.strptime(time, '%Y-%m-%d %H:%M:%S')
+def get_datetime_from_str(time: str) -> datetime:
+    return datetime.strptime(time, '%Y-%m-%d %H:%M:%S').astimezone(tz)
 
 
-def get_day_from_str(time: str) -> datetime.date:
+def get_day_from_str(time: str) -> date:
     return get_datetime_from_str(time).date()
 
 
 def get_timestamp_from_str(time: str) -> float:
-    return datetime.datetime.timestamp(get_datetime_from_str(time))
+    return datetime.timestamp(get_datetime_from_str(time))
 
 
 # ################################# API For Server ################################# #
@@ -60,8 +59,8 @@ def parse_deadline_str(date_str: str) -> str:
         time_pattern = "%Y.%m.%d:%H"
     else:
         time_pattern = "%Y.%m.%d"
-    this_year = datetime.datetime.strptime(f"{now().year}.{date_str}", time_pattern)
-    next_year = datetime.datetime.strptime(f"{now().year + 1}.{date_str}", time_pattern)
+    this_year = datetime.strptime(f"{now().year}.{date_str}", time_pattern)
+    next_year = datetime.strptime(f"{now().year + 1}.{date_str}", time_pattern)
     if now() < this_year:
         return this_year.strftime("%Y-%m-%d %H:%M:%S")
     else:
@@ -75,8 +74,7 @@ def is_work_time():
 
 if is_time_debug():
     # 对是否开启时间的DEBUG模式进行检测, 并给出警告
-    current_debug_time = datetime.datetime.strptime(debug_time(), "%Y-%m-%d %H:%M:%S")
-    logger.warning(f"Time API is in DEBUG mode and now is {current_debug_time}")
+    logger.warning(f"Time API is in DEBUG mode and now is {now_str()}")
 
 if __name__ == '__main__':
     delta = get_datetime_from_str("2020-2-13 12:00:00") - get_datetime_from_str("2020-2-14 12:00:00")
