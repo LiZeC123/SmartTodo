@@ -33,8 +33,8 @@ def now_stamp() -> float:
     return now().timestamp()
 
 
-def today() -> datetime:
-    return now().today()
+def today() -> date:
+    return now().date()
 
 
 def this_year_str() -> str:
