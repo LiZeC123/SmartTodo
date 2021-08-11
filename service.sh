@@ -12,7 +12,7 @@ function stopService() {
 
 function backup() {
   echo "Zip SmartTodo Data"
-  zip -r SmartTodo.zip config/ data/database data/log data/notebase
+  zip -r SmartTodo.zip config/ data/database data/log data/notebase > /dev/null
   echo "Done."
 }
 
