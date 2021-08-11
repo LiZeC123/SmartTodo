@@ -72,6 +72,7 @@ class MemoryDataBase:
         item.create_time = now_str()
         with self.lock:
             self.data.append(item.to_dict())
+            logger.info(f"{MemoryDataBase.__name__}: Insert Item: {item}")
         self.save2file()
         return item.id
 

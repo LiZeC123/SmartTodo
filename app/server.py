@@ -64,7 +64,7 @@ class TaskManager:
         t1 = timedelta(hours=now_time.hour + 1)
         dt = t1 - t0
 
-        logger.info(f"TimeTask: Now is {now_time}\nSleep {dt.seconds} seconds to the hour")
+        logger.info(f"TimeTask: Now is {now_time}. Sleep {dt.seconds} seconds to the hour")
         # 等待到下一个整点时刻再开始执行任务
         Timer(dt.seconds, self.__start0).start()
 
@@ -178,7 +178,6 @@ class ItemManager:
             title = extract_title(item.name)
             item.url = item.name
             item.name = title
-        logger.info(f"{ItemManager.__name__}: Insert Item: {item}")
         return self.database.insert(item)
 
     def select(self, iid: int) -> Item:
