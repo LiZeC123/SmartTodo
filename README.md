@@ -319,6 +319,7 @@ func <function_name> <arg>
 
 ### Python
 - [How to upgrade to python 3.7 on Ubuntu 18.10](https://www.itsupportwale.com/blog/how-to-upgrade-to-python-3-7-on-ubuntu-18-10/)
+- [Python datetime 处理时区信息](https://yanbin.blog/python-datetime-timezone/)
 
 ### Vue.js
 - [Vue.js——60分钟快速入门](https://www.cnblogs.com/keepfool/p/5619070.html)
