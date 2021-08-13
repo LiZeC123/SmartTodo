@@ -48,5 +48,5 @@ else
   echo "compile   只编译项目"
   echo "run       直接运行项目"
   echo "backup    备份数据文件"
-  echo ""
+  echo "update    更新项目代码"
 fi
