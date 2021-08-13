@@ -75,19 +75,11 @@ export default {
 
     //绑定保存按键
     document.onkeydown = this.save;
+    // 失去焦点执行一次自动保存操作
+    window.onblur = this.autoSave;
 
     // 设置自动保存
-    setInterval(() => {
-      const currentHTML = document.getElementById("editor").innerHTML;
-      if (currentHTML !== this.lastContent) {
-        console.log(["autoSave", currentHTML])
-        this.lastContent = currentHTML
-        this.axios.post("note/update", {
-          "id": this.$route.params.id,
-          "content": currentHTML
-        });
-      }
-    }, 60 * 1000);
+    setInterval(this.autoSave, 60 * 1000);
   },
   methods: {
     finishTodoItem: function (index) {
@@ -134,6 +126,17 @@ export default {
         });
       }
     },
+    autoSave: function () {
+      const currentHTML = document.getElementById("editor").innerHTML;
+      if (currentHTML !== this.lastContent) {
+        console.log(["autoSave", currentHTML])
+        this.lastContent = currentHTML
+        this.axios.post("note/update", {
+          "id": this.$route.params.id,
+          "content": currentHTML
+        });
+      }
+    },
     doAction: function (role) {
       const baseAction = ['h1', 'h2', 'p'];
 
@@ -143,17 +146,6 @@ export default {
         document.execCommand(role, false, null);
       }
     },
-    checkUpdateStatus: function () {
-      const today = new Date().getDate();
-      if (today !== this.lastUpdateDate) {
-        this.axios.post("/note/getAll", {"id": this.$route.params.id}).then(res => {
-          this.todo = res.data.data.todo
-          this.done = res.data.data.done
-          this.old = res.data.data.old
-        });
-        this.lastUpdateDate = today;
-      }
-    }
   },
   watch: {
     "updateTodo": function () {
