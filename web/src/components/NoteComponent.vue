@@ -128,7 +128,7 @@ export default {
     autoSave: function () {
       const currentHTML = document.getElementById("editor").innerHTML;
       if (currentHTML !== this.lastContent) {
-        console.log(["autoSave", currentHTML])
+        console.log("autoSave")
         this.lastContent = currentHTML
         this.axios.post("note/update", {
           "id": this.$route.params.id,
