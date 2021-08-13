@@ -71,15 +71,14 @@ export default {
     this.axios.post("/item/getTitle", {"id": this.$route.params.id}).then(res => document.title = res.data.data);
     // 获取note的正文
     this.axios.post("/note/content", {"id": this.$route.params.id}).then(res => this.content = res.data.data);
-
-
+  },
+  mounted() {
     //绑定保存按键
     document.onkeydown = this.save;
-    // 失去焦点执行一次自动保存操作
-    window.onblur = this.autoSave;
-
     // 设置自动保存
     setInterval(this.autoSave, 60 * 1000);
+    // 失去焦点执行一次自动保存操作
+    window.onblur = this.autoSave;
   },
   methods: {
     finishTodoItem: function (index) {
