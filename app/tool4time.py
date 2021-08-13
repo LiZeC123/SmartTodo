@@ -12,8 +12,9 @@ is_time_debug = os.path.exists("database/time.debug")
 
 
 def get_debug_time() -> datetime:
-    with open("database/time.debug") as f:
-        return datetime.strptime(f.readline(), "%Y-%m-%d %H:%M:%S").astimezone(str_tz)
+    if is_time_debug:
+        with open("database/time.debug") as f:
+            return datetime.strptime(f.readline(), "%Y-%m-%d %H:%M:%S").astimezone(str_tz)
 
 
 debug_time = get_debug_time()
