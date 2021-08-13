@@ -8,19 +8,20 @@ tz = timezone(timedelta(hours=+8))
 # 系统输入的字符串值的时间已经是+8之后的结果了,所以应该不变
 str_tz = timezone(timedelta(hours=0))
 
-
-def is_time_debug() -> bool:
-    return os.path.exists("database/time.debug")
+is_time_debug = os.path.exists("database/time.debug")
 
 
-def debug_time() -> datetime:
+def get_debug_time() -> datetime:
     with open("database/time.debug") as f:
         return datetime.strptime(f.readline(), "%Y-%m-%d %H:%M:%S").astimezone(str_tz)
 
 
+debug_time = get_debug_time()
+
+
 def now() -> datetime:
-    if is_time_debug():
-        return debug_time()
+    if is_time_debug:
+        return debug_time
     else:
         return datetime.now().astimezone(tz)
 
@@ -75,7 +76,7 @@ def is_work_time():
     return 9 <= now().hour < 18 and 0 <= now().weekday() <= 4
 
 
-if is_time_debug():
+if is_time_debug:
     # 对是否开启时间的DEBUG模式进行检测, 并给出警告
     logger.warning(f"Time API is in DEBUG mode and now is {now_str()}")
 
