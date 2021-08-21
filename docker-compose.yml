@@ -6,14 +6,13 @@ services:
     build:
       context: ./ 
       dockerfile: docker/app/Dockerfile
-    working_dir: /app
-    environment: 
-      TZ: Asia/Shanghai
     expose: 
       - "4231"
     volumes:
       - ./config:/app/config
       - ./data:/app/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
   web:
     container_name: web-app
     restart: always

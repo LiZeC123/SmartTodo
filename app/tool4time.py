@@ -1,12 +1,8 @@
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, date
 import os
 
 from tool4log import logger
 
-# 所有指定时区的地方等价于获得时间后自动+8
-tz = timezone(timedelta(hours=+8))
-# 系统输入的字符串值的时间已经是+8之后的结果了,所以应该不变
-str_tz = timezone(timedelta(hours=0))
 
 is_time_debug = os.path.exists("database/time.debug")
 
@@ -14,7 +10,7 @@ is_time_debug = os.path.exists("database/time.debug")
 def get_debug_time() -> datetime:
     if is_time_debug:
         with open("database/time.debug") as f:
-            return datetime.strptime(f.readline(), "%Y-%m-%d %H:%M:%S").astimezone(str_tz)
+            return datetime.strptime(f.readline(), "%Y-%m-%d %H:%M:%S")
 
 
 debug_time = get_debug_time()
@@ -24,7 +20,7 @@ def now() -> datetime:
     if is_time_debug:
         return debug_time
     else:
-        return datetime.now().astimezone(tz)
+        return datetime.now()
 
 
 def now_str() -> str:
@@ -44,7 +40,7 @@ def this_year_str() -> str:
 
 
 def get_datetime_from_str(time: str) -> datetime:
-    return datetime.strptime(time, '%Y-%m-%d %H:%M:%S').astimezone(str_tz)
+    return datetime.strptime(time, '%Y-%m-%d %H:%M:%S')
 
 
 def get_day_from_str(time: str) -> date:
@@ -64,8 +60,8 @@ def parse_deadline_str(date_str: str) -> str:
         time_pattern = "%Y.%m.%d:%H"
     else:
         time_pattern = "%Y.%m.%d"
-    this_year = datetime.strptime(f"{now().year}.{date_str}", time_pattern).astimezone(str_tz)
-    next_year = datetime.strptime(f"{now().year + 1}.{date_str}", time_pattern).astimezone(str_tz)
+    this_year = datetime.strptime(f"{now().year}.{date_str}", time_pattern)
+    next_year = datetime.strptime(f"{now().year + 1}.{date_str}", time_pattern)
     if now() < this_year:
         return this_year.strftime("%Y-%m-%d %H:%M:%S")
     else:
