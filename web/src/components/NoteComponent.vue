@@ -77,8 +77,15 @@ export default {
     document.onkeydown = this.save;
     // 设置自动保存
     setInterval(this.autoSave, 60 * 1000);
-    // 失去焦点执行一次自动保存操作
-    window.onblur = this.autoSave;
+
+    // 关闭页面时如果未保存则执行保存操作
+    window.onbeforeunload = e => {
+      e.preventDefault();
+      const currentHTML = document.getElementById("editor").innerHTML;
+      if (currentHTML !== this.lastContent) {
+        e.returnValue = "自定义文本";
+      }
+    };
   },
   methods: {
     finishTodoItem: function (index) {
@@ -116,9 +123,11 @@ export default {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
 
+        const currentHTML = document.getElementById("editor").innerHTML;
+        this.lastContent = currentHTML;
         this.axios.post("note/update", {
           "id": this.$route.params.id,
-          "content": document.getElementById("editor").innerHTML
+          "content": currentHTML
         }).then(() => {
           showAlert();
           setTimeout(hideAlert, 500);
@@ -175,6 +184,8 @@ function showAlert() {
 function hideAlert() {
   document.getElementById("alert").className = 'alert-none';
 }
+
+
 </script>
 
 <style scoped>
