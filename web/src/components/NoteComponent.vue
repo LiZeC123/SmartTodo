@@ -83,7 +83,11 @@ export default {
       // 获取Note的标题并设置为页面的标题
       this.axios.post("/item/getTitle", {"id": this.$route.params.id}).then(res => document.title = res.data.data);
       // 获取note的正文
-      this.axios.post("/note/content", {"id": this.$route.params.id}).then(res => this.content = res.data.data);
+      this.axios.post("/note/content", {"id": this.$route.params.id})
+          .then(res => {
+            this.content = res.data.data
+            this.lastContent = document.getElementById("editor").innerHTML
+          });
     },
     reloadItem: function () {
       this.axios.post("/note/getAll", {"id": this.$route.params.id}).then(res => {
