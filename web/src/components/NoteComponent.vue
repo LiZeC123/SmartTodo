@@ -60,34 +60,38 @@ export default {
     }
   },
   created() {
-    // 获取Note私有的Item列表
-    this.axios.post("/note/getAll", {"id": this.$route.params.id}).then(res => {
-      this.todo = res.data.data.todo
-      this.done = res.data.data.done
-      this.old = res.data.data.old
-    });
-
-    // 获取Note的标题并设置为页面的标题
-    this.axios.post("/item/getTitle", {"id": this.$route.params.id}).then(res => document.title = res.data.data);
-    // 获取note的正文
-    this.axios.post("/note/content", {"id": this.$route.params.id}).then(res => this.content = res.data.data);
+    this.reload()
   },
   mounted() {
     //绑定保存按键
     document.onkeydown = this.save;
+
+    // 获得焦点后自动更新一次
+    window.onfocus = this.checkUpdateStatus
+
     // 设置自动保存
     setInterval(this.autoSave, 60 * 1000);
 
     // 关闭页面时如果未保存则执行保存操作
-    window.onbeforeunload = e => {
-      e.preventDefault();
-      const currentHTML = document.getElementById("editor").innerHTML;
-      if (currentHTML !== this.lastContent) {
-        e.returnValue = "自定义文本";
-      }
-    };
+    window.onbeforeunload = this.checkUnsaved;
   },
   methods: {
+    reload: function () {
+      // 获取Note私有的Item列表
+      this.reloadItem()
+
+      // 获取Note的标题并设置为页面的标题
+      this.axios.post("/item/getTitle", {"id": this.$route.params.id}).then(res => document.title = res.data.data);
+      // 获取note的正文
+      this.axios.post("/note/content", {"id": this.$route.params.id}).then(res => this.content = res.data.data);
+    },
+    reloadItem: function () {
+      this.axios.post("/note/getAll", {"id": this.$route.params.id}).then(res => {
+        this.todo = res.data.data.todo
+        this.done = res.data.data.done
+        this.old = res.data.data.old
+      });
+    },
     finishTodoItem: function (index) {
       this.axios.post("/item/done", {
         "id": this.todo[index].id,
@@ -145,6 +149,14 @@ export default {
         });
       }
     },
+    checkUnsaved: function (e) {
+      e.preventDefault();
+      const currentHTML = document.getElementById("editor").innerHTML;
+      if (currentHTML !== this.lastContent) {
+        // 虽然设置文本并没有用, 但必须设置了才会出现弹窗
+        e.returnValue = "自定义文本";
+      }
+    },
     doAction: function (role) {
       const baseAction = ['h1', 'h2', 'p'];
 
@@ -154,6 +166,14 @@ export default {
         document.execCommand(role, false, null);
       }
     },
+    checkUpdateStatus: function () {
+      const today = new Date().getDate();
+      if (today !== this.lastUpdateDate) {
+        console.log("Update State!")
+        this.reloadItem();
+        this.lastUpdateDate = today;
+      }
+    }
   },
   watch: {
     "updateTodo": function () {
