@@ -233,7 +233,7 @@ class FileItemManager(ItemManager):
         """将上传的文件保存到私有空间"""
         path = join(FileItemManager._FILE_FOLDER, f.filename)
         f.save(path)
-        url = path.replace("\\", "/").replace("data/filebase", '/file')
+        url = path.replace("\\", "/").replace(FileItemManager._FILE_FOLDER, '/file')
         return f.filename, url
 
     def remove(self, item: Item):
