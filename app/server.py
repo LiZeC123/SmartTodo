@@ -237,7 +237,7 @@ class FileItemManager(ItemManager):
         return f.filename, url
 
     def remove(self, item: Item):
-        filename = item.url.replace("/file", "filebase")
+        filename = item.url.replace("/file", FileItemManager._FILE_FOLDER)
         try:
             os.remove(filename)
             self.database.remove(item)
