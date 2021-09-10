@@ -203,6 +203,7 @@ Note页面内可以继续创建Item, 此页面内创建的Item只在此页面可
 ### 实现参考
 
 - [10行 JavaScript 实现文本编辑器](https://segmentfault.com/a/1190000008454793)
+- [自己动手实现简易的div可编辑富文本框及按下tab键后增加4个空格功能](https://blog.csdn.net/Clark_Fitz817/article/details/79316037)
 
 类型与属性
 ---------------------
