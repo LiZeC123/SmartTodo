@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- 主体：文本编辑器控制按钮 -->
-    <div id='editControls' class='span12' style='text-align:center; padding:5px;'>
+    <div id='editControls' style='text-align:center; padding:5px;'>
       <div class='btn-group'>
         <a class='btn' @click="doAction('h1')" href='#'>h<sup>1</sup></a>
         <a class='btn' @click="doAction('h2')" href='#'>h<sup>2</sup></a>
@@ -21,7 +21,7 @@
                @btn-click="removeTodo"></item-list>
 
     <!-- 主体：文本编辑器 -->
-    <div id='editor' class='span12' style='' contenteditable="true">
+    <div id='editor' contenteditable="true" @keydown.tab="tab">
       <span v-html="content"/>
     </div>
 
@@ -177,6 +177,35 @@ export default {
         this.reloadItem();
         this.lastUpdateDate = today;
       }
+    },
+    tab: function (event) {
+      // 阻止默认切换元素的行为
+      if (event && event.preventDefault) {
+        event.preventDefault()
+      } else {
+        window.event.returnValue = false
+      }
+      // 获取光标的range对象 event.view 是一个window对象
+      let range = event.view.getSelection().getRangeAt(0);
+      // 光标的偏移位置
+      let offset = range.startOffset;
+      // 新建一个span元素
+      let span = document.createElement('span');
+      // 四个 表示四个空格
+      span.innerHTML = '&nbsp;&nbsp;&nbsp;&nbsp;';
+      // 创建一个新的range对象
+      let newRange = document.createRange();
+      // 设置新的range的位置，也是插入元素的位置
+      newRange.setStart(range.startContainer, offset);
+      newRange.setEnd(range.startContainer, offset);
+      newRange.collapse(true);
+      newRange.insertNode(span);
+      // 去掉旧的range对象，用新的range对象替换
+      event.view.getSelection().removeAllRanges();
+      event.view.getSelection().addRange(range);
+      // 将光标的位置向后移动一个偏移量，放到加入的四个空格后面
+      range.setStart(span, 1);
+      range.setEnd(span, 1);
     }
   },
   watch: {
