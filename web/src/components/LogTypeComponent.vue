@@ -1,7 +1,7 @@
 <template>
   <div>
     <h2>{{ title }}</h2>
-    <textarea v-model="content" id="editor"></textarea>
+    <textarea v-model="content" id="editor" disabled></textarea>
   </div>
 </template>
 
