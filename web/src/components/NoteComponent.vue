@@ -21,9 +21,7 @@
                @btn-click="removeTodo"></item-list>
 
     <!-- 主体：文本编辑器 -->
-    <div id='editor' contenteditable="true" @keydown.tab="tab">
-      <span v-html="content"/>
-    </div>
+    <div id='editor' contenteditable="true" @keydown.tab="tab" @input="updateContent" v-html="initContent"></div>
 
 
     <item-list title="已经完成" btn-name="-" :data="done" :done="true" @checkbox-change="resetTodoItem"
@@ -54,8 +52,8 @@ export default {
       done: [],
       todo: [],
       old: [],
-      content: "",
-      lastContent: undefined,
+      initContent: "",
+      contentUpdated: false,  // 指示前端是否修改了content内容
       lastUpdateDate: new Date().getDate()
     }
   },
@@ -85,8 +83,7 @@ export default {
       // 获取note的正文
       this.axios.post("/note/content", {"id": this.$route.params.id})
           .then(res => {
-            this.content = res.data.data
-            this.lastContent = document.getElementById("editor").innerHTML
+            this.initContent = res.data.data
           });
     },
     reloadItem: function () {
@@ -126,37 +123,36 @@ export default {
         "parent": this.$route.params.id
       }).then(() => this.done.splice(index, 1));
     },
+    updateContent: function () {
+      this.contentUpdated = true
+    },
     save: function (e) {
       // Ctrl + S
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
 
-        const currentHTML = document.getElementById("editor").innerHTML;
-        this.lastContent = currentHTML;
         this.axios.post("note/update", {
           "id": this.$route.params.id,
-          "content": currentHTML
+          "content": document.getElementById("editor").innerHTML
         }).then(() => {
+          this.contentUpdated = false
           showAlert();
           setTimeout(hideAlert, 500);
         });
       }
     },
     autoSave: function () {
-      const currentHTML = document.getElementById("editor").innerHTML;
-      if (currentHTML !== this.lastContent) {
+      if (this.contentUpdated) {
         console.log("autoSave")
-        this.lastContent = currentHTML
         this.axios.post("note/update", {
           "id": this.$route.params.id,
-          "content": currentHTML
+          "content": document.getElementById("editor").innerHTML
         });
       }
     },
     checkUnsaved: function (e) {
       e.preventDefault();
-      const currentHTML = document.getElementById("editor").innerHTML;
-      if (currentHTML !== this.lastContent) {
+      if (this.contentUpdated) {
         // 虽然设置文本并没有用, 但必须设置了才会出现弹窗
         e.returnValue = "自定义文本";
       }
