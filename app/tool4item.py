@@ -108,7 +108,7 @@ def update_urgent_level(item: dict) -> NoReturn:
     # 时间相减后的形式是 xx days, xx:xx:xx, 直接忽略不足一天的部分
     delta = (deadline - now()).days
     item['urgent'] = delta
-    logger.info(f"Update Deadline For Item: {item}")
+    logger.info(f"Update Urgent Level For Item: {item}")
 
 
 def where_update_repeatable_item(item: dict) -> bool:
