@@ -8,7 +8,7 @@ from entity import Item
 from server import Manager, TokenManager
 from service4config import ConfigManager
 from tool4log import logger, Log_File
-from tool4time import parse_deadline_str
+from tool4time import parse_deadline_timestamp
 
 app = Flask(__name__)
 
@@ -112,7 +112,7 @@ def create_item():
     item: Item = Item(0, f['name'], f['itemType'], token.get_username(request))
 
     if "deadline" in f:
-        item.deadline = parse_deadline_str(f["deadline"])
+        item.deadline = parse_deadline_timestamp(f["deadline"])
 
     if "work" in f:
         item.work = bool(f["work"])

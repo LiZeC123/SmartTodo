@@ -37,7 +37,7 @@
 </template>
 
 <script>
-import router from "@/router";
+import router from "../router";
 
 export default {
   name: "Main",
@@ -156,7 +156,7 @@ function parseTitleToData(todoContent, todoType, parent) {
     if (values[i].charAt(0) !== "-") {
       data.name += " " + values[i];
     } else if (values[i] === "-dl" && i + 1 < values.length) {
-      data.deadline = values[i + 1];
+      data.deadline = parseDeadline(values[i + 1]);
       i++;
     } else if (values[i] === "-wk") {
       data.work = true;
@@ -210,30 +210,42 @@ function inferNoteType(name) {
   return false;
 }
 
+function parseDeadline(deadline) {
+  let data = /(\d+)\.(\d+)(:(\d+))?/.exec(deadline)
+  if(data) {
+    let month = data[1]
+    let day = data[2]
+    let hour = data[4] === undefined ? 10: data[4]
+    return parseDate(month, day, hour,0,0);
+  } else {
+    data = /[Ww](\d+)/.exec(deadline)
+    return parseWeek(data[1])
+  }
+}
+
 function parseDate(tMonth, tDay, tHour, tMin, tSec) {
-    let nowTime = new Date();
-    let nowYear = nowTime.getFullYear();
-    let ans = new Date(nowYear + "-" + tMonth + "-" + tDay + " " + tHour + ":" + tMin + ":" + tSec);
-    if (ans < nowTime) {
-        let R_year = nowYear + 1;
-        ans = new Date(R_year + "-" + tMonth + "-" + tDay + " " + tHour + ":" + tMin + ":" + tSec);
-    }
-    return ans.getTime();
+  let nowTime = new Date();
+  let nowYear = nowTime.getFullYear();
+  let ans = new Date(nowYear + "-" + tMonth + "-" + tDay + " " + tHour + ":" + tMin + ":" + tSec);
+  if (ans < nowTime) {
+    let nextYear = nowYear + 1;
+    ans = new Date(nextYear + "-" + tMonth + "-" + tDay + " " + tHour + ":" + tMin + ":" + tSec);
+  }
+  return ans.getTime();
 }
 
 function parseWeek(weekDay) {
-    const dayMillisecond = 24 * 60 * 60 * 1000;
-    let time = new Date();
-    let today = time.getDay();
-    weekDay = weekDay % 7;
-    let diffDay = weekDay - today;
-    if (diffDay < 0) {
-        diffDay = 7 + diffDay;
-    }
-    let diffTime = diffDay * dayMillisecond;
-    let curTime = time.getTime();
-    let res = curTime + diffTime;
-    return res;
+  const dayMillisecond = 24 * 60 * 60 * 1000;
+  let time = new Date();
+  let today = time.getDay();
+  weekDay = weekDay % 7;
+  let diffDay = weekDay - today;
+  if (diffDay <= 0) {
+    diffDay = 7 + diffDay;
+  }
+  let diffTime = diffDay * dayMillisecond;
+  let curTime = time.getTime();
+  return curTime + diffTime;
 }
 
 </script>

@@ -1,8 +1,8 @@
+import time
 from datetime import datetime, date
 import os
 
 from tool4log import logger
-
 
 is_time_debug = os.path.exists("database/time.debug")
 
@@ -39,19 +39,23 @@ def this_year_str() -> str:
     return now().strftime("%Y")
 
 
-def get_datetime_from_str(time: str) -> datetime:
-    return datetime.strptime(time, '%Y-%m-%d %H:%M:%S')
+def get_datetime_from_str(t: str) -> datetime:
+    return datetime.strptime(t, '%Y-%m-%d %H:%M:%S')
 
 
-def get_day_from_str(time: str) -> date:
-    return get_datetime_from_str(time).date()
+def get_day_from_str(t: str) -> date:
+    return get_datetime_from_str(t).date()
 
 
-def get_timestamp_from_str(time: str) -> float:
-    return datetime.timestamp(get_datetime_from_str(time))
+def get_timestamp_from_str(t: str) -> float:
+    return datetime.timestamp(get_datetime_from_str(t))
 
 
 # ################################# API For Server ################################# #
+
+
+def parse_deadline_timestamp(timestamp: int) -> str:
+    return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(timestamp / 1000))
 
 
 def parse_deadline_str(date_str: str) -> str:
