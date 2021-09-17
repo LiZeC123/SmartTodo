@@ -210,6 +210,32 @@ function inferNoteType(name) {
   return false;
 }
 
+function parseDate(tMonth, tDay, tHour, tMin, tSec) {
+    let nowTime = new Date();
+    let nowYear = nowTime.getFullYear();
+    let ans = new Date(nowYear + "-" + tMonth + "-" + tDay + " " + tHour + ":" + tMin + ":" + tSec);
+    if (ans < nowTime) {
+        let R_year = nowYear + 1;
+        ans = new Date(R_year + "-" + tMonth + "-" + tDay + " " + tHour + ":" + tMin + ":" + tSec);
+    }
+    return ans.getTime();
+}
+
+function parseWeek(weekDay) {
+    const dayMillisecond = 24 * 60 * 60 * 1000;
+    let time = new Date();
+    let today = time.getDay();
+    weekDay = weekDay % 7;
+    let diffDay = weekDay - today;
+    if (diffDay < 0) {
+        diffDay = 7 + diffDay;
+    }
+    let diffTime = diffDay * dayMillisecond;
+    let curTime = time.getTime();
+    let res = curTime + diffTime;
+    return res;
+}
+
 </script>
 
 <style scoped>
