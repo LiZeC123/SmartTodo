@@ -147,7 +147,7 @@ export default {
         this.axios.post("note/update", {
           "id": this.$route.params.id,
           "content": document.getElementById("editor").innerHTML
-        });
+        }).then(() => this.contentUpdated = false)
       }
     },
     checkUnsaved: function (e) {
