@@ -104,13 +104,13 @@ class Manager:
 
     def create(self, item: Item):
         self.manager[item.item_type].create(item)
+        self.__update_state()
 
     def create_upload_file(self, f, parent: int, owner: str):
         name, url = self.file_manager.create_upload_file(f)
         item = Item(0, name, 'file', owner, parent=parent)
         item.url = url
         self.item_manager.create(item)
-        self.__update_state()
 
     def select(self):
         pass
