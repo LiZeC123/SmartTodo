@@ -107,7 +107,8 @@ def update_urgent_level(item: dict) -> NoReturn:
     deadline = get_datetime_from_str(item['deadline'])
     # 时间相减后的形式是 xx days, xx:xx:xx, 直接忽略不足一天的部分
     delta = (deadline - now()).days
-    item['urgent'] = delta
+    # 极限情况下两者处于同一天,导致差值为0, 但urgent最小有效值为1, 因此+1
+    item['urgent'] = delta + 1
     logger.info(f"Update Urgent Level For Item: {item}")
 
 

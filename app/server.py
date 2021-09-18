@@ -110,6 +110,7 @@ class Manager:
         item = Item(0, name, 'file', owner, parent=parent)
         item.url = url
         self.item_manager.create(item)
+        self.__update_state()
 
     def select(self):
         pass
