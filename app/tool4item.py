@@ -99,19 +99,6 @@ def old_item(item: dict):
     logger.info(f"Move Item {item['name']} To Old Lists")
 
 
-def where_update_urgent_level(item: dict) -> bool:
-    return item['deadline'] is not None
-
-
-def update_urgent_level(item: dict) -> NoReturn:
-    deadline = get_datetime_from_str(item['deadline'])
-    # 时间相减后的形式是 xx days, xx:xx:xx, 直接忽略不足一天的部分
-    delta = (deadline - now()).days
-    # 极限情况下两者处于同一天,导致差值为0, 但urgent最小有效值为1, 因此+1
-    item['urgent'] = delta + 1
-    logger.info(f"Update Urgent Level For Item: {item}")
-
-
 def where_update_repeatable_item(item: dict) -> bool:
     return item['repeatable'] is True and item['finish_time'] is not None
 

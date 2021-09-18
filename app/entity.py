@@ -12,7 +12,6 @@ class Item:
         self.item_type: str = item_type  # single, file, note 共三种类型
         self.create_time: str = now_str()
         self.finish_time: Optional[str] = None
-        self.urgent: int = 0  # 表示紧急程度的等级, 1~4共四个等级, 0表示此字段无效
         self.deadline: Optional[str] = deadline
         self.old: bool = old
         self.repeatable: bool = repeatable
@@ -36,8 +35,6 @@ def from_dict(raw: Dict) -> Item:
         item.create_time = raw['create_time']
     if "finish_time" in raw:
         item.finish_time = raw['finish_time']
-    if "urgent" in raw:
-        item.urgent = int(raw['urgent'])
     if "deadline" in raw:
         item.deadline = raw['deadline']
     if "old" in raw:

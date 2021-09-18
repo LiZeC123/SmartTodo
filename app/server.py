@@ -10,8 +10,8 @@ from werkzeug.exceptions import abort
 
 from entity import Item, from_dict
 from mapper import MemoryDataBase
-from tool4item import update_urgent_level, where_can_delete, \
-    where_update_repeatable_item, update_repeatable_item, where_update_urgent_level, where_id_equal, finish_item, \
+from tool4item import where_can_delete, \
+    where_update_repeatable_item, update_repeatable_item, where_id_equal, finish_item, \
     undo_item, where_equal, old_item, group_all_item_with, where_select_todo_with, update_note_url, \
     where_select_all_file, where_unreferenced, select_id, select_title
 from tool4key import todo_item_key, done_item_key, old_item_key
@@ -52,7 +52,7 @@ class TokenManager:
 
 class TaskManager:
     def __init__(self) -> None:
-        self.tasks = [[] for i in range(24)]
+        self.tasks = [[] for _ in range(24)]
         self.ONE_HOUR = 60 * 60
 
     def add_task(self, task, hour: int):
@@ -104,7 +104,6 @@ class Manager:
 
     def create(self, item: Item):
         self.manager[item.item_type].create(item)
-        self.__update_state()
 
     def create_upload_file(self, f, parent: int, owner: str):
         name, url = self.file_manager.create_upload_file(f)
@@ -166,7 +165,6 @@ class Manager:
             logger.info(f"Garbage Collection(Unreferenced): {item.name}")
 
     def __update_state(self):
-        self.database.update_by(where_update_urgent_level, update_urgent_level)
         self.database.update_by(where_update_repeatable_item, update_repeatable_item)
 
 
