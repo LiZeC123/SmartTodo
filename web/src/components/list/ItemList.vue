@@ -43,9 +43,14 @@ export default {
         return "specific";
       }
 
-      // 如果是紧急任务, 则改变样式, 变成更醒目的红色
-      if (item.urgent > 0 && item.urgent <= 4) {
-        return "specific-" + item.urgent
+      // 如果指定了deadline, 则计算距离deadline的时间并设置不同的颜色
+      if (item.deadline) {
+        let delta = new Date(item.deadline) - new Date()
+        const dayMs = 24 * 60 * 60 * 1000
+        let urgent = Math.ceil(delta / dayMs)
+        if (urgent > 0 && urgent <= 4) {
+          return "specific-" + urgent
+        }
       }
 
       return 'single';
