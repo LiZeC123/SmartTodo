@@ -6,7 +6,7 @@
         <a class='btn' @click="doAction('h1')" href='#'>h<sup>1</sup></a>
         <a class='btn' @click="doAction('h2')" href='#'>h<sup>2</sup></a>
         <a class='btn' @click="doAction('p')" href='#'>p</a>
-        <a class='btn' @click="doAction('bold')" href='#'><b>Bold</b></a>
+        <a id="boldAction" class='btn' @click="doAction('bold')" href='#'><b>Bold</b></a>
         <a class='btn' @click="doAction('italic')" href='#'><em>Italic</em></a>
         <a class='btn' @click="doAction('underline')" href='#'><u><b>U</b></u></a>
         <a class='btn' @click="doAction('strikeThrough')" href='#'>
@@ -14,6 +14,7 @@
         </a>
         <a class='btn' @click="doAction('undo')" href='#'>Undo</a>
         <a class='btn' @click="doAction('redo')" href='#'>Redo</a>
+        <a class='btn' @click="save" href='#'>Save</a>
       </div>
     </div>
 
@@ -62,7 +63,7 @@ export default {
   },
   mounted() {
     //绑定保存按键
-    document.onkeydown = this.save;
+    document.onkeydown = this.hotKeyDispatcher;
 
     // 获得焦点后自动更新一次
     window.onfocus = this.checkUpdateStatus
@@ -126,20 +127,24 @@ export default {
     updateContent: function () {
       this.contentUpdated = true
     },
-    save: function (e) {
-      // Ctrl + S
+    hotKeyDispatcher: function (e) {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-
-        this.axios.post("note/update", {
-          "id": this.$route.params.id,
-          "content": document.getElementById("editor").innerHTML
-        }).then(() => {
-          this.contentUpdated = false
-          showAlert();
-          setTimeout(hideAlert, 500);
-        });
+        e.preventDefault()
+        this.save()
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault()
+        document.getElementById("boldAction").click()
       }
+    },
+    save: function () {
+      this.axios.post("note/update", {
+        "id": this.$route.params.id,
+        "content": document.getElementById("editor").innerHTML
+      }).then(() => {
+        this.contentUpdated = false
+        showAlert();
+        setTimeout(hideAlert, 500);
+      });
     },
     autoSave: function () {
       if (this.contentUpdated) {
@@ -153,8 +158,8 @@ export default {
     checkUnsaved: function (e) {
       e.preventDefault();
       if (this.contentUpdated) {
-        // 虽然设置文本并没有用, 但必须设置了才会出现弹窗
-        e.returnValue = "自定义文本";
+        // 设置为false来弹窗阻止关闭
+        e.returnValue = false;
       }
     },
     doAction: function (role) {
