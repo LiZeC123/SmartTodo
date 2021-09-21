@@ -4,6 +4,8 @@ Smart-Todo 待办管理器
 ![](https://img.shields.io/github/license/LiZeC123/SmartTodo)
 ![](https://img.shields.io/github/issues/LiZeC123/SmartTodo)
 ![](https://img.shields.io/github/v/tag/LiZeC123/SmartTodo)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/LiZeC123/SmartTodo)
+![GitHub last commit](https://img.shields.io/github/last-commit/LiZeC123/SmartTodo)
 
 Smart-Todo是一个简单智能的待办事项管理程序. Smart-Todo提供了创建和删除待办事项的基础功能, 并在此基础上自动优先级排序, 离线下载文件, 创建便签等重要的辅助功能.
 
