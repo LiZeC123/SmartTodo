@@ -1,27 +1,12 @@
 <template>
   <div>
     <!-- 主体：文本编辑器控制按钮 -->
-    <div id='editControls' style='text-align:center; padding:5px;'>
-      <div class='btn-group'>
-        <a class='btn' @click="doAction('h1')" href='#'>h<sup>1</sup></a>
-        <a class='btn' @click="doAction('h2')" href='#'>h<sup>2</sup></a>
-        <a class='btn' @click="doAction('p')" href='#'>p</a>
-        <a id="boldAction" class='btn' @click="doAction('bold')" href='#'><b>Bold</b></a>
-        <a class='btn' @click="doAction('italic')" href='#'><em>Italic</em></a>
-        <a class='btn' @click="doAction('underline')" href='#'><u><b>U</b></u></a>
-        <a class='btn' @click="doAction('strikeThrough')" href='#'>
-          <del>abc</del>
-        </a>
-        <a class='btn' @click="doAction('undo')" href='#'>Undo</a>
-        <a class='btn' @click="doAction('redo')" href='#'>Redo</a>
-        <a class='btn' @click="save" href='#'>Save</a>
-      </div>
-    </div>
-
     <item-list title="正在进行" btn-name="-" :data="todo" :done="false" @checkbox-change="finishTodoItem"
                @btn-click="removeTodo"></item-list>
 
     <!-- 主体：文本编辑器 -->
+    <div><span>{{showSaveState}}</span> <span @click="save" style="float: right">保存文档</span>
+    </div>
     <div id='editor' contenteditable="true" @keydown.tab="tab" @input="updateContent" v-html="initContent"></div>
 
 
@@ -60,6 +45,15 @@ export default {
   },
   created() {
     this.reload()
+  },
+  computed: {
+    showSaveState: function () {
+      if (this.contentUpdated) {
+        return "文档已发生更改"
+      } else {
+        return "文档已保存"
+      }
+    }
   },
   mounted() {
     //绑定保存按键
@@ -133,7 +127,22 @@ export default {
         this.save()
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
         e.preventDefault()
-        document.getElementById("boldAction").click()
+        this.doAction('bold')
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+        e.preventDefault()
+        this.doAction('italic')
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+        e.preventDefault()
+        this.doAction('underline')
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault()
+        this.doAction('strikeThrough')
+      } else if ((e.ctrlKey || e.metaKey) && e.key === '1') {
+        e.preventDefault()
+        this.doAction('h1')
+      } else if ((e.ctrlKey || e.metaKey) && e.key === '2') {
+        e.preventDefault()
+        this.doAction('h2')
       }
     },
     save: function () {
@@ -243,18 +252,6 @@ function hideAlert() {
 </script>
 
 <style scoped>
-.btn-group > a {
-  position: relative;
-  display: inline-flex;
-  vertical-align: middle;
-  margin-left: 8px;
-}
-
-.btn-group > .btn {
-  position: relative;
-  flex: 1 1 auto;
-}
-
 #editor {
   resize: vertical;
   overflow: auto;
