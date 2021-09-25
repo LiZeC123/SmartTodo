@@ -175,15 +175,15 @@ ol, ul {
 }
 
 .specific-4 {
-  border-left: 5px solid #0020ee;
+  border-left: 5px solid rgba(0, 32, 238, 0.94);
 }
 
 .specific-3 {
-  border-left: 5px solid #fff400;
+  border-left: 5px solid #eee916;
 }
 
 .specific-2 {
-  border-left: 5px solid #ee8a00;
+  border-left: 5px solid #ff7700;
 }
 
 .specific-1 {
