@@ -35,7 +35,7 @@ jobs:
     
     - name: Push Docker Image to Github Packages
       run: |
-        docker tag smart-todo-app ghcr.io/LiZeC123/smart-todo-app
-        docker push ghcr.io/LiZeC123/smart-todo-app
-        docker tag smart-todo-web ghcr.io/LiZeC123/smart-todo-web
-        docker push ghcr.io/LiZeC123/smart-todo-web
+        docker tag smart-todo-app ghcr.io/lizec123/smart-todo-app
+        docker push ghcr.io/lizec123/smart-todo-app
+        docker tag smart-todo-web ghcr.io/lizec123/smart-todo-web
+        docker push ghcr.io/lizec123/smart-todo-web
