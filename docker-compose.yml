@@ -1,6 +1,6 @@
 version: '3.0'
 services:
-  app:
+  backend:
     container_name: smart-todo-app
     image: ghcr.io/lizec123/smart-todo-app:latest
     expose: 
