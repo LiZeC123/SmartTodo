@@ -1,11 +1,8 @@
 version: '3.0'
 services:
-  backend:
-    container_name: flask-app
-    restart: always
-    build:
-      context: ./ 
-      dockerfile: docker/app/Dockerfile
+  app:
+    container_name: smart-todo-app
+    image: ghcr.io/lizec123/smart-todo-app:latest
     expose: 
       - "4231"
     volumes:
@@ -14,11 +11,8 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
   web:
-    container_name: web-app
-    restart: always
-    build: 
-      context: ./
-      dockerfile: docker/web/Dockerfile
+    container_name: smart-todo-web
+    image: ghcr.io/lizec123/smart-todo-web:latest
     environment:
       TZ: Asia/Shanghai
     ports: 
