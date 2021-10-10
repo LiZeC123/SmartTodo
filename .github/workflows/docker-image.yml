@@ -21,13 +21,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Build the SmartTodo App Image
+    - name: Build Image
       run: |
-        echo smart-todo-app:${{ env.TAG }}
-        docker build . --file docker/app/Dockerfile --tag smart-todo-app
+        docker build . --file docker/app/Dockerfile --tag ghcr.io/LiZeC123/smart-todo-app
+        docker build . --file docker/web/Dockerfile --tag ghcr.io/LiZeC123/smart-todo-web
     
     - name: Build the SmartTodo Web Image
-      run: docker build . --file docker/web/Dockerfile --tag smart-todo-web
+      
       
     - name: Docker Login
       # You may pin to the exact commit or the version.
@@ -43,5 +43,5 @@ jobs:
     
     - name: Push Docker Image to Github Packages
       run: |
-        docker push smart-todo-app
-        docker push smart-todo-web
+        docker push ghcr.io/LiZeC123/smart-todo-app
+        docker push ghcr.io/LiZeC123/smart-todo-app
