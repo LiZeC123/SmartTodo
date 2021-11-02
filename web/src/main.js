@@ -21,12 +21,12 @@ const doNone = function () {
 
 axios.interceptors.response.use(res => {
     console.log(["Res=", res])
-    if (!res.data.success) {
+    if (res.data.success) {
+        return res;
+    } else {
         store.commit('del_token')
         router.push({path: '/login'}).then(doNone);
     }
-
-    return res;
 });
 
 
