@@ -20,6 +20,7 @@ const doNone = function () {
 };
 
 axios.interceptors.response.use(res => {
+    console.log(["Res=", res])
     if (!res.data.success) {
         store.commit('del_token')
         router.push({path: '/login'}).then(doNone);
