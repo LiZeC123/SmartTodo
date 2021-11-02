@@ -32,7 +32,6 @@ export default {
   methods: {
     reload: function () {
       this.axios.post("/item/getAll").then(res => {
-        console.log(["Res In GetAll", res])
         this.todo = res.data.data.todo
         this.done = res.data.data.done
         this.old = res.data.data.old

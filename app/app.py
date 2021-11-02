@@ -21,10 +21,6 @@ def make_success(data=None) -> str:
     return json.dumps({"success": True, "data": data})
 
 
-def make_fail(data=None) -> str:
-    return json.dumps({"success": False, "data": data})
-
-
 def logged(func=None, role='ROLE_USER', wrap=True):
     if func is None:
         return functools.partial(logged, role=role)
@@ -41,11 +37,6 @@ def logged(func=None, role='ROLE_USER', wrap=True):
     return wrapper
 
 
-@app.errorhandler(401)
-def handle_401(e):
-    return make_fail("未授权操作")
-
-
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -56,7 +47,7 @@ def login():
     else:
         real_ip = request.headers.get("X-Real-IP")
         logger.warning(f"已拒绝来自{real_ip}的请求, 此请求尝试以'{password}'为密码登录账号'{username}'")
-        return make_fail()
+        return abort(401)
 
 
 @app.route('/api/logout', methods=['POST'])
