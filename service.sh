@@ -1,14 +1,3 @@
-function compileService() {
-  docker-compose build
-}
-
-function runService() {
-  docker-compose up -d
-}
-
-function stopService() {
-  docker-compose down
-}
 
 function backup() {
   echo "Zip SmartTodo Data"
@@ -18,22 +7,13 @@ function backup() {
 
 function update() {
   git pull
+  docker-compose down
+  docker pull ghcr.io/lizec123/smart-todo-app:latest
+  docker pull ghcr.io/lizec123/smart-todo-web:latest
+  docker-compose up -d
 }
 
-if [ "$1"x == "start"x ]; then
-  compileService
-  runService
-elif [ "$1"x == "compile"x ]; then
-  compileService
-elif [ "$1"x == "run"x ]; then
-  runService
-elif [ "$1"x == "stop"x ]; then
-  stopService
-elif [ "$1"x == "restart"x ]; then
-  compileService
-  stopService
-  runService
-elif [ "$1"x == "backup"x ]; then
+if [ "$1"x == "backup"x ]; then
   backup
 elif [ "$1"x == "update"x ]; then
   update
@@ -42,11 +22,7 @@ else
   echo ""
   echo "用法: ./service [参数]"
   echo "参数可以选择以下值:"
-  echo "start     编译并启动项目"
-  echo "stop      停止项目"
-  echo "restart   重启项目"
-  echo "compile   只编译项目"
-  echo "run       直接运行项目"
   echo "backup    备份数据文件"
-  echo "update    更新项目代码"
+  echo "update    更新项目代码并重启"
+  echo ""
 fi
