@@ -143,6 +143,9 @@ export default {
       } else if ((e.ctrlKey || e.metaKey) && e.key === '2') {
         e.preventDefault()
         this.doAction('h2')
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+        e.preventDefault()
+        this.line(e)
       }
     },
     save: function () {
@@ -189,6 +192,12 @@ export default {
       }
     },
     tab: function (event) {
+      this.insertHTML(event, '&nbsp;&nbsp;&nbsp;&nbsp;')
+    },
+    line: function (event) {
+      this.insertHTML(event, '<hr />')
+    },
+    insertHTML: function (e, content) {
       // 阻止默认切换元素的行为
       if (event && event.preventDefault) {
         event.preventDefault()
@@ -202,7 +211,7 @@ export default {
       // 新建一个span元素
       let span = document.createElement('span');
       // 四个 表示四个空格
-      span.innerHTML = '&nbsp;&nbsp;&nbsp;&nbsp;';
+      span.innerHTML = content;
       // 创建一个新的range对象
       let newRange = document.createRange();
       // 设置新的range的位置，也是插入元素的位置
