@@ -5,10 +5,8 @@
                @btn-click="removeTodo"></item-list>
 
     <!-- 主体：文本编辑器 -->
-    <div><span>{{showSaveState}}</span> <span @click="save" style="float: right">保存文档</span>
-    </div>
-    <div id='editor' contenteditable="true" @keydown.tab="tab" @input="updateContent" v-html="initContent"></div>
-
+    <div><span>{{ showSaveState }}</span> <span @click="save" style="float: right">保存文档</span></div>
+    <note-editor :init-content="initContent" @save="save" @changed="updateContent"></note-editor>
 
     <item-list title="已经完成" btn-name="-" :data="done" :done="true" @checkbox-change="resetTodoItem"
                @btn-click="removeDone"></item-list>
@@ -24,11 +22,12 @@
 
 <script>
 
-import ItemList from "@/components/list/ItemList";
+import ItemList from "./list/ItemList";
+import NoteEditor from "./NoteEditor";
 
 export default {
   name: "NoteComponent",
-  components: {ItemList},
+  components: {NoteEditor, ItemList},
   props: {
     updateTodo: Number,
     createPlaceHold: Number
@@ -56,15 +55,8 @@ export default {
     }
   },
   mounted() {
-    //绑定保存按键
-    document.onkeydown = this.hotKeyDispatcher;
-
     // 获得焦点后自动更新一次
     window.onfocus = this.checkUpdateStatus
-
-    // 设置自动保存
-    setInterval(this.autoSave, 60 * 1000);
-
     // 关闭页面时如果未保存则执行保存操作
     window.onbeforeunload = this.checkUnsaved;
   },
@@ -121,33 +113,6 @@ export default {
     updateContent: function () {
       this.contentUpdated = true
     },
-    hotKeyDispatcher: function (e) {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault()
-        this.save()
-      } else if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-        e.preventDefault()
-        this.doAction('bold')
-      } else if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
-        e.preventDefault()
-        this.doAction('italic')
-      } else if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
-        e.preventDefault()
-        this.doAction('underline')
-      } else if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
-        e.preventDefault()
-        this.doAction('strikeThrough')
-      } else if ((e.ctrlKey || e.metaKey) && e.key === '1') {
-        e.preventDefault()
-        this.doAction('h1')
-      } else if ((e.ctrlKey || e.metaKey) && e.key === '2') {
-        e.preventDefault()
-        this.doAction('h2')
-      } else if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
-        e.preventDefault()
-        this.line(e)
-      }
-    },
     save: function () {
       this.axios.post("note/update", {
         "id": this.$route.params.id,
@@ -174,15 +139,6 @@ export default {
         e.returnValue = false;
       }
     },
-    doAction: function (role) {
-      const baseAction = ['h1', 'h2', 'p'];
-
-      if (baseAction.indexOf(role) !== -1) {
-        document.execCommand('formatBlock', false, '<' + role + '>');
-      } else {
-        document.execCommand(role, false, null);
-      }
-    },
     checkUpdateStatus: function () {
       const today = new Date().getDate();
       if (today !== this.lastUpdateDate) {
@@ -191,41 +147,6 @@ export default {
         this.lastUpdateDate = today;
       }
     },
-    tab: function (event) {
-      this.insertHTML(event, '&nbsp;&nbsp;&nbsp;&nbsp;')
-    },
-    line: function (event) {
-      this.insertHTML(event, '<hr />')
-    },
-    insertHTML: function (e, content) {
-      // 阻止默认切换元素的行为
-      if (event && event.preventDefault) {
-        event.preventDefault()
-      } else {
-        window.event.returnValue = false
-      }
-      // 获取光标的range对象 event.view 是一个window对象
-      let range = event.view.getSelection().getRangeAt(0);
-      // 光标的偏移位置
-      let offset = range.startOffset;
-      // 新建一个span元素
-      let span = document.createElement('span');
-      // 四个 表示四个空格
-      span.innerHTML = content;
-      // 创建一个新的range对象
-      let newRange = document.createRange();
-      // 设置新的range的位置，也是插入元素的位置
-      newRange.setStart(range.startContainer, offset);
-      newRange.setEnd(range.startContainer, offset);
-      newRange.collapse(true);
-      newRange.insertNode(span);
-      // 去掉旧的range对象，用新的range对象替换
-      event.view.getSelection().removeAllRanges();
-      event.view.getSelection().addRange(range);
-      // 将光标的位置向后移动一个偏移量，放到加入的四个空格后面
-      range.setStart(span, 1);
-      range.setEnd(span, 1);
-    }
   },
   watch: {
     "updateTodo": function () {
