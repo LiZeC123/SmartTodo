@@ -15,8 +15,7 @@ export default {
     }
   },
   mounted() {
-    // 设置自动保存
-    setInterval(this.save, 60 * 1000);
+
   },
   methods: {
     hotKeyDispatcher: function (e) {

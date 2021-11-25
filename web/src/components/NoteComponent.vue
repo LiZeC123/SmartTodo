@@ -59,6 +59,9 @@ export default {
     window.onfocus = this.checkUpdateStatus
     // 关闭页面时如果未保存则执行保存操作
     window.onbeforeunload = this.checkUnsaved;
+
+    // 设置自动保存
+    setInterval(this.autoSave, 60 * 1000);
   },
   methods: {
     reload: function () {
