@@ -198,6 +198,15 @@ def note_get_todo_item():
     return manager.todo_items(owner, parent=nid)
 
 
+# ####################### API For SubTasks #######################
+
+def sub_task_items():
+    pass
+
+
+# 1. 根据文本创建 / 查询已有记录 / 修改记录状态 / 记录转文本 / 根据文本更新记录
+
+
 # ####################### API For Functions #######################
 
 @app.route("/api/meta/isAdmin", methods=["GET"])

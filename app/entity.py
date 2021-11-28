@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 from tool4time import now_str
 
@@ -20,6 +20,7 @@ class Item:
         self.url: Optional[str] = url
         self.parent: int = parent  # 指示此Item是否附属于某个note, 0表示不附属任何note
         self.owner: str = owner
+        self.pTask: int = 0     # 指示此Item是否是某个Item的子任务, 0表示不附属任何Item
 
     def to_dict(self) -> Dict:
         # 添加一个字典到对象的方法, 从而便于添加字段
@@ -49,4 +50,6 @@ def from_dict(raw: Dict) -> Item:
         item.url = raw['url']
     if "parent" in raw:
         item.parent = int(raw['parent'])
+    if "pTask" in raw:
+        item.subTask = int(raw['pTask'])
     return item

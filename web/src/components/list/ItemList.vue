@@ -194,6 +194,19 @@ ol, ul {
   border-left: 5px solid #EE0000;
 }
 
+.subTask-1 {
+  margin-left: 20px;
+}
+
+.subTask-2 {
+  margin-left: 40px;
+}
+
+.subTask-3 {
+  margin-left: 60px;
+}
+
+
 /*任务单选框*/
 li input {
   position: absolute;
