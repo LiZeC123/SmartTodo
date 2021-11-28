@@ -28,6 +28,7 @@
       <a v-if="isAdmin && isMainPage" @click="backUpData">备份数据</a>
       <a v-if="isAdmin && isMainPage" @click="updateLogs">查看日志</a>
       <a v-if="isAdmin" @click="gc">垃圾回收</a>
+      <a v-if="isMainPage" @click="tomato">番茄钟</a>
       <a @click="doLogout">退出登录</a>
     </div>
 
@@ -56,7 +57,7 @@ export default {
   },
   computed: {
     isMainPage: function () {
-      return this.$route.params.id === undefined;
+      return this.$route.fullPath === "/home/todo"
     }
   },
   methods: {
@@ -123,6 +124,9 @@ export default {
     },
     gc: function () {
       this.axios.post("/admin/gc").then(() => alert("垃圾回收完毕"))
+    },
+    tomato: function () {
+      this.$router.push("/home/tomato");
     }
   }
 }
@@ -212,11 +216,11 @@ function inferNoteType(name) {
 
 function parseDeadline(deadline) {
   let data = /(\d+)\.(\d+)(:(\d+))?/.exec(deadline)
-  if(data) {
+  if (data) {
     let month = data[1]
     let day = data[2]
-    let hour = data[4] === undefined ? 10: data[4]
-    return parseDate(month, day, hour,0,0);
+    let hour = data[4] === undefined ? 10 : data[4]
+    return parseDate(month, day, hour, 0, 0);
   } else {
     data = /[Ww](\d+)/.exec(deadline)
     return parseWeek(data[1])

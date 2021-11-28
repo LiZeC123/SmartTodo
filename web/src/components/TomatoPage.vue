@@ -1,11 +1,15 @@
 <template>
-  <div>
-    <p>{{ timeWithMin }}</p>
-    <button @click="reset">Reset</button>
+  <div style="height: 500px">
+    <p style="text-align:center;font-size: 45px">{{ timeWithMin }}</p>
+    <button style="display:block;margin:0 auto;font-size: 25px;" @click="reset">重置番茄钟</button>
   </div>
 </template>
 
 <script>
+
+const resetTime = 5 * 60;
+const tomatoTime = 25 * 60;
+
 export default {
   name: "TomatoPage",
   data: function () {
@@ -43,7 +47,7 @@ export default {
           this.timeSeconds -= 1
         } else {
           this.stage = "REST"
-          this.timeSeconds = 5 * 60;
+          this.timeSeconds = resetTime;
           new Notification("专注时间结束", {body: "完成一个番茄钟了, 休息一下吧~"})
         }
       } else if (this.stage === "REST") {
@@ -57,7 +61,7 @@ export default {
     },
     reset: function () {
       this.stage = "FOCUS"
-      this.timeSeconds = 25 * 60
+      this.timeSeconds = tomatoTime
     }
   }
 }
