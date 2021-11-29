@@ -45,7 +45,7 @@ export default {
         this.timeSeconds = (tomatoTomeMS + resetTimeMS - delta) / 1000
       }
 
-      this.startTime = new Date(d.startTime)
+      this.startTime = new Date(tsStart)
       this.taskName = d.name
     })
   },
