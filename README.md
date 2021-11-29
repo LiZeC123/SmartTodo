@@ -253,3 +253,12 @@ Note页面内可以继续创建Item, 此页面内创建的Item只在此页面可
 ### Vue.js
 - [Vue.js——60分钟快速入门](https://www.cnblogs.com/keepfool/p/5619070.html)
 - [使用 axios 访问 API](https://cn.vuejs.org/v2/cookbook/using-axios-to-consume-apis.html)
+
+### JavaScript
+
+- [使用 Web Notifications](https://developer.mozilla.org/zh-CN/docs/Web/API/Notifications_API/Using_the_Notifications_API)
+
+### Font Awesome
+
+- [Font Awesome图标查询](https://fontawesome.com/v5.15/icons?d=gallery&p=2&s=regular,solid&m=free)
+- [Vue中使用Font Awesome](https://github.com/FortAwesome/vue-fontawesome)
