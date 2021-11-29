@@ -20,20 +20,21 @@
     <router-view class="container" :updateTodo="updateTodo" :createPlaceHold="createPlaceHold"></router-view>
 
     <!-- 脚部：印记和功能按钮 -->
-    <div class="footer" id="footerContainer">
-      Copyright &copy; {{ year }} LiZeC
-    </div>
-    <div class="footer" id="footerFunctionContainer">
-      <a @click="selectFile">上传文件</a>
-      <a v-if="isAdmin && isMainPage" @click="backUpData">备份数据</a>
-      <a v-if="isAdmin && isMainPage" @click="updateLogs">查看日志</a>
-      <a v-if="isAdmin" @click="gc">垃圾回收</a>
-      <a v-if="isMainPage" @click="tomato">番茄钟</a>
-      <a @click="doLogout">退出登录</a>
-    </div>
+    <div class=" footer
+    " id="footerContainer">
+    Copyright &copy; {{ year }} LiZeC
+  </div>
+  <div class="footer" id="footerFunctionContainer">
+    <a @click="selectFile">上传文件</a>
+    <a v-if="isAdmin && isMainPage" @click="backUpData">备份数据</a>
+    <a v-if="isAdmin && isMainPage" @click="updateLogs">查看日志</a>
+    <a v-if="isAdmin" @click="gc">垃圾回收</a>
+    <a v-if="isMainPage" @click="tomato">番茄钟</a>
+    <a @click="doLogout">退出登录</a>
+  </div>
 
-    <!-- 上传文件的控件 -->
-    <input type="file" id="file_selector" style="display: none;" @change="uploadFile"/>
+  <!-- 上传文件的控件 -->
+  <input type="file" id="file_selector" style="display: none;" @change="uploadFile"/>
   </div>
 </template>
 
