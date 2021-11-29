@@ -1,5 +1,7 @@
 <template>
   <div style="height: 500px">
+    <p>开始时间: {{ startTime.toLocaleTimeString() }} </p>
+    <p>任务名称: {{ taskName }}</p>
     <p style="text-align:center;font-size: 45px">{{ timeWithMin }}</p>
     <button style="display:block;margin:0 auto;font-size: 25px;" @click="reset">重置番茄钟</button>
   </div>
@@ -14,6 +16,8 @@ export default {
   name: "TomatoPage",
   data: function () {
     return {
+      startTime: new Date(),
+      taskName: "任务名",
       timeSeconds: 0,
       stage: "FOCUS",
     }
@@ -21,6 +25,8 @@ export default {
   mounted() {
     this.reset()
     setInterval(this.timeHandler, 1000)
+
+    document.title = "番茄钟"
   },
   computed: {
     timeWithMin: function () {
@@ -48,7 +54,7 @@ export default {
         } else {
           this.stage = "REST"
           this.timeSeconds = resetTime;
-          new Notification("专注时间结束", {body: "完成一个番茄钟了, 休息一下吧~"})
+          new Notification("完成一个番茄钟啦~", {body: "任务: "+ this.taskName +" 完成了, 休息一下吧~"})
         }
       } else if (this.stage === "REST") {
         if (this.timeSeconds > 0) {
@@ -62,6 +68,7 @@ export default {
     reset: function () {
       this.stage = "FOCUS"
       this.timeSeconds = tomatoTime
+      this.startTime = new Date()
     }
   }
 }

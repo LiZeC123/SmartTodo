@@ -127,7 +127,7 @@ export default {
       this.axios.post("/admin/gc").then(() => alert("垃圾回收完毕"))
     },
     tomato: function () {
-      this.$router.push("/home/tomato");
+      window.open("/home/tomato");
     }
   }
 }
