@@ -206,6 +206,20 @@ def sub_task_items():
 
 # 1. 根据文本创建 / 查询已有记录 / 修改记录状态 / 记录转文本 / 根据文本更新记录
 
+# ####################### API For Tomato #########################
+@app.route('/api/tomato/setTask', methods=['POST'])
+@logged
+def set_tomato_task():
+    iid = get_xid_from_request()
+    owner = token.get_username(request)
+    return manager.set_tomato_task(iid, owner)
+
+
+@app.route('/api/tomato/getTask', methods=['GET'])
+@logged
+def get_tomato_task():
+    return manager.get_tomato_task()
+
 
 # ####################### API For Functions #######################
 

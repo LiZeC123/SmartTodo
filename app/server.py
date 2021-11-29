@@ -78,6 +78,19 @@ class TaskManager:
         Timer(self.ONE_HOUR, self.__start0).start()
 
 
+class TomatoManager:
+    def __init__(self):
+        self.taskName = ""
+        self.startTime = now()
+
+    def set_task(self, name: str):
+        self.taskName = name
+        self.startTime = now()
+
+    def get_task(self):
+        return {"name": self.taskName, "startTime": self.startTime.timestamp()}
+
+
 class Manager:
     def __init__(self):
         database = MemoryDataBase()
@@ -85,8 +98,9 @@ class Manager:
         self.item_manager = ItemManager(database)
         self.file_manager = FileItemManager(database)
         self.note_manager = NoteItemManager(database)
-        self.task_manager = TaskManager()
         self.manager = {"single": self.item_manager, "file": self.file_manager, "note": self.note_manager}
+        self.task_manager = TaskManager()
+        self.tomato_manager = TomatoManager()
         self.__init_task()
 
     def __init_task(self):
@@ -163,6 +177,13 @@ class Manager:
         for item in unreferenced:
             self.manager[item.item_type].remove(item)
             logger.info(f"Garbage Collection(Unreferenced): {item.name}")
+
+    def set_tomato_task(self, xid: int, owner: str):
+        title = self.get_title(xid, owner)
+        self.tomato_manager.set_task(title)
+
+    def get_tomato_task(self):
+        return self.tomato_manager.get_task()
 
     def __update_state(self):
         self.database.update_by(where_update_repeatable_item, update_repeatable_item)
