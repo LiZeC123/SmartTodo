@@ -24,10 +24,12 @@ export default {
       taskName: "任务名",
       timeSeconds: 0,
       stage: "DONE",
+      hasShowFocusMessage: false,
+      hasShowRestMessage:false,
     }
   },
   mounted() {
-    setInterval(this.timeHandler, 1000)
+    setInterval(this.timeHandler, 500)
 
     document.title = "番茄钟"
 
@@ -35,16 +37,8 @@ export default {
       console.log(res.data.data)
       let d = res.data.data
       let tsStart = d.startTime * 1000
-      let tsNow = new Date().getTime()
 
-      let delta = tsNow - tsStart
-      if (delta < tomatoTomeMS) {
-        this.stage = "FOCUS"
-        this.timeSeconds = (tomatoTomeMS - delta) / 1000
-      } else if (delta < tomatoTomeMS + resetTimeMS) {
-        this.stage = "REST"
-        this.timeSeconds = (tomatoTomeMS + resetTimeMS - delta) / 1000
-      }
+      this.updateTimeSecond(tsStart)
 
       this.startTime = new Date(tsStart)
       this.taskName = d.name
@@ -70,23 +64,30 @@ export default {
   methods: {
     timeHandler: function () {
       // 注意: 每一秒钟此函数都会触发一次, 注意妥善处理后续情况
-      if (this.stage === "FOCUS") {
-        if (this.timeSeconds > 0) {
-          this.timeSeconds -= 1
-        } else {
-          this.stage = "REST"
-          this.timeSeconds = resetTime;
-          new Notification("完成一个番茄钟了, 休息一下吧~", {body: "任务: " + this.taskName})
-        }
-      } else if (this.stage === "REST") {
-        if (this.timeSeconds > 0) {
-          this.timeSeconds -= 1;
-        } else {
-          this.stage = "DONE"
-          new Notification("休息结束", {body: ""})
-        }
+
+      this.updateTimeSecond(this.startTime)
+      if (this.stage === "FOCUS" && this.timeSeconds === 0 && !this.hasShowFocusMessage) {
+        new Notification("完成一个番茄钟了, 休息一下吧~", {body: "任务: " + this.taskName})
+        this.hasShowFocusMessage = true
+      } else if (this.stage === "REST" && this.timeSeconds === 0 && !this.hasShowRestMessage) {
+        new Notification("休息结束", {body: ""})
+        this.hasShowRestMessage = true;
       }
     },
+    updateTimeSecond: function (tsStart){
+      let tsNow = new Date().getTime()
+      let delta = tsNow - tsStart
+      if (delta < tomatoTomeMS) {
+        this.stage = "FOCUS"
+        this.timeSeconds = Math.floor((tomatoTomeMS - delta) / 1000)
+      } else if (delta < tomatoTomeMS + resetTimeMS) {
+        this.stage = "REST"
+        this.timeSeconds = Math.floor((tomatoTomeMS + resetTimeMS - delta) / 1000)
+      } else {
+        this.stage = "DONE"
+        this.timeSeconds = 0
+      }
+    }
   }
 }
 
