@@ -2,6 +2,7 @@
   <div style="height: 500px">
     <p>开始时间: {{ startTime.toLocaleTimeString() }} </p>
     <p>任务名称: {{ taskName }}</p>
+    <p>当前状态: {{ stage }}</p>
     <p style="text-align:center;font-size: 45px">{{ timeWithMin }}</p>
     <!--    <button style="display:block;margin:0 auto;font-size: 25px;" @click="reset">重置番茄钟</button>-->
   </div>
