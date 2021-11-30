@@ -80,15 +80,15 @@ class TaskManager:
 
 class TomatoManager:
     def __init__(self):
+        self.data = {}
         self.taskName = ""
         self.startTime = now()
 
-    def set_task(self, name: str):
-        self.taskName = name
-        self.startTime = now()
+    def set_task(self, name: str, owner: str):
+        self.data[owner] = {"name": name, "startTime": now().timestamp()}
 
-    def get_task(self):
-        return {"name": self.taskName, "startTime": self.startTime.timestamp()}
+    def get_task(self, owner: str):
+        return self.data[owner]
 
 
 class Manager:
@@ -180,10 +180,10 @@ class Manager:
 
     def set_tomato_task(self, xid: int, owner: str):
         title = self.get_title(xid, owner)
-        self.tomato_manager.set_task(title)
+        self.tomato_manager.set_task(title, owner)
 
-    def get_tomato_task(self):
-        return self.tomato_manager.get_task()
+    def get_tomato_task(self, owner: str):
+        return self.tomato_manager.get_task(owner)
 
     def __update_state(self):
         self.database.update_by(where_update_repeatable_item, update_repeatable_item)

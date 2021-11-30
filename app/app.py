@@ -218,7 +218,8 @@ def set_tomato_task():
 @app.route('/api/tomato/getTask', methods=['GET'])
 @logged
 def get_tomato_task():
-    return manager.get_tomato_task()
+    owner = token.get_username(request)
+    return manager.get_tomato_task(owner)
 
 
 # ####################### API For Functions #######################
