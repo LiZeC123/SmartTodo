@@ -15,8 +15,6 @@
 </template>
 
 <script>
-// const resetTime = 5 * 60;
-// const tomatoTime = 25 * 60;
 
 export default {
   name: "ItemList",
@@ -27,7 +25,7 @@ export default {
     data: Array,
   },
   mounted() {
-    //setInterval(() => this.data.forEach(timeHandler), 1000);
+
   },
   methods: {
     change: function (index) {
@@ -89,64 +87,19 @@ export default {
         showName = "【" + getWeekByDay(item.specific) + "】" + showName
       }
 
-      // if (item.stage === "FOCUS" || item.stage === "REST") {
-      //   showName = "【" + timeWithMin(item.timeSeconds) + "】" + showName
-      // }
       return showName;
     },
     resetTomatoTimer: function (index) {
       let item = this.data[index]
       this.axios.post("/tomato/setTask", {"id": item.id}).then(() => window.open("/home/tomato"))
-      // item.stage = "FOCUS"
-      // item.timeSeconds = tomatoTime
     },
   }
 }
-
-// function timeHandler(item) {
-//   // 注意: 每一秒钟此函数都会触发一次, 注意妥善处理后续情况
-//   if (item.stage === "FOCUS") {
-//     if (item.timeSeconds > 0) {
-//       item.timeSeconds -= 1
-//     } else {
-//       item.stage = "REST"
-//       item.timeSeconds = resetTime;
-//       new Notification("专注时间结束", {body: "完成一个番茄钟了, 休息一下吧~"})
-//     }
-//   } else if (item.stage === "REST") {
-//     if (item.timeSeconds > 0) {
-//       item.timeSeconds -= 1;
-//     } else {
-//       item.stage = "DONE"
-//       new Notification("休息结束", {body: ""})
-//     }
-//   }
-// }
-
 
 function getWeekByDay(dayValue) {
   const today = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]; //创建星期数组
   return today[dayValue - 1];  //返一周中的某一天，其中1为周一
 }
-
-//
-// function timeWithMin(timeSeconds) {
-//   if (timeSeconds < 0) {
-//     return "00:00"
-//   }
-//
-//   let m = Math.floor(timeSeconds / 60);
-//   let s = Math.floor(timeSeconds % 60);
-//   if (m < 10) {
-//     m = "0" + m;
-//   }
-//   if (s < 10) {
-//     s = "0" + s;
-//   }
-//   return m + ":" + s;
-//
-// }
-
 
 </script>
 
