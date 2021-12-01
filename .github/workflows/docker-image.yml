@@ -22,9 +22,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build Image
-      run: |
-        docker build . --file docker/app/Dockerfile --tag ghcr.io/lizec123/smart-todo-app
-        docker build . --file docker/web/Dockerfile --tag ghcr.io/lizec123/smart-todo-web
+      run: docker build . --file docker/Dockerfile --tag ghcr.io/lizec123/smart-todo
       
     - name: Docker Login
       uses: docker/login-action@v1.10.0
@@ -34,6 +32,5 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Push Docker Image to Github Packages
-      run: |
-        docker push ghcr.io/lizec123/smart-todo-app
-        docker push ghcr.io/lizec123/smart-todo-web
+      run: docker push ghcr.io/lizec123/smart-todo
+        
