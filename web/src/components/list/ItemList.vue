@@ -2,12 +2,13 @@
   <div v-if="data.length > 0">
     <h2>{{ title }}<span id="todoCount"> {{ data.length }}</span></h2>
     <ol id="todoList" class="demo-box">
-      <li v-for="(item, index) in data" :key="item.id" :class="[done ? 'done' : '', mapTypeToClass(item)]"
+      <li v-for="(item, idxItem) in data" :key="item.id" :class="[item.checked ? 'done' : '', mapTypeToClass(item)]"
           id="li-active">
-        <label><input type='checkbox' @change='change(index)' :checked="done"/></label>
+        <label><input type='checkbox' @change='change(idxItem, item.id)' v-model="item.checked"/></label>
         <p @click='jumpTo(item.url)'>{{ mapName(item) }}</p>
-        <a class="function function-2" @click="resetTomatoTimer(index)">R</a>
-        <a class="function function-1" @click='click(index)'>{{ btnName }}</a>
+
+        <a v-for="(btn, idxBtn) in btnConfig" :key="btn.name" :class="['function', 'function-'+idxBtn]"
+           @click="btn['function'](idxItem, item.id)" :title="btn.desc">{{ btn.name }}</a>
       </li>
     </ol>
   </div>
@@ -20,16 +21,27 @@ export default {
   name: "ItemList",
   props: {
     title: String,
-    btnName: String,
-    done: Boolean,
+    btnConfig: Array,
     data: Array,
   },
+  data: function () {
+    return {
+      done: false
+    }
+  },
   mounted() {
-
+    for (let d of this.data) {
+      d.checked = false
+    }
   },
   methods: {
-    change: function (index) {
-      this.$emit('checkbox-change', index)
+    change: function (index, id) {
+      this.$emit('checkbox-change', index, id)
+      setTimeout(() => {
+        let d = this.data[index]
+        d.checked = false
+      }, 500);
+
     },
     jumpTo: function (url) {
       if (url !== null) {
@@ -85,6 +97,10 @@ export default {
 
       if (item.specific) {
         showName = "【" + getWeekByDay(item.specific) + "】" + showName
+      }
+
+      if (item.expected_tomato !== 1) {
+        showName = "【" + item.used_tomato + "/" + item.expected_tomato + "】" + showName
       }
 
       return showName;
@@ -247,14 +263,26 @@ p {
   cursor: pointer;
 }
 
+.function-0 {
+  top: 4px;
+  right: 4px;
+}
+
 .function-1 {
   top: 4px;
-  right: 5px;
+  right: 34px;
 }
 
 .function-2 {
   top: 4px;
-  right: 34px;
+  right: 64px;
 }
+
+
+.function-3 {
+  top: 4px;
+  right: 94px;
+}
+
 
 </style>
