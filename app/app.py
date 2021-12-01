@@ -240,6 +240,22 @@ def get_tomato_task():
     return manager.get_tomato_task(owner)
 
 
+@app.route('/api/tomato/finishTask', methods=['POST'])
+@logged
+def finish_tomato_task():
+    iid = get_xid_from_request()
+    owner = token.get_username(request)
+    return manager.finish_tomato_task(iid, owner)
+
+
+@app.route('/api/tomato/undoTask', methods=['POST'])
+@logged
+def undo_tomato_task():
+    iid = get_xid_from_request()
+    owner = token.get_username(request)
+    return manager.undo_tomato_task(iid, owner)
+
+
 # ####################### API For Functions #######################
 
 @app.route("/api/meta/isAdmin", methods=["GET"])

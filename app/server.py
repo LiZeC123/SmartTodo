@@ -85,11 +85,17 @@ class TomatoManager:
         self.taskName = ""
         self.startTime = now()
 
-    def set_task(self, name: str, owner: str):
-        self.data[owner] = {"name": name, "startTime": now().timestamp()}
+    def set_task(self, xid: int, name: str, owner: str):
+        self.data[owner] = {"id": xid, "name": name, "startTime": now().timestamp()}
 
     def get_task(self, owner: str):
         return self.data[owner]
+
+    def check_id(self, xid: int, owner: str):
+        return self.data[owner]['id'] == xid
+
+    def clear_task(self, owner: str):
+        self.data[owner] = {"id": 0, "name": "当前无任务", "startTime": 0}
 
 
 class Manager:
@@ -154,10 +160,10 @@ class Manager:
     def increase_used_tomato(self, xid: int, owner: str):
         return self.database.update_by(where_equal(xid, owner), inc_used_tomato) == 1
 
-    def to_urgent_task(self,  xid: int, owner: str):
+    def to_urgent_task(self, xid: int, owner: str):
         return self.database.update_by(where_equal(xid, owner), urgent_task) == 1
 
-    def to_today_task(self,  xid: int, owner: str):
+    def to_today_task(self, xid: int, owner: str):
         return self.database.update_by(where_equal(xid, owner), today_task) == 1
 
     def get_title(self, xid: int, owner: str) -> str:
@@ -185,10 +191,19 @@ class Manager:
 
     def set_tomato_task(self, xid: int, owner: str):
         title = self.get_title(xid, owner)
-        self.tomato_manager.set_task(title, owner)
+        self.tomato_manager.set_task(xid, title, owner)
 
     def get_tomato_task(self, owner: str):
         return self.tomato_manager.get_task(owner)
+
+    def finish_tomato_task(self, xid: int, owner: str):
+        if self.tomato_manager.check_id(xid, owner):
+            self.increase_used_tomato(xid, owner)
+            self.tomato_manager.clear_task(owner)
+
+    def undo_tomato_task(self, xid: int, owner: str):
+        if self.tomato_manager.check_id(xid, owner):
+            self.tomato_manager.clear_task(owner)
 
     def __update_state(self):
         self.database.update_by(where_update_repeatable_item, update_repeatable_item)
