@@ -8,8 +8,7 @@ function backup() {
 function update() {
   git pull
   docker-compose down
-  docker pull ghcr.io/lizec123/smart-todo-app:latest
-  docker pull ghcr.io/lizec123/smart-todo-web:latest
+  docker pull ghcr.io/lizec123/smart-todo
   docker-compose up -d
 }
 
