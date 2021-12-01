@@ -57,45 +57,6 @@ def logout():
 
 
 # ####################### API For Item #######################
-@app.route('/api/item/getAll', methods=['POST'])
-@logged
-def get_all_item():
-    owner: str = token.get_username(request)
-    return manager.all_items(owner, parent=0)
-
-
-@app.route('/api/item/getTodo', methods=['POST'])
-@logged
-def get_todo_item():
-    owner: str = token.get_username(request)
-    return manager.todo_items(owner, parent=0)
-
-
-@app.route('/api/item/done', methods=['POST'])
-@logged
-def done_item() -> bool:
-    xid = get_xid_from_request()
-    owner = token.get_username(request)
-    parent = try_get_parent_from_request()
-    return manager.done(xid=xid, owner=owner, parent=parent)
-
-
-@app.route('/api/item/undone', methods=['POST'])
-@logged
-def undone_item() -> bool:
-    xid = get_xid_from_request()
-    owner = token.get_username(request)
-    parent = try_get_parent_from_request()
-    return manager.undo(xid=xid, owner=owner, parent=parent)
-
-
-@app.route('/api/item/toOld', methods=['POST'])
-@logged
-def to_old():
-    xid = get_xid_from_request()
-    return manager.to_old(xid=xid, owner=token.get_username(request))
-
-
 @app.route("/api/item/create", methods=["POST"])
 @logged
 def create_item():
@@ -104,9 +65,6 @@ def create_item():
 
     if "deadline" in f:
         item.deadline = parse_deadline_timestamp(f["deadline"])
-
-    if "work" in f:
-        item.work = bool(f["work"])
 
     if "repeatable" in f:
         item.repeatable = bool(f["repeatable"])
@@ -120,12 +78,70 @@ def create_item():
     manager.create(item)
 
 
+@app.route('/api/item/getAll', methods=['POST'])
+@logged
+def get_all_item():
+    owner: str = token.get_username(request)
+    parent = try_get_parent_from_request()
+    return manager.all_items(owner, parent=parent)
+
+
+@app.route('/api/item/getActivate', methods=['POST'])
+@logged
+def get_activate_item():
+    owner: str = token.get_username(request)
+    parent = try_get_parent_from_request()
+    return manager.activate_items(owner, parent=parent)
+
+
+@app.route('/api/item/back', methods=['POST'])
+@logged
+def back_item() -> bool:
+    xid = get_xid_from_request()
+    owner = token.get_username(request)
+    parent = try_get_parent_from_request()
+    return manager.undo(xid=xid, owner=owner, parent=parent)
+
+
 @app.route("/api/item/remove", methods=["POST"])
 @logged
 def remove_item():
     iid = get_xid_from_request()
     owner = token.get_username(request)
+    # TODO: Remove 怎么执行?
     manager.remove(iid, owner)
+
+
+@app.route('/api/item/increaseExpectedTomatoTime', methods=['POST'])
+@logged
+def increase_expected_tomato() -> bool:
+    xid = get_xid_from_request()
+    owner = token.get_username(request)
+    return manager.increase_expected_tomato(xid=xid, owner=owner)
+
+
+@app.route('/api/item/increaseUsedTomatoTime', methods=['POST'])
+@logged
+def increase_used_tomato() -> bool:
+    xid = get_xid_from_request()
+    owner = token.get_username(request)
+    return manager.increase_used_tomato(xid=xid, owner=owner)
+
+
+@app.route('/api/item/toUrgentTask', methods=['POST'])
+@logged
+def to_urgent_task() -> bool:
+    xid = get_xid_from_request()
+    owner = token.get_username(request)
+    return manager.to_urgent_task(xid=xid, owner=owner)
+
+
+@app.route('/api/item/toTodayTask', methods=['POST'])
+@logged
+def to_today_task() -> bool:
+    xid = get_xid_from_request()
+    owner = token.get_username(request)
+    return manager.to_today_task(xid=xid, owner=owner)
 
 
 @app.route("/api/item/getTitle", methods=["POST"])
@@ -145,7 +161,10 @@ def get_xid_from_request() -> int:
 
 def try_get_parent_from_request() -> int:
     f: Dict = request.get_json()
-    return int(f.get("parent", "0"))
+    if f is not None:
+        return int(f.get("parent", "0"))
+    else:
+        return 0
 
 
 # ####################### API For File #######################
@@ -195,7 +214,7 @@ def note_get_all_item():
 def note_get_todo_item():
     owner: str = token.get_username(request)
     nid = get_xid_from_request()
-    return manager.todo_items(owner, parent=nid)
+    return manager.activate_items(owner, parent=nid)
 
 
 # ####################### API For SubTasks #######################

@@ -21,27 +21,17 @@ def group_all_item_with(owner: str, parent: int):
     def group_by(item: dict) -> str:
         if owner != item['owner'] or parent != item['parent']:
             return "miss"
-        if item['old'] is True:
-            return "old"
-        if item['finish_time'] is None:
-            return "todo"
-        if item['specific'] != 0:
-            return "todo" if check_specific_item_is_todo(item) else "done"
-        if item['repeatable'] is True:
-            return "done"
-
-        finish_day = get_day_from_str(item['finish_time'])
-        if finish_day == today():
-            return "done"
+        elif item['is_delete']:
+            return "delete"
+        else:
+            return item['tomato_type']
 
     return group_by
 
 
-def where_select_todo_with(owner: str, parent: int):
-    group_by = group_all_item_with(owner, parent)
-
+def where_select_activate_with(owner: str, parent: int):
     def select(item: dict) -> bool:
-        return group_by(item) == 'todo'
+        return owner == item['owner'] and parent == item['parent'] and item['tomato_type'] == 'activate'
 
     return select
 
@@ -84,19 +74,26 @@ def where_unreferenced(parent: list):
     return lambda item: item['parent'] != 0 and item['parent'] not in parent
 
 
-def finish_item(item: dict):
-    item['finish_time'] = now_str()
-    logger.info(f"Move Item {item['name']} To Done Lists")
-
-
 def undo_item(item: dict):
-    item['finish_time'] = None
-    logger.info(f"Move Item {item['name']} To Todo Lists")
+    item['create_time'] = now_str()
+    item['tomato_type'] = 'activate'
+    logger.info(f"Undo Item {item['name']}")
 
 
-def old_item(item: dict):
-    item['old'] = True
-    logger.info(f"Move Item {item['name']} To Old Lists")
+def inc_expected_tomato(item: dict):
+    item['expected_tomato'] += 1
+
+
+def inc_used_tomato(item: dict):
+    item['used_tomato'] += 1
+
+
+def urgent_task(item: dict):
+    item['tomato_type'] = "urgent"
+
+
+def today_task(item: dict):
+    item['tomato_type'] = "today"
 
 
 def where_update_repeatable_item(item: dict) -> bool:

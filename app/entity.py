@@ -5,22 +5,24 @@ from tool4time import now_str
 
 class Item:
     def __init__(self, item_id, name, item_type, owner, /,
-                 deadline: Optional[str] = None, old: bool = False, repeatable: bool = False, specific: int = 0,
-                 work: bool = False, url: Optional[str] = None, parent: int = 0):
+                 tomato_type: str = "activate", deadline: Optional[str] = None, repeatable: bool = False,
+                 specific: int = 0, work: bool = False, url: Optional[str] = None, parent: int = 0, is_delete: bool = False):
         self.id: int = item_id
         self.name: str = name
-        self.item_type: str = item_type  # single, file, note 共三种类型
+        self.item_type: str = item_type         # single, file, note 三种类型
+        self.tomato_type: str = tomato_type     # activate, urgent, today 三种类型
         self.create_time: str = now_str()
-        self.finish_time: Optional[str] = None
         self.deadline: Optional[str] = deadline
-        self.old: bool = old
         self.repeatable: bool = repeatable
         self.specific: int = specific
         self.work: bool = work
         self.url: Optional[str] = url
         self.parent: int = parent  # 指示此Item是否附属于某个note, 0表示不附属任何note
+        self.pTask: int = 0  # 指示此Item是否是某个Item的子任务, 0表示不附属任何Item
+        self.expected_tomato: int = 1
+        self.used_tomato: int = 0
+        self.is_delete = is_delete
         self.owner: str = owner
-        self.pTask: int = 0     # 指示此Item是否是某个Item的子任务, 0表示不附属任何Item
 
     def to_dict(self) -> Dict:
         # 添加一个字典到对象的方法, 从而便于添加字段
@@ -32,10 +34,10 @@ class Item:
 
 def from_dict(raw: Dict) -> Item:
     item = Item(int(raw['id']), raw['name'], raw['item_type'], raw['owner'])
+    if "tomato_type" in raw:
+        item.tomato_type = raw['tomato_type']
     if "create_time" in raw:
         item.create_time = raw['create_time']
-    if "finish_time" in raw:
-        item.finish_time = raw['finish_time']
     if "deadline" in raw:
         item.deadline = raw['deadline']
     if "old" in raw:
@@ -52,4 +54,10 @@ def from_dict(raw: Dict) -> Item:
         item.parent = int(raw['parent'])
     if "pTask" in raw:
         item.subTask = int(raw['pTask'])
+    if "expected_tomato" in raw:
+        item.expected_tomato = int(raw['expected_tomato'])
+    if "used_tomato" in raw:
+        item.used_tomato = int(raw['used_tomato'])
+    if "is_delete" in raw:
+        item.is_delete = bool(raw['is_delete'])
     return item

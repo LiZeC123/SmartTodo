@@ -11,10 +11,11 @@ from werkzeug.exceptions import abort
 from entity import Item, from_dict
 from mapper import MemoryDataBase
 from tool4item import where_can_delete, \
-    where_update_repeatable_item, update_repeatable_item, where_id_equal, finish_item, \
-    undo_item, where_equal, old_item, group_all_item_with, where_select_todo_with, update_note_url, \
-    where_select_all_file, where_unreferenced, select_id, select_title
-from tool4key import todo_item_key, done_item_key, old_item_key
+    where_update_repeatable_item, update_repeatable_item, where_id_equal, \
+    undo_item, where_equal, group_all_item_with, where_select_activate_with, update_note_url, \
+    where_select_all_file, where_unreferenced, select_id, select_title, inc_expected_tomato, inc_used_tomato, \
+    urgent_task, today_task
+from tool4key import activate_key, create_time_key
 from tool4log import logger
 from tool4time import now
 from tool4web import extract_title, download
@@ -132,8 +133,8 @@ class Manager:
         # 可以考虑在前端请求的时候, 返回一个是否需要刷新的标记, 如果检测到变化, 则要求前端刷新, 否则不变
         return self.item_manager.select_all(owner, parent)
 
-    def todo_items(self, owner: str, /, parent: int = 0):
-        return self.item_manager.select_todo(owner, parent)
+    def activate_items(self, owner: str, /, parent: int = 0):
+        return self.item_manager.select_activate(owner, parent)
 
     def files(self):
         return self.item_manager.select_file()
@@ -143,16 +144,21 @@ class Manager:
         item = self.item_manager.select(xid)
         self.manager[item.item_type].remove(item)
 
-    def done(self, xid: int, owner: str, parent: int = 0):
-        self.database.update_by(where_equal(xid, owner), finish_item)
-        return self.todo_items(owner, parent=parent)
-
     def undo(self, xid: int, owner: str, parent: int = 0):
         self.database.update_by(where_equal(xid, owner), undo_item)
-        return self.todo_items(owner, parent=parent)
+        return self.activate_items(owner, parent=parent)
 
-    def to_old(self, xid: int, owner: str) -> bool:
-        return self.database.update_by(where_equal(xid, owner), old_item) == 1
+    def increase_expected_tomato(self, xid: int, owner: str):
+        return self.database.update_by(where_equal(xid, owner), inc_expected_tomato) == 1
+
+    def increase_used_tomato(self, xid: int, owner: str):
+        return self.database.update_by(where_equal(xid, owner), inc_used_tomato) == 1
+
+    def to_urgent_task(self,  xid: int, owner: str):
+        return self.database.update_by(where_equal(xid, owner), urgent_task) == 1
+
+    def to_today_task(self,  xid: int, owner: str):
+        return self.database.update_by(where_equal(xid, owner), today_task) == 1
 
     def get_title(self, xid: int, owner: str) -> str:
         return self.database.select_one(where_equal(xid, owner), select_title)
@@ -204,18 +210,18 @@ class ItemManager:
         return from_dict(self.database.select(iid))
 
     def select_all(self, owner: str, parent: int):
-        data = {"todo": [], "done": [], "old": [], "delete": []}
+        data = {"activate": [], "urgent": [], "today": [], "delete": []}
         self.database.select_group_by(data, group_all_item_with(owner, parent))
 
         return {
-            "todo": list(map(self.to_dict, sorted(data["todo"], key=todo_item_key, reverse=True))),
-            "done": list(map(self.to_dict, sorted(data["done"], key=done_item_key, reverse=True))),
-            "old": list(map(self.to_dict, sorted(data["old"], key=old_item_key, reverse=True)))
+            "todayTask": list(map(self.to_dict, sorted(data["today"], key=create_time_key))),
+            "urgentTask": list(map(self.to_dict, sorted(data["urgent"], key=create_time_key))),
+            "activeTask": list(map(self.to_dict, sorted(data["activate"], key=activate_key, reverse=True)))
         }
 
-    def select_todo(self, owner: str, parent: int):
-        return list(map(self.to_dict, sorted(self.database.select_by(where_select_todo_with(owner, parent)),
-                                             key=todo_item_key, reverse=True)))
+    def select_activate(self, owner: str, parent: int):
+        return list(map(self.to_dict, sorted(self.database.select_by(where_select_activate_with(owner, parent)),
+                                             key=activate_key, reverse=True)))
 
     def select_file(self):
         return list(map(self.to_dict, self.database.select_by(where_select_all_file)))

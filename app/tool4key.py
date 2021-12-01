@@ -2,6 +2,11 @@ from entity import Item
 from tool4time import get_timestamp_from_str, is_work_time, now_stamp, get_datetime_from_str, now
 
 
+def activate_key(item: Item):
+    # TODO: 合适的函数
+    return get_datetime_from_str(item.create_time)
+
+
 def todo_item_key(item: Item):
     value = get_timestamp_from_str(item.create_time)
     day_second = 60 * 60 * 24
@@ -27,9 +32,5 @@ def todo_item_key(item: Item):
     return value
 
 
-def done_item_key(item: Item):
-    return get_datetime_from_str(item.finish_time)
-
-
-def old_item_key(item: Item):
+def create_time_key(item: Item):
     return get_datetime_from_str(item.create_time)
