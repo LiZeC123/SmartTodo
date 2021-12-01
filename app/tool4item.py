@@ -1,28 +1,13 @@
 from typing import NoReturn
 
 from tool4log import logger
-from tool4time import today, get_day_from_str, now_str
-
-
-def check_specific_item_is_todo(item):
-    # 特定任务在每周设定的日期, 如果完成时间没有被更新,则重置到todo列表
-    create_day = get_day_from_str(item['create_time'])
-    if create_day.weekday() == today().weekday():
-        if item['finish_time'] is None:
-            # 没有完成时间则必定属于todo列表
-            return True
-        else:
-            # 否则检查完成时间是否小于今天, 是则说明以前完成了, 但今天还需要重复完成
-            finish_day = get_day_from_str(item['finish_time'])
-            return finish_day < today()
+from tool4time import now_str
 
 
 def group_all_item_with(owner: str, parent: int):
     def group_by(item: dict) -> str:
         if owner != item['owner'] or parent != item['parent']:
             return "miss"
-        elif item['is_delete']:
-            return "delete"
         else:
             return item['tomato_type']
 
@@ -47,15 +32,6 @@ def where_can_delete(item: dict) -> bool:
     return item['repeatable'] is False and item['specific'] == 0 \
            and item['tomato_type'] in ['today', 'urgent'] \
            and item['expected_tomato'] == item['used_tomato']
-
-
-def map_file(item):
-    if item['item_type'] == "file":
-        if item['finish_time'] is None:
-            return "todo"
-        finish_day = get_day_from_str(item['finish_time'])
-        return "done" if finish_day == today() else "delete"
-    return "delete"
 
 
 def where_id_equal(iid: int):
@@ -101,16 +77,13 @@ def today_task(item: dict):
 
 
 def where_update_repeatable_item(item: dict) -> bool:
-    return item['repeatable'] is True and item['finish_time'] is not None
+    return item['repeatable'] is True
 
 
 def update_repeatable_item(item: dict) -> NoReturn:
-    finish_day = get_day_from_str(item['finish_time'])
-    # 如果小于当前日期, 则重置
-    if finish_day < today():
-        item['create_time'] = now_str()
-        item['finish_time'] = None
-        logger.info(f"Reset Repeatable Item {item['name']} To Todo")
+    item['create_time'] = now_str()
+    item['used_tomato'] = 0
+    logger.info(f"Reset Repeatable Item {item['name']}")
 
 
 def update_note_url(item: dict) -> NoReturn:

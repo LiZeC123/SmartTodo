@@ -1,22 +1,11 @@
 from entity import Item
-from tool4time import get_timestamp_from_str, is_work_time, now_stamp, get_datetime_from_str, now
+from tool4time import get_timestamp_from_str, now_stamp, get_datetime_from_str, now
 
 
 def activate_key(item: Item):
-    # TODO: 合适的函数
-    return get_datetime_from_str(item.create_time)
-
-
-def todo_item_key(item: Item):
     value = get_timestamp_from_str(item.create_time)
     day_second = 60 * 60 * 24
-    if item.work:
-        # 如果处于工作时间段, 则相应时间段的任务相当于30天后提交的任务
-        # 否则相当于30天以前提交的任务
-        if is_work_time():
-            value = value + 30 * day_second
-        else:
-            value = value - 30 * day_second
+
     if item.specific != 0:
         # 由于特定任务只能在某一天完成, 因此具有最高优先级
         value = now_stamp()
