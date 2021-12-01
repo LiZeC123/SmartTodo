@@ -16,13 +16,20 @@ Smart-Todo是一个简单智能的待办事项管理程序. Smart-Todo提供了�
 项目部署
 -------------
 
-本项目已经支持Docker方式部署, clone本项目后, 执行如下命令构建镜像并运行
+本项目已经支持Docker方式部署, clone本项目后, 执行如下命令拉取并运行
 
 ```bash
 docker-compose up -d
 ```
 
-项目默认在8080端口提供服务. 
+此操作将从Github提供的镜像托管服务`ghcr.io`上拉取镜像, 如果无法便利的访问此服务, 可以手动执行如下的命令构建镜像并运行
+
+```
+docker build . --file docker/Dockerfile --tag ghcr.io/lizec123/smart-todo
+docker-compose up -d
+```
+
+项目默认在8080端口提供服务, 可通过修改`docker-compose.yml`文件修改项目配置.
 
 
 
