@@ -1,23 +1,14 @@
 version: '3.0'
 services:
-  backend:
-    container_name: smart-todo-app
-    image: ghcr.io/lizec123/smart-todo-app:latest
-    expose: 
-      - "4231"
+  todo:
+    container_name: smart-todo
+    image: ghcr.io/lizec123/smart-todo:latest
+    environment:
+      TZ: Asia/Shanghai
+    ports: 
+      - "8080:80"
     volumes:
       - ./config:/app/config
       - ./data:/app/data
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
-  web:
-    container_name: smart-todo-web
-    image: ghcr.io/lizec123/smart-todo-web:latest
-    environment:
-      TZ: Asia/Shanghai
-    ports: 
-      - "8080:80"
-    volumes: 
-      - ./data/filebase:/app/filebase
-    depends_on: 
-      - backend
