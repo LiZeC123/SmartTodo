@@ -4,7 +4,10 @@
     <p>任务名称: {{ taskName }}</p>
     <p>当前状态: {{ stage }}</p>
     <p style="text-align:center;font-size: 45px">{{ timeWithMin }}</p>
-    <!--    <button style="display:block;margin:0 auto;font-size: 25px;" @click="reset">重置番茄钟</button>-->
+    <div style="display:block;margin:auto;font-size: 25px;position: absolute;">
+      <button @click="undoTask">取消任务</button>
+      <button @click="finishTask">提前完成</button>
+    </div>
   </div>
 </template>
 
@@ -21,11 +24,12 @@ export default {
   data: function () {
     return {
       startTime: new Date(),
+      taskId: 0,
       taskName: "任务名",
       timeSeconds: 0,
       stage: "DONE",
       hasShowFocusMessage: false,
-      hasShowRestMessage:false,
+      hasShowRestMessage: false,
     }
   },
   mounted() {
@@ -42,6 +46,7 @@ export default {
 
       this.startTime = new Date(tsStart)
       this.taskName = d.name
+      this.taskId = d.id
     })
   },
   computed: {
@@ -69,12 +74,13 @@ export default {
       if (this.stage === "FOCUS" && this.timeSeconds === 0 && !this.hasShowFocusMessage) {
         new Notification("完成一个番茄钟了, 休息一下吧~", {body: "任务: " + this.taskName})
         this.hasShowFocusMessage = true
+        this.finishTask()
       } else if (this.stage === "REST" && this.timeSeconds === 0 && !this.hasShowRestMessage) {
         new Notification("休息结束", {body: ""})
         this.hasShowRestMessage = true;
       }
     },
-    updateTimeSecond: function (tsStart){
+    updateTimeSecond: function (tsStart) {
       let tsNow = new Date().getTime()
       let delta = tsNow - tsStart
       if (delta < tomatoTomeMS) {
@@ -87,6 +93,12 @@ export default {
         this.stage = "DONE"
         this.timeSeconds = 0
       }
+    },
+    undoTask: function () {
+      this.axios.post("/tomato/undoTask", {"id": this.taskId}).then(() => window.close())
+    },
+    finishTask: function () {
+      this.axios.post("/tomato/finishTask", {"id": this.taskId})
     }
   }
 }
