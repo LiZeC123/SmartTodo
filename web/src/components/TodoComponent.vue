@@ -16,7 +16,8 @@ export default {
   components: {ItemList},
   props: {
     updateTodo: Number,
-    createPlaceHold: Number
+    createPlaceHold: Number,
+    parent: String,
   },
   data: function () {
     return {
@@ -58,15 +59,15 @@ export default {
       }
     },
     reload: function () {
-        this.axios.post("/item/getAll").then(res => {
-          console.log(res.data.data)
-          this.todayTask = res.data.data.todayTask
-          this.urgentTask = res.data.data.urgentTask
-          this.activeTask = res.data.data.activeTask
-        })
+      this.axios.post("/item/getAll", {"parent": this.parent}).then(res => {
+        console.log(res.data.data)
+        this.todayTask = res.data.data.todayTask
+        this.urgentTask = res.data.data.urgentTask
+        this.activeTask = res.data.data.activeTask
+      })
     },
     backItem: function (index, id) {
-      this.axios.post("/item/back", {"id": id}).then(res => {
+      this.axios.post("/item/back", {"id": id, "parent": this.parent}).then(res => {
         this.findItem(index, id).splice(index, 1)
         this.activeTask = res.data.data
       })
@@ -115,7 +116,7 @@ export default {
   },
   watch: {
     "updateTodo": function () {
-      this.axios.post("/item/getActivate").then(res => this.activeTask = res.data.data);
+      this.axios.post("/item/getActivate", {"parent": this.parent}).then(res => this.activeTask = res.data.data);
     },
     "createPlaceHold": function () {
       this.todayTask.unshift({

@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <router-view class="container" :updateTodo="updateTodo" :createPlaceHold="createPlaceHold"></router-view>
+    <router-view class="container" :updateTodo="updateTodo" :createPlaceHold="createPlaceHold" :parent="0"></router-view>
 
     <!-- 脚部：印记和功能按钮 -->
     <div class=" footer
