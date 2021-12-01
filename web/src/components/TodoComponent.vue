@@ -119,7 +119,7 @@ export default {
       this.axios.post("/item/getActivate", {"parent": this.parent}).then(res => this.activeTask = res.data.data);
     },
     "createPlaceHold": function () {
-      this.todayTask.unshift({
+      this.activeTask.unshift({
         "id": 1,
         "name": "文件正在下载,请稍等...",
         "item_type": "file",
@@ -130,6 +130,8 @@ export default {
         "specific": 0,
         "work": false,
         "url": "#",
+        "expected_tomato": 1,
+        "used_tomato": 0,
       })
     }
   }
