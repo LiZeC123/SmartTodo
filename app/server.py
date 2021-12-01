@@ -171,7 +171,6 @@ class Manager:
         self.check_authority(nid, owner)
         self.note_manager.update(nid, content)
 
-    # 垃圾收集的条件  1. 达到计数次数 2. 零点定时处理
     def garbage_collection(self):
         items = self.database.select_by(where_can_delete)
         for item in items:

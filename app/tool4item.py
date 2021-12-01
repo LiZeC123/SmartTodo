@@ -1,7 +1,7 @@
 from typing import NoReturn
 
 from tool4log import logger
-from tool4time import now, today, get_day_from_str, get_datetime_from_str, now_str
+from tool4time import today, get_day_from_str, now_str
 
 
 def check_specific_item_is_todo(item):
@@ -41,8 +41,12 @@ def where_select_all_file(item: dict) -> bool:
 
 
 def where_can_delete(item: dict) -> bool:
-    return item['repeatable'] is False and item['specific'] == 0 and item['finish_time'] is not None \
-           and get_day_from_str(item['finish_time']) != today()
+    # 1. 不是不可回收的特殊类型
+    # 2. 位于可回收列表中
+    # 3. 处于完成状态
+    return item['repeatable'] is False and item['specific'] == 0 \
+           and item['tomato_type'] in ['today', 'urgent'] \
+           and item['expected_tomato'] == item['used_tomato']
 
 
 def map_file(item):

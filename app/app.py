@@ -108,7 +108,6 @@ def back_item() -> bool:
 def remove_item():
     iid = get_xid_from_request()
     owner = token.get_username(request)
-    # TODO: Remove 怎么执行?
     manager.remove(iid, owner)
 
 
