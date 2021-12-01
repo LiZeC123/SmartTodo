@@ -100,26 +100,6 @@ export default {
       }
     },
   },
-  // watch: {
-  //   "updateTodo": function () {
-  //     this.axios.post("/note/getTodo", {"id": this.$route.params.id})
-  //         .then(res => this.todo = res.data.data);
-  //   },
-  //   "createPlaceHold": function () {
-  //     this.todo.unshift({
-  //       "id": 1,
-  //       "name": "文件正在下载,请稍等...",
-  //       "item_type": "file",
-  //       "urgent": 0,
-  //       "deadline": null,
-  //       "old": false,
-  //       "repeatable": false,
-  //       "specific": 0,
-  //       "work": false,
-  //       "url": "#",
-  //     })
-  //   }
-  // }
 }
 
 function showAlert() {

@@ -2,7 +2,7 @@
   <div v-if="data.length > 0">
     <h2>{{ title }}<span id="todoCount"> {{ data.length }}</span></h2>
     <ol id="todoList" class="demo-box">
-      <li v-for="(item, idxItem) in data" :key="item.id" :class="[item.checked ? 'done' : '', mapTypeToClass(item)]"
+      <li v-for="(item, idxItem) in data" :key="item.id" :class="[doneItem(item) ? 'done' : '', mapTypeToClass(item)]"
           id="li-active">
         <label><input type='checkbox' @change='change(idxItem, item.id)' v-model="item.checked"/></label>
         <p @click='jumpTo(item.url)'>{{ mapName(item) }}</p>
@@ -38,10 +38,13 @@ export default {
     change: function (index, id) {
       this.$emit('checkbox-change', index, id)
       setTimeout(() => {
-        let d = this.data[index]
-        d.checked = false
+        let item = this.data[index]
+        item.checked = this.doneItem(item)
       }, 500);
 
+    },
+    doneItem: function (item) {
+      return item.used_tomato === item.expected_tomato;
     },
     jumpTo: function (url) {
       if (url !== null) {
@@ -190,6 +193,8 @@ ol, ul {
   border-left: 5px solid #999;
   /*不透明度 0完全透明~1完全不透明*/
   opacity: 0.5;
+  /*删除线效果*/
+  text-decoration: line-through;
 }
 
 .single {
