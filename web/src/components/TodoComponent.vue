@@ -44,7 +44,6 @@ export default {
         {"name": "E", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
       ],
       tomatoReloadCount: 0,
-      tomatoIndex: 0
     }
   },
   created() {
@@ -60,6 +59,21 @@ export default {
         return this.activeTask
       }
       return null
+    },
+    findItemById: function (id) {
+      for (let i = 0; i < this.todayTask.length; i++) {
+        const e = this.todayTask[i];
+        if (e.id === id) {
+          return [i, e]
+        }
+      }
+      for (let i = 0; i < this.urgentTask.length; i++) {
+        const e = this.urgentTask[i];
+        if (e.id === id) {
+          return [i, e]
+        }
+      }
+      return [-1, null]
     },
     reload: function () {
       this.axios.post("/item/getAll", {"parent": this.parent}).then(res => {
@@ -90,7 +104,6 @@ export default {
       })
     },
     startTomatoTimer: function (index, id) {
-      this.tomatoIndex = index
       this.axios.post("/tomato/setTask", {"id": id}).then(() => this.tomatoReloadCount += 1)
     },
     toUrgentTask: function (index, id) {
@@ -116,8 +129,11 @@ export default {
       }
     },
     doneTomatoTask: function (type, id) {
-      if (type === 'done' && this.findItem(this.tomatoIndex, id) !== null) {
-        this.increaseUsedTomatoTime(this.tomatoIndex, id)
+      if (type === 'done') {
+        const [index, item] = this.findItemById(id)
+        if (item !== null) {
+          this.increaseUsedTomatoTime(index, id)
+        }
       }
     }
   },
