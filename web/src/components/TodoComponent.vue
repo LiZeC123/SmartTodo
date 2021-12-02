@@ -1,10 +1,11 @@
 <template>
   <div>
     <item-list title="今日任务" :btnConfig="todayConfig" :data="todayTask"
-               @checkbox-change="finishTask"></item-list>
+               @checkbox-change="increaseUsedTomatoTime"></item-list>
     <item-list title="紧急任务" :btnConfig="urgentConfig" :data="urgentTask"
-               @checkbox-change="finishTask"></item-list>
-    <item-list title="活动任务" :btnConfig="activeConfig" :data="activeTask"></item-list>
+               @checkbox-change="increaseUsedTomatoTime"></item-list>
+    <item-list title="活动任务" :btnConfig="activeConfig" :data="activeTask"
+               @checkbox-change="toTodayTask"></item-list>
   </div>
 </template>
 
@@ -28,19 +29,16 @@ export default {
       todayConfig: [
         {"name": "↓", "desc": "退回此项目", "function": this.backItem},
         {"name": "T", "desc": "启动番茄钟", "function": this.startTomatoTimer},
-        {"name": "U", "desc": "增加已用时间", "function": this.increaseUsedTomatoTime},
         {"name": "E", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
       ],
       urgentConfig: [
         {"name": "↓", "desc": "退回此项目", "function": this.backItem},
         {"name": "T", "desc": "启动番茄钟", "function": this.startTomatoTimer},
-        {"name": "U", "desc": "增加已用时间", "function": this.increaseUsedTomatoTime},
         {"name": "E", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
       ],
       activeConfig: [
         {"name": "-", "desc": "删除此项目", "function": this.removeItem},
         {"name": "U", "desc": "转为紧急任务", "function": this.toUrgentTask},
-        {"name": "T", "desc": "转为今日任务", "function": this.toTodayTask},
         {"name": "E", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
       ]
     }
@@ -79,7 +77,12 @@ export default {
       this.axios.post("/item/increaseExpectedTomatoTime", {"id": id}).then(() => this.findItem(index, id)[index].expected_tomato += 1)
     },
     increaseUsedTomatoTime: function (index, id) {
-      this.axios.post("/item/increaseUsedTomatoTime", {"id": id}).then(() => this.findItem(index, id)[index].used_tomato += 1)
+      this.axios.post("/item/increaseUsedTomatoTime", {"id": id}).then(() => {
+        let item = this.findItem(index, id)[index]
+        if(item.used_tomato < item.expected_tomato) {
+          item.used_tomato += 1
+        }
+      })
     },
     startTomatoTimer: function (index, id) {
       this.axios.post("/tomato/setTask", {"id": id}).then(() => window.open("/home/tomato"))
@@ -98,9 +101,6 @@ export default {
         this.activeTask.splice(index, 1)
         this.todayTask.push(item)
       })
-    },
-    finishTask: function (index, id) {
-      this.increaseUsedTomatoTime(index, id)
     },
     checkUpdateStatus: function () {
       const today = new Date().getDate();

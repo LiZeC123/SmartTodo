@@ -4,7 +4,7 @@
     <ol id="todoList" class="demo-box">
       <li v-for="(item, idxItem) in data" :key="item.id" :class="[doneItem(item) ? 'done' : '', mapTypeToClass(item)]"
           id="li-active">
-        <label><input type='checkbox' @change='change(idxItem, item.id)' v-model="item.checked"/></label>
+        <label><input type='checkbox' @change='change(idxItem, item.id)' :checked="this.doneItem(item)" :disabled="this.doneItem(item)"  /></label>
         <p @click='jumpTo(item.url)'>{{ mapName(item) }}</p>
 
         <a v-for="(btn, idxBtn) in btnConfig" :key="btn.name" :class="['function', 'function-'+idxBtn]"
@@ -29,19 +29,9 @@ export default {
       done: false
     }
   },
-  mounted() {
-    for (let d of this.data) {
-      d.checked = false
-    }
-  },
   methods: {
     change: function (index, id) {
       this.$emit('checkbox-change', index, id)
-      setTimeout(() => {
-        let item = this.data[index]
-        item.checked = this.doneItem(item)
-      }, 500);
-
     },
     doneItem: function (item) {
       return item.used_tomato === item.expected_tomato;
@@ -74,7 +64,6 @@ export default {
       }
 
       return 'single';
-
     },
     mapName: function (item) {
       let showName = item.name
@@ -107,10 +96,6 @@ export default {
       }
 
       return showName;
-    },
-    resetTomatoTimer: function (index) {
-      let item = this.data[index]
-      this.axios.post("/tomato/setTask", {"id": item.id}).then(() => window.open("/home/tomato"))
     },
   }
 }
@@ -169,22 +154,12 @@ ol, ul {
   list-style: none;
 }
 
-#li-normal {
-  line-height: 32px;
-  background: #fff;
-  position: relative;
-  margin-bottom: 10px;
-  padding: 0 45px;
-  border-radius: 3px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.07);
-}
-
 #li-active {
   line-height: 32px;
   background: #fff;
   position: relative;
   margin-bottom: 10px;
-  padding: 0 45px;
+  padding: 0 88px 0 42px;
   border-radius: 3px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.07);
 }
