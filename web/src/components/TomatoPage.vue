@@ -1,13 +1,11 @@
-<template>
-  <div v-show="taskId !== 0">
-    <h2>当前任务</h2>
-    <ol>
-      <li :class="stage" :title="desc">【{{ timeWithMin }}】{{ taskName }}
-        <a class="function function-0" title="取消任务" @click="undoTask">R</a>
-        <a class="function function-1" title="完成任务" @click="finishTask">D</a>
-      </li>
-    </ol>
-  </div>
+<template >
+  <h2 v-show="show">当前任务</h2>
+  <ol v-show="show">
+    <li :class="stage" :title="desc">【{{ timeWithMin }}】{{ taskName }}
+      <a class="function function-0" title="取消任务" @click="undoTask">R</a>
+      <a class="function function-1" title="完成任务" @click="finishTask">D</a>
+    </li>
+  </ol>
 </template>
 
 <script>
@@ -20,6 +18,7 @@ const tomatoTomeMS = 1000 * tomatoTime
 
 export default {
   name: "TomatoPage",
+  emits: ['done-task'],
   props: {
     reloadCount: Number,
   },
@@ -57,7 +56,10 @@ export default {
     desc: function () {
       return "开始时间:" + this.startTime.toLocaleTimeString() + "\n" +
           "当前状态" + this.stage;
-    }
+    },
+    show: function () {
+      return this.taskId !== 0
+    },
   },
   methods: {
     reload: function () {
@@ -100,14 +102,14 @@ export default {
     },
     undoTask: function () {
       this.axios.post("/tomato/undoTask", {"id": this.taskId}).then(() => {
-        this.$emit('done', "undo")
-        this.taskId = 0
+        this.$emit('done-task', "undo")
+        this.reload()
       })
     },
     finishTask: function () {
       this.axios.post("/tomato/finishTask", {"id": this.taskId}).then(() => {
-        this.$emit('done', "done", this.taskId)
-        this.taskId = 0
+        this.$emit('done-task', "done", this.taskId)
+        this.reload()
       })
     }
   },

@@ -1,10 +1,11 @@
 <template>
   <div v-if="data.length > 0">
-    <h2>{{ title }}<span id="todoCount"> {{ data.length }}</span></h2>
+    <h2>{{ title }}<span id="todoCount"> {{ tomatoCount }}</span></h2>
     <ol id="todoList" class="demo-box">
       <li v-for="(item, idxItem) in data" :key="item.id" :class="[doneItem(item) ? 'done' : '', mapTypeToClass(item)]"
           id="li-active">
-        <label><input type='checkbox' @change='change(idxItem, item.id)' :checked="this.doneItem(item)" :disabled="this.doneItem(item)"  /></label>
+        <label><input type='checkbox' @change='change(idxItem, item.id)' :checked="this.doneItem(item)"
+                      :disabled="this.doneItem(item)"/></label>
         <p @click='jumpTo(item.url)'>{{ mapName(item) }}</p>
 
         <a v-for="(btn, idxBtn) in btnConfig" :key="btn.name" :class="['function', 'function-'+idxBtn]"
@@ -27,6 +28,16 @@ export default {
   data: function () {
     return {
       done: false
+    }
+  },
+  computed: {
+    tomatoCount: function () {
+      let Ec = 0, Uc = 0
+      for (const d of this.data) {
+        Ec += d.expected_tomato
+        Uc += d.used_tomato
+      }
+      return Uc + " / " + Ec
     }
   },
   methods: {

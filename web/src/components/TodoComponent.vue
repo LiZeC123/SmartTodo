@@ -1,6 +1,6 @@
 <template>
   <div>
-    <tomato-page :reload-count="tomatoReloadCount" @done="doneTomatoTask"></tomato-page>
+    <tomato-page :reload-count="tomatoReloadCount" @done-task="doneTomatoTask"></tomato-page>
     <item-list title="今日任务" :btnConfig="todayConfig" :data="todayTask"
                @checkbox-change="increaseUsedTomatoTime"></item-list>
     <item-list title="紧急任务" :btnConfig="urgentConfig" :data="urgentTask"
