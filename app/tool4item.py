@@ -65,14 +65,17 @@ def inc_expected_tomato(item: dict):
 
 
 def inc_used_tomato(item: dict):
-    item['used_tomato'] += 1
+    if item['used_tomato'] < item['expected_tomato']:
+        item['used_tomato'] += 1
 
 
 def urgent_task(item: dict):
+    item['create_time'] = now_str()
     item['tomato_type'] = "urgent"
 
 
 def today_task(item: dict):
+    item['create_time'] = now_str()
     item['tomato_type'] = "today"
 
 
