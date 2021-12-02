@@ -1,5 +1,6 @@
 <template>
   <div>
+    <tomato-page :reload-count="tomatoReloadCount" @done="doneTomatoTask"></tomato-page>
     <item-list title="今日任务" :btnConfig="todayConfig" :data="todayTask"
                @checkbox-change="increaseUsedTomatoTime"></item-list>
     <item-list title="紧急任务" :btnConfig="urgentConfig" :data="urgentTask"
@@ -11,10 +12,11 @@
 
 <script>
 import ItemList from "@/components/list/ItemList";
+import TomatoPage from "./TomatoPage";
 
 export default {
   name: "TodoComponent",
-  components: {ItemList},
+  components: {TomatoPage, ItemList},
   props: {
     updateTodo: Number,
     createPlaceHold: Number,
@@ -40,7 +42,9 @@ export default {
         {"name": "-", "desc": "删除此项目", "function": this.removeItem},
         {"name": "U", "desc": "转为紧急任务", "function": this.toUrgentTask},
         {"name": "E", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
-      ]
+      ],
+      tomatoReloadCount: 0,
+      tomatoIndex: 0
     }
   },
   created() {
@@ -55,6 +59,7 @@ export default {
       } else if (this.activeTask.length > index && this.activeTask[index].id === id) {
         return this.activeTask
       }
+      return null
     },
     reload: function () {
       this.axios.post("/item/getAll", {"parent": this.parent}).then(res => {
@@ -79,13 +84,14 @@ export default {
     increaseUsedTomatoTime: function (index, id) {
       this.axios.post("/item/increaseUsedTomatoTime", {"id": id}).then(() => {
         let item = this.findItem(index, id)[index]
-        if(item.used_tomato < item.expected_tomato) {
+        if (item.used_tomato < item.expected_tomato) {
           item.used_tomato += 1
         }
       })
     },
     startTomatoTimer: function (index, id) {
-      this.axios.post("/tomato/setTask", {"id": id}).then(() => window.open("/home/tomato"))
+      this.tomatoIndex = index
+      this.axios.post("/tomato/setTask", {"id": id}).then(() => this.tomatoReloadCount += 1)
     },
     toUrgentTask: function (index, id) {
       this.axios.post("/item/toUrgentTask", {"id": id}).then(() => {
@@ -95,7 +101,6 @@ export default {
       })
     },
     toTodayTask: function (index, id) {
-      console.log([index, id])
       this.axios.post("/item/toTodayTask", {"id": id}).then(() => {
         let item = this.activeTask[index]
         this.activeTask.splice(index, 1)
@@ -108,6 +113,11 @@ export default {
         console.log("Update State!")
         this.reload();
         this.lastUpdateDate = today;
+      }
+    },
+    doneTomatoTask: function (type, id) {
+      if (type === 'done' && this.findItem(this.tomatoIndex, id) !== null) {
+        this.increaseUsedTomatoTime(this.tomatoIndex, id)
       }
     }
   },

@@ -37,19 +37,17 @@ if (localStorage.getItem('token')) {
 }
 
 router.beforeEach((to, from, next) => {
-    console.log(["In router beforeEach, Token = ", store.state.token])
+    // console.log(["In router beforeEach, Token = ", store.state.token])
     const isLogin = store.state.token;  // 是否登录
 
     if (!isLogin && to.path !== "/login") {
         // 未登录状态；跳转至login
-        console.log("GOTO Login Page")
         router.push({path: '/login'}).then(doNone);
     }
 
     if (to.path === '/login') {
         // 已登录状态；当路由到login时，跳转至home
         if (isLogin) {
-            console.log("GOTO Home Page")
             router.push({path: '/home/todo'}).then(doNone);
         }
     }
