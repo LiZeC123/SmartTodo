@@ -89,6 +89,8 @@ class TomatoManager:
         self.data[owner] = {"id": xid, "name": name, "startTime": now().timestamp()}
 
     def get_task(self, owner: str):
+        if owner not in self.data:
+            self.clear_task(owner)
         return self.data[owner]
 
     def check_id(self, xid: int, owner: str):
