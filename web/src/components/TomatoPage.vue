@@ -1,4 +1,4 @@
-<template >
+<template>
   <h2 v-show="show">当前任务</h2>
   <ol v-show="show">
     <li :class="stage" :title="desc">【{{ timeWithMin }}】{{ taskName }}
@@ -34,8 +34,8 @@ export default {
     }
   },
   mounted() {
-    setInterval(this.timeHandler, 500)
-    this.reload()
+    setInterval(this.updateTimeSecond, 500)
+    this.reload(false)
   },
   computed: {
     timeWithMin: function () {
@@ -62,40 +62,63 @@ export default {
     },
   },
   methods: {
-    reload: function () {
+    reload: function (reset) {
       this.axios.get("/tomato/getTask").then(res => {
         let d = res.data.data
         let tsStart = d.startTime * 1000
 
-        this.updateTimeSecond(tsStart)
-
         this.startTime = new Date(tsStart)
         this.taskName = d.name
         this.taskId = d.id
+
+        if (reset) {
+          this.resetTaskStates()
+        }
+
+        this.updateTimeSecond()
       })
     },
-    timeHandler: function () {
-      // 注意: 每一秒钟此函数都会触发一次, 需要处理时间的所有可能情况
-      this.updateTimeSecond(this.startTime)
-      if (this.stage === "FOCUS" && this.timeSeconds === 0 && !this.hasShowFocusMessage) {
-        new Notification("完成一个番茄钟了, 休息一下吧~", {body: "任务: " + this.taskName})
-        this.hasShowFocusMessage = true
-      } else if (this.stage === "REST" && this.timeSeconds === 0 && !this.hasShowRestMessage) {
-        new Notification("休息结束", {body: ""})
-        this.hasShowRestMessage = true;
-        this.finishTask()
-      }
-    },
-    updateTimeSecond: function (tsStart) {
+    updateTimeSecond: function () {
+      const tsStart = this.startTime
       let tsNow = new Date().getTime()
       let delta = tsNow - tsStart
+
+      // 没有任务的情况
+      if (this.taskId === 0) {
+        this.stage = "DONE"
+        this.timeSeconds = 0
+        return
+      }
+
       if (delta < tomatoTomeMS) {
         this.stage = "FOCUS"
         this.timeSeconds = Math.floor((tomatoTomeMS - delta) / 1000)
-      } else if (delta < tomatoTomeMS + resetTimeMS) {
-        this.stage = "REST"
-        this.timeSeconds = Math.floor((tomatoTomeMS + resetTimeMS - delta) / 1000)
-      } else {
+      }
+
+      if (delta > tomatoTomeMS) {
+
+        // 无论当前具体处于哪个状态, 只要经过了REST状态, 就发送对应的通知
+        const hasShowFocusMessage = localStorage.getItem("hasShowFocusMessage")
+        if (hasShowFocusMessage === null) {
+          console.log(delta)
+          new Notification("完成一个番茄钟了, 休息一下吧~", {body: "任务: " + this.taskName})
+          localStorage.setItem("hasShowFocusMessage", "done")
+        }
+
+        if (delta < tomatoTomeMS + resetTimeMS) {
+          this.stage = "REST"
+          this.timeSeconds = Math.floor((tomatoTomeMS + resetTimeMS - delta) / 1000)
+        }
+      }
+
+      if (delta > tomatoTomeMS + resetTimeMS) {
+        const hasShowRestMessage = localStorage.getItem("hasShowRestMessage")
+        if (hasShowRestMessage === null) {
+          new Notification("休息结束, 继续加油学习吧~", {body: "任务: " + this.taskName})
+          localStorage.setItem("hasShowRestMessage", "done")
+          this.finishTask()
+        }
+
         this.stage = "DONE"
         this.timeSeconds = 0
       }
@@ -103,19 +126,23 @@ export default {
     undoTask: function () {
       this.axios.post("/tomato/undoTask", {"id": this.taskId}).then(() => {
         this.$emit('done-task', "undo")
-        this.reload()
+        this.reload(false)
       })
     },
     finishTask: function () {
       this.axios.post("/tomato/finishTask", {"id": this.taskId}).then(() => {
         this.$emit('done-task', "done", this.taskId)
-        this.reload()
+        this.reload(false)
       })
+    },
+    resetTaskStates: function () {
+      localStorage.removeItem("hasShowFocusMessage")
+      localStorage.removeItem("hasShowRestMessage")
     }
   },
   watch: {
     "reloadCount": function () {
-      this.reload()
+      this.reload(true)
     }
   }
 }
