@@ -127,7 +127,10 @@ export default {
       this.$router.push("/home/log/log");
     },
     gc: function () {
-      this.axios.post("/admin/gc").then(() => alert("垃圾回收完毕"))
+      this.axios.post("/admin/gc").then(() => {
+        this.updateTodo += 1
+        alert("垃圾回收完毕")
+      })
     },
     tomato: function () {
       window.open("/home/tomato");

@@ -49,6 +49,9 @@ export default {
   created() {
     this.reload();
   },
+  mounted() {
+    window.onfocus = this.checkUpdateStatus
+  },
   methods: {
     findItem: function (index, id) {
       if (this.urgentTask.length > index && this.urgentTask[index].id === id) {
@@ -139,9 +142,6 @@ export default {
         }
       }
     }
-  },
-  mounted() {
-    window.onfocus = this.checkUpdateStatus
   },
   watch: {
     "updateTodo": function () {
