@@ -3,7 +3,7 @@
     <div class="header">
       <div class="box">
         <div id="form" @keyup.enter="commitTodo">
-          <label for="title">ToDoList</label>
+          <label for="title" @click="gotoHome">ToDoList</label>
           <div style="float: right;width: 60%;">
             <label for="itemType"></label>
             <select id="itemType" v-model="todoType">
@@ -62,6 +62,9 @@ export default {
     }
   },
   methods: {
+    gotoHome:function () {
+      router.push({path: '/home/todo'})
+    },
     commitTodo: function () {
       this.todoContent = this.todoContent.trim();
       if (this.todoContent === "") {

@@ -1,11 +1,13 @@
 <template>
-  <h2 v-show="show">当前任务</h2>
-  <ol v-show="show">
-    <li :class="stage" :title="desc">【{{ timeWithMin }}】{{ taskName }}
-      <a class="function function-0" title="取消任务" @click="undoTask">R</a>
-      <a class="function function-1" title="完成任务" @click="finishTask">D</a>
-    </li>
-  </ol>
+  <div>
+    <h2 v-show="show">当前任务</h2>
+    <ol v-show="show">
+      <li :class="stage" :title="desc">【{{ timeWithMin }}】{{ taskName }}
+        <a class="function function-0" title="取消任务" @click="undoTask">R</a>
+        <a class="function function-1" title="完成任务" @click="finishTask">D</a>
+      </li>
+    </ol>
+  </div>
 </template>
 
 <script>
@@ -101,7 +103,7 @@ export default {
         const hasShowFocusMessage = localStorage.getItem("hasShowFocusMessage")
         if (hasShowFocusMessage === null) {
           console.log(delta)
-          new Notification("完成一个番茄钟了, 休息一下吧~", {body: "任务: " + this.taskName})
+          new Notification("完成一个番茄钟了, 休息一下吧~", {body: this.bodyMessage()})
           localStorage.setItem("hasShowFocusMessage", "done")
         }
 
@@ -114,7 +116,7 @@ export default {
       if (delta > tomatoTomeMS + resetTimeMS) {
         const hasShowRestMessage = localStorage.getItem("hasShowRestMessage")
         if (hasShowRestMessage === null) {
-          new Notification("休息结束, 继续加油学习吧~", {body: "任务: " + this.taskName})
+          new Notification("休息结束, 继续加油学习吧~", {body: this.bodyMessage()})
           localStorage.setItem("hasShowRestMessage", "done") 
         }
 
@@ -124,6 +126,9 @@ export default {
         // 只要大于时间就发送完成任务请求, 从而刷新当前页面
         this.finishTask()
       }
+    },
+    bodyMessage: function (){
+      return "任务: " + this.taskName;
     },
     undoTask: function () {
       this.axios.post("/tomato/undoTask", {"id": this.taskId}).then(() => {
