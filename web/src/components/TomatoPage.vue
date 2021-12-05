@@ -115,12 +115,14 @@ export default {
         const hasShowRestMessage = localStorage.getItem("hasShowRestMessage")
         if (hasShowRestMessage === null) {
           new Notification("休息结束, 继续加油学习吧~", {body: "任务: " + this.taskName})
-          localStorage.setItem("hasShowRestMessage", "done")
-          this.finishTask()
+          localStorage.setItem("hasShowRestMessage", "done") 
         }
 
         this.stage = "DONE"
         this.timeSeconds = 0
+
+        // 只要大于时间就发送完成任务请求, 从而刷新当前页面
+        this.finishTask()
       }
     },
     undoTask: function () {
