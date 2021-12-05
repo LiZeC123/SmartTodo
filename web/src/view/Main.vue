@@ -157,7 +157,7 @@ function parseTitleToData(todoContent, todoType, parent) {
 
   // 更新任务名称重新分析任务类型
   data.itemType = inferType(data.name, data.itemType);
-
+  data.repeatable = inferRepeatable(data.name)
 
   // 分析参数
   if (parent !== undefined) {
@@ -215,6 +215,18 @@ function inferNoteType(name) {
   for (const type of knowType) {
     if (name.indexOf(type) !== -1) {
       return confirm("检测到代办类型包含关键词, 是否按照便签类型进行创建?")
+    }
+  }
+
+  return false;
+}
+
+function inferRepeatable(name) {
+  const knowType = ['每日', '今日'];
+
+  for (const type of knowType) {
+    if (name.indexOf(type) !== -1) {
+      return confirm("检测到关键词, 是否添加可重复属性?")
     }
   }
 
