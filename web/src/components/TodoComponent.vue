@@ -27,7 +27,7 @@ export default {
       urgentTask: [],
       todayTask: [],
       activeTask: [],
-      lastUpdateDate: new Date().getDate() - 1,
+      lastUpdateDate: new Date().getDate(),
       todayConfig: [
         {"name": "↓", "desc": "退回此项目", "function": this.backItem},
         {"name": "T", "desc": "启动番茄钟", "function": this.startTomatoTimer},
@@ -48,6 +48,9 @@ export default {
   },
   created() {
     this.reload();
+  },
+  mounted() {
+    window.onfocus = this.checkUpdateStatus
   },
   methods: {
     findItem: function (index, id) {
@@ -123,10 +126,13 @@ export default {
     checkUpdateStatus: function () {
       const today = new Date().getDate();
       if (today !== this.lastUpdateDate) {
-        console.log("Update State!")
-        this.reload();
-        this.lastUpdateDate = today;
+        console.log("检测到日期变化, 刷新当前页面")
+        this.reload()
+        this.lastUpdateDate = today
       }
+
+      // 只要重新回到当前页面, 就刷新番茄钟状态
+      this.tomatoReloadCount += 1
     },
     doneTomatoTask: function (type, id) {
       if (type === 'done') {
@@ -137,12 +143,9 @@ export default {
       }
     }
   },
-  mounted() {
-    window.onfocus = this.checkUpdateStatus
-  },
   watch: {
     "updateTodo": function () {
-      this.axios.post("/item/getActivate", {"parent": this.parent}).then(res => this.activeTask = res.data.data);
+      this.reload()
     },
     "createPlaceHold": function () {
       this.activeTask.unshift({

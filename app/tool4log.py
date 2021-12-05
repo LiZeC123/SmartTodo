@@ -17,3 +17,5 @@ logger.setLevel(logging.INFO)
 th = handlers.TimedRotatingFileHandler(filename=Log_File, when='midnight', backupCount=14, encoding='utf-8')
 th.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(th)
+
+task_logger = logging.getLogger("task")

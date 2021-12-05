@@ -30,6 +30,9 @@ class Item:
     def __str__(self) -> str:
         return str(self.to_dict())
 
+    def done_item(self):
+        return self.expected_tomato == self.used_tomato
+
 
 def from_dict(raw: Dict) -> Item:
     item = Item(int(raw['id']), raw['name'], raw['item_type'], raw['owner'])

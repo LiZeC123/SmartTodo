@@ -9,7 +9,7 @@ def activate_key(item: Item):
     if item.specific != 0:
         # 由于特定任务只能在某一天完成, 因此具有最高优先级
         value = now_stamp()
-        value -= 100 * day_second
+        value += 100 * day_second
     if item.deadline is not None:
         # deadline属性的任务比较剩余时间
         # 首先消除创建时间的分值, 统一使用当前时间
@@ -17,9 +17,16 @@ def activate_key(item: Item):
         value = now_stamp()
         deadline = get_datetime_from_str(item.deadline)
         delta = deadline - now()
-        value -= (56 - 8 * delta.days) * day_second - 8 * delta.seconds
+        value += (56 - 8 * delta.days) * day_second - 8 * delta.seconds
     return value
 
 
 def create_time_key(item: Item):
-    return get_datetime_from_str(item.create_time)
+    value = get_timestamp_from_str(item.create_time)
+    day_second = 60 * 60 * 24
+
+    # 已经完成的任务排到最下方
+    if item.done_item():
+        value += 100 * day_second
+
+    return value

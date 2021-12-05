@@ -3,7 +3,7 @@
     <div class="header">
       <div class="box">
         <div id="form" @keyup.enter="commitTodo">
-          <label for="title">ToDoList</label>
+          <label for="title" @click="gotoHome">ToDoList</label>
           <div style="float: right;width: 60%;">
             <label for="itemType"></label>
             <select id="itemType" v-model="todoType">
@@ -62,6 +62,9 @@ export default {
     }
   },
   methods: {
+    gotoHome:function () {
+      router.push({path: '/home/todo'})
+    },
     commitTodo: function () {
       this.todoContent = this.todoContent.trim();
       if (this.todoContent === "") {
@@ -124,7 +127,10 @@ export default {
       this.$router.push("/home/log/log");
     },
     gc: function () {
-      this.axios.post("/admin/gc").then(() => alert("垃圾回收完毕"))
+      this.axios.post("/admin/gc").then(() => {
+        this.updateTodo += 1
+        alert("垃圾回收完毕")
+      })
     },
     tomato: function () {
       window.open("/home/tomato");
@@ -151,7 +157,7 @@ function parseTitleToData(todoContent, todoType, parent) {
 
   // 更新任务名称重新分析任务类型
   data.itemType = inferType(data.name, data.itemType);
-
+  data.repeatable = inferRepeatable(data.name)
 
   // 分析参数
   if (parent !== undefined) {
@@ -163,13 +169,13 @@ function parseTitleToData(todoContent, todoType, parent) {
     } else if (values[i] === "-dl" && i + 1 < values.length) {
       data.deadline = parseDeadline(values[i + 1]);
       i++;
-    } else if (values[i] === "-wk") {
-      data.work = true;
     } else if (values[i] === "-re") {
       data.repeatable = true;
     } else if (values[i] === "-sp" && i + 1 < values.length) {
       data.specific = values[i + 1];
       i++;
+    } else if (values[i] === "-td") {
+      data.today = true;
     }
   }
 
@@ -209,6 +215,18 @@ function inferNoteType(name) {
   for (const type of knowType) {
     if (name.indexOf(type) !== -1) {
       return confirm("检测到代办类型包含关键词, 是否按照便签类型进行创建?")
+    }
+  }
+
+  return false;
+}
+
+function inferRepeatable(name) {
+  const knowType = ['每日', '今日'];
+
+  for (const type of knowType) {
+    if (name.indexOf(type) !== -1) {
+      return confirm("检测到关键词, 是否添加可重复属性?")
     }
   }
 

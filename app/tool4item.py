@@ -57,7 +57,7 @@ def where_unreferenced(parent: list):
 def undo_item(item: dict):
     item['create_time'] = now_str()
     item['tomato_type'] = 'activate'
-    logger.info(f"Undo Item {item['name']}")
+    logger.info(f"回退任务到活动列表: {item['name']}")
 
 
 def inc_expected_tomato(item: dict):
@@ -66,6 +66,7 @@ def inc_expected_tomato(item: dict):
 
 def inc_used_tomato(item: dict):
     if item['used_tomato'] < item['expected_tomato']:
+        logger.info("完成任务: " + item['name'])
         item['used_tomato'] += 1
 
 
@@ -84,9 +85,9 @@ def where_update_repeatable_item(item: dict) -> bool:
 
 
 def update_repeatable_item(item: dict) -> NoReturn:
-    item['create_time'] = now_str()
+    # item['create_time'] = now_str()
     item['used_tomato'] = 0
-    logger.info(f"Reset Repeatable Item {item['name']}")
+    logger.info(f"重置可重复任务: {item['name']}")
 
 
 def update_note_url(item: dict) -> NoReturn:
