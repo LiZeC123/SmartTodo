@@ -232,12 +232,12 @@ class ItemManager:
         return {
             "todayTask": list(map(self.to_dict, sorted(data["today"], key=create_time_key))),
             "urgentTask": list(map(self.to_dict, sorted(data["urgent"], key=create_time_key))),
-            "activeTask": list(map(self.to_dict, sorted(data["activate"], key=activate_key)))
+            "activeTask": list(map(self.to_dict, sorted(data["activate"], key=activate_key, reverse=True)))
         }
 
     def select_activate(self, owner: str, parent: int):
         return list(map(self.to_dict, sorted(self.database.select_by(where_select_activate_with(owner, parent)),
-                                             key=activate_key)))
+                                             key=activate_key, reverse=True)))
 
     def select_file(self):
         return list(map(self.to_dict, self.database.select_by(where_select_all_file)))
