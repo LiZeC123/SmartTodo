@@ -22,4 +22,11 @@ def activate_key(item: Item):
 
 
 def create_time_key(item: Item):
-    return get_datetime_from_str(item.create_time)
+    value = get_timestamp_from_str(item.create_time)
+    day_second = 60 * 60 * 24
+
+    # 已经完成的任务排到最下方
+    if item.done_item():
+        value += 100 * day_second
+
+    return value
