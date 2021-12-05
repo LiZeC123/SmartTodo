@@ -142,7 +142,7 @@ export default {
   },
   watch: {
     "updateTodo": function () {
-      this.axios.post("/item/getActivate", {"parent": this.parent}).then(res => this.activeTask = res.data.data);
+      this.reload()
     },
     "createPlaceHold": function () {
       this.activeTask.unshift({

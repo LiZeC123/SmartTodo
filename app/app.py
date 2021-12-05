@@ -75,6 +75,9 @@ def create_item():
     if "parent" in f:
         item.parent = int(f["parent"])
 
+    if "today" in f:
+        item.tomato_type = "today"
+
     manager.create(item)
 
 
@@ -89,6 +92,7 @@ def get_all_item():
 @app.route('/api/item/getActivate', methods=['POST'])
 @logged
 def get_activate_item():
+    # Deprecated
     owner: str = token.get_username(request)
     parent = try_get_parent_from_request()
     return manager.activate_items(owner, parent=parent)

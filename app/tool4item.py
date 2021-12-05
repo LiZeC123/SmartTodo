@@ -84,7 +84,7 @@ def where_update_repeatable_item(item: dict) -> bool:
 
 
 def update_repeatable_item(item: dict) -> NoReturn:
-    item['create_time'] = now_str()
+    # item['create_time'] = now_str()
     item['used_tomato'] = 0
     logger.info(f"Reset Repeatable Item {item['name']}")
 

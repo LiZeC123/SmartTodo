@@ -163,13 +163,13 @@ function parseTitleToData(todoContent, todoType, parent) {
     } else if (values[i] === "-dl" && i + 1 < values.length) {
       data.deadline = parseDeadline(values[i + 1]);
       i++;
-    } else if (values[i] === "-wk") {
-      data.work = true;
     } else if (values[i] === "-re") {
       data.repeatable = true;
     } else if (values[i] === "-sp" && i + 1 < values.length) {
       data.specific = values[i + 1];
       i++;
+    } else if (values[i] === "-td") {
+      data.today = true;
     }
   }
 
