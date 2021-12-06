@@ -22,6 +22,7 @@ export default {
   name: "TomatoPage",
   emits: ['done-task'],
   props: {
+    resetCount: Number,
     reloadCount: Number,
   },
   data: function () {
@@ -117,7 +118,7 @@ export default {
         const hasShowRestMessage = localStorage.getItem("hasShowRestMessage")
         if (hasShowRestMessage === null) {
           new Notification("休息结束, 继续加油学习吧~", {body: this.bodyMessage()})
-          localStorage.setItem("hasShowRestMessage", "done") 
+          localStorage.setItem("hasShowRestMessage", "done")
         }
 
         this.stage = "DONE"
@@ -127,7 +128,7 @@ export default {
         this.finishTask()
       }
     },
-    bodyMessage: function (){
+    bodyMessage: function () {
       return "任务: " + this.taskName;
     },
     undoTask: function () {
@@ -148,8 +149,11 @@ export default {
     }
   },
   watch: {
-    "reloadCount": function () {
+    "resetCount": function () {
       this.reload(true)
+    },
+    "reloadCount":function () {
+      this.reload(false)
     }
   }
 }

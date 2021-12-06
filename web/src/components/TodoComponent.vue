@@ -1,6 +1,6 @@
 <template>
   <div>
-    <tomato-page :reload-count="tomatoReloadCount" @done-task="doneTomatoTask"></tomato-page>
+    <tomato-page :reset-count="tomatoResetCount" :reload-count="tomatoReloadCount" @done-task="doneTomatoTask"></tomato-page>
     <item-list title="今日任务" :btnConfig="todayConfig" :data="todayTask"
                @checkbox-change="increaseUsedTomatoTime"></item-list>
     <item-list title="紧急任务" :btnConfig="urgentConfig" :data="urgentTask"
@@ -43,6 +43,7 @@ export default {
         {"name": "U", "desc": "转为紧急任务", "function": this.toUrgentTask},
         {"name": "E", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
       ],
+      tomatoResetCount: 0,
       tomatoReloadCount: 0,
     }
   },
@@ -107,7 +108,7 @@ export default {
       })
     },
     startTomatoTimer: function (index, id) {
-      this.axios.post("/tomato/setTask", {"id": id}).then(() => this.tomatoReloadCount += 1)
+      this.axios.post("/tomato/setTask", {"id": id}).then(() => this.tomatoResetCount += 1)
     },
     toUrgentTask: function (index, id) {
       this.axios.post("/item/toUrgentTask", {"id": id}).then(() => {
