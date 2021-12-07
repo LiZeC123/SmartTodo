@@ -26,7 +26,7 @@
     </div>
     <div class="footer" id="footerFunctionContainer">
       <a @click="selectFile">上传文件</a>
-      <a v-if="isAdmin && isMainPage" @click="backUpData">备份数据</a>
+      <a v-if="isAdmin" @click="backUpData">备份数据</a>
       <a v-if="isAdmin && isMainPage" @click="updateLogs">查看日志</a>
       <a v-if="isAdmin" @click="gc">垃圾回收</a>
       <a v-if="isMainPage" @click="gotoTodaySummary">任务汇总</a>
@@ -129,7 +129,11 @@ export default {
       }
     },
     backUpData: function () {
-      this.$router.push("/home/log/data");
+      this.axios.post("/admin/func", {"cmd": "backup", "data": "now", "parent": this.$route.params.id})
+          .then(() => {
+            this.updateTodo += 1
+            alert("备份成功")
+          })
     },
     updateLogs: function () {
       this.$router.push("/home/log/log");

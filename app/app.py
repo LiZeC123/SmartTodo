@@ -303,8 +303,8 @@ def gc():
 @logged(role='ROLE_ADMIN')
 def exec_function():
     f: Dict = request.get_json()
-    command: str = f['cmd']
-    data: str = f['data']
+    command: str = f.get("cmd", "<undefined>")
+    data: str = f.get("data", "")
     owner = token.get_username(request)
     parent = try_get_parent_from_request()
     manager.exec_function(command, data, parent, owner)

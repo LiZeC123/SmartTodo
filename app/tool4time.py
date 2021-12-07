@@ -27,6 +27,10 @@ def now_str() -> str:
     return now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def now_str_fn() -> str:
+    return now().strftime("%Y%m%d_%H%M%S")
+
+
 def now_stamp() -> float:
     return now().timestamp()
 
