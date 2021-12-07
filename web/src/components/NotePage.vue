@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- 主体：文本编辑器控制按钮 -->
-    <todo-component :updateTodo="updateTodo" :createPlaceHold="createPlaceHold" :parent="parentId"></todo-component>
+    <todo-page :updateTodo="updateTodo" :createPlaceHold="createPlaceHold" :parent="parentId"></todo-page>
 
     <!-- 主体：文本编辑器 -->
     <div><span>{{ showSaveState }}</span> <span @click="save" style="float: right">保存文档</span></div>
@@ -16,12 +16,12 @@
 </template>
 
 <script>
-import NoteEditor from "./NoteEditor";
-import TodoComponent from "./TodoComponent";
+import NoteEditor from "@/components/m/NoteEditor"
+import TodoPage from "@/components/TodoPage";
 
 export default {
-  name: "NoteComponent",
-  components: {TodoComponent, NoteEditor},
+  name: "NotePage",
+  components: {TodoPage, NoteEditor},
   props: {
     updateTodo: Number,
     createPlaceHold: Number

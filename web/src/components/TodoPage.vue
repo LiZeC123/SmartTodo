@@ -11,11 +11,11 @@
 </template>
 
 <script>
-import ItemList from "@/components/list/ItemList";
-import TomatoPage from "@/components/TomatoPage";
+import ItemList from "@/components/m/ItemList";
+import TomatoPage from "@/components/m/TomatoItem";
 
 export default {
-  name: "TodoComponent",
+  name: "TodoPage",
   components: {TomatoPage, ItemList},
   props: {
     updateTodo: Number,

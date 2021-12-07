@@ -6,7 +6,7 @@
 </template>
 
 <script>
-import ItemList from "@/components/list/ItemList";
+import ItemList from "@/components/m/ItemList";
 
 export default {
   name: "SummaryPage",
