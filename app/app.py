@@ -299,10 +299,15 @@ def gc():
     manager.garbage_collection()
 
 
-@app.route("/admin/op", methods=["POST"])
+@app.route("/api/admin/func", methods=["POST"])
 @logged(role='ROLE_ADMIN')
-def do_operation():
-    pass
+def exec_function():
+    f: Dict = request.get_json()
+    command: str = f['cmd']
+    data: str = f['data']
+    owner = token.get_username(request)
+    parent = try_get_parent_from_request()
+    manager.exec_function(command, data, parent, owner)
 
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@
     <div class="header">
       <div class="box">
         <div id="form" @keyup.enter="commitTodo">
-          <label for="title" @click="gotoHome">ToDoList</label>
+          <label for="title" @click="gotoHome">SmartTodo</label>
           <div style="float: right;width: 60%;">
             <label for="itemType"></label>
             <select id="itemType" v-model="todoType">
@@ -22,19 +22,19 @@
     <!-- 脚部：印记和功能按钮 -->
     <div class=" footer
     " id="footerContainer">
-    Copyright &copy; {{ year }} LiZeC
-  </div>
-  <div class="footer" id="footerFunctionContainer">
-    <a @click="selectFile">上传文件</a>
-    <a v-if="isAdmin && isMainPage" @click="backUpData">备份数据</a>
-    <a v-if="isAdmin && isMainPage" @click="updateLogs">查看日志</a>
-    <a v-if="isAdmin" @click="gc">垃圾回收</a>
-    <a v-if="isMainPage" @click="gotoTodaySummary">任务汇总</a>
-    <a @click="doLogout">退出登录</a>
-  </div>
+      Copyright &copy; {{ year }} LiZeC
+    </div>
+    <div class="footer" id="footerFunctionContainer">
+      <a @click="selectFile">上传文件</a>
+      <a v-if="isAdmin && isMainPage" @click="backUpData">备份数据</a>
+      <a v-if="isAdmin && isMainPage" @click="updateLogs">查看日志</a>
+      <a v-if="isAdmin" @click="gc">垃圾回收</a>
+      <a v-if="isMainPage" @click="gotoTodaySummary">任务汇总</a>
+      <a @click="doLogout">退出登录</a>
+    </div>
 
-  <!-- 上传文件的控件 -->
-  <input type="file" id="file_selector" style="display: none;" @change="uploadFile"/>
+    <!-- 上传文件的控件 -->
+    <input type="file" id="file_selector" style="display: none;" @change="uploadFile"/>
   </div>
 </template>
 
@@ -62,30 +62,37 @@ export default {
     }
   },
   methods: {
-    gotoHome:function () {
+    gotoHome: function () {
       router.push({path: '/home/todo'})
       document.title = "待办事项列表"
     },
     commitTodo: function () {
       this.todoContent = this.todoContent.trim();
       if (this.todoContent === "") {
-        alert("TODO不能为空");
-      } else if (/set (.+)/.test(this.todoContent) || /fun (.+)/.test(this.todoContent)) {
-        // TODO: Operation Or Function
+        alert("TODO不能为空")
+        return
+      }
+
+      let match = /func (\S+) (.+)/.exec(this.todoContent)
+      if (match !== null) {
+        this.axios.post("/admin/func", {
+          "cmd": match[1],
+          "data": match[2],
+          "parent": this.$route.params.id}
+        ).then(() => this.updateTodo += 1)
       } else {
         const data = parseTitleToData(this.todoContent, this.todoType, this.$route.params.id)
         // 通过修改updateTodo变量触发子组件的Todo部分更新操作
         this.axios.post("/item/create", data).then(() => this.updateTodo += 1)
-
-        // 提交请求后直接清空内容, 而不必等待请求返回, 提高响应速度, 避免重复提交
-        this.todoContent = ""
-        this.todoType = "single"
-
         //根据需要判断是否需要先创建一个占位Item
         if (data.itemType === 'file') {
           this.createPlaceHold += 1
         }
       }
+
+      // 提交请求后直接清空内容, 而不必等待请求返回, 提高响应速度, 避免重复提交
+      this.todoContent = ""
+      this.todoType = "single"
     },
     doLogout: function () {
       this.$store.commit('del_token')

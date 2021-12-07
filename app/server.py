@@ -11,6 +11,7 @@ from werkzeug.exceptions import abort
 
 from entity import Item, from_dict
 from mapper import MemoryDataBase
+from service4interpreter import OpInterpreter
 from tool4item import where_can_delete, \
     where_update_repeatable_item, update_repeatable_item, where_id_equal, \
     undo_item, where_equal, group_all_item_with, where_select_activate_with, update_note_url, \
@@ -109,6 +110,7 @@ class Manager:
         self.file_manager = FileItemManager(database)
         self.note_manager = NoteItemManager(database)
         self.manager = {"single": self.item_manager, "file": self.file_manager, "note": self.note_manager}
+        self.op = OpInterpreter(self)
         self.task_manager = TaskManager()
         self.tomato_manager = TomatoManager()
         self.__init_task()
@@ -213,6 +215,9 @@ class Manager:
 
     def __update_state(self):
         self.database.update_by(where_update_repeatable_item, update_repeatable_item)
+
+    def exec_function(self, command: str, data: str, parent: int, owner: str):
+        self.op.exec_function(command, data, parent, owner)
 
 
 class ItemManager:
@@ -345,18 +350,18 @@ class NoteItemManager(ItemManager):
     @staticmethod
     def get(nid: int) -> str:
         filename = os.path.join(NoteItemManager._NOTE_FOLDER, str(nid))
-        with open(filename, 'r') as f:
+        with open(filename, 'r', encoding="utf-8") as f:
             return f.read()
 
     @staticmethod
     def update(nid: int, content: str):
         filename = os.path.join(NoteItemManager._NOTE_FOLDER, str(nid))
-        with open(filename, "w") as f:
+        with open(filename, "w", encoding="utf-8") as f:
             f.write(content)
 
     @staticmethod
     def __write_init_content(filename, title):
-        with open(filename, "w") as f:
+        with open(filename, "w", encoding="utf-8") as f:
             content = f"<h1>{title}</h1>" \
                       f"<div>====================</div>" \
                       f"<div><br></div><div><br></div><div><br></div><div><br></div>"
