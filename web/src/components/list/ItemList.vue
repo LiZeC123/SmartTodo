@@ -2,8 +2,9 @@
   <div v-if="data.length > 0">
     <h2>{{ title }}<span id="todoCount"> {{ tomatoCount }}</span></h2>
     <ol id="todoList" class="demo-box">
-      <li v-for="(item, idxItem) in data" :key="item.id" :class="[doneItem(item) ? 'done' : '', mapTypeToClass(item)]"
-          id="li-active">
+      <li v-for="(item, idxItem) in data" :key="item.id" id="li-active"
+          :class="[doneItem(item) ? 'done' : '', mapTypeToClass(item), mapSubTask(item)]"
+      >
         <label><input type='checkbox' @change='change(idxItem, item.id)' :checked="this.doneItem(item)"
                       :disabled="this.doneItem(item)"/></label>
         <p @click='jumpTo(item.url)'>{{ mapName(item) }}</p>
@@ -75,6 +76,11 @@ export default {
       }
 
       return 'single';
+    },
+    mapSubTask: function (item) {
+      if (item.subTask) {
+        return "subTask-1"
+      }
     },
     mapName: function (item) {
       let showName = item.name

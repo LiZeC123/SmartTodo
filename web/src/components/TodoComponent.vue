@@ -12,7 +12,7 @@
 
 <script>
 import ItemList from "@/components/list/ItemList";
-import TomatoPage from "./TomatoPage";
+import TomatoPage from "@/components/TomatoPage";
 
 export default {
   name: "TodoComponent",

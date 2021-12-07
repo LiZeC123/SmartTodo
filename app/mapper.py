@@ -60,10 +60,11 @@ class MemoryDataBase:
         self.save2file()
         return ans
 
-    def select_group_by(self, ans: Dict[str, List], f: Callable[[dict], str]) -> Dict[str, List]:
+    def select_group_by(self, ans: Dict[str, List], f: Callable[[dict], str], /, limited=True) -> Dict[str, List]:
         for item in self.data:
             key = f(item)
-            if key in ans:
+            # 如果指定为限定，则只有传入的类型放入集合
+            if not limited or key in ans:
                 ans[key].append(from_dict(item))
         return ans
 

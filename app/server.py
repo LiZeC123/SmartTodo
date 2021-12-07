@@ -1,6 +1,7 @@
 import os
 import random
 import string
+from collections import defaultdict
 from datetime import timedelta
 from os import mkdir
 from os.path import join, exists
@@ -14,7 +15,7 @@ from tool4item import where_can_delete, \
     where_update_repeatable_item, update_repeatable_item, where_id_equal, \
     undo_item, where_equal, group_all_item_with, where_select_activate_with, update_note_url, \
     where_select_all_file, where_unreferenced, select_id, select_title, inc_expected_tomato, inc_used_tomato, \
-    urgent_task, today_task
+    urgent_task, today_task, group_today_task_by_parent
 from tool4key import activate_key, create_time_key
 from tool4log import logger
 from tool4time import now
@@ -144,6 +145,9 @@ class Manager:
     def activate_items(self, owner: str, /, parent: int = 0):
         return self.item_manager.select_activate(owner, parent)
 
+    def get_summary(self, owner: str):
+        return self.item_manager.select_summary(owner)
+
     def files(self):
         return self.item_manager.select_file()
 
@@ -238,6 +242,19 @@ class ItemManager:
     def select_activate(self, owner: str, parent: int):
         return list(map(self.to_dict, sorted(self.database.select_by(where_select_activate_with(owner, parent)),
                                              key=activate_key, reverse=True)))
+
+    def select_summary(self, owner: str):
+        res = defaultdict(list)
+        self.database.select_group_by(res, group_today_task_by_parent(owner), limited=False)
+
+        del res['0']
+        del res['miss']
+
+        ans = {}
+        for parent, lists in res.items():
+            lists.insert(0, self.database.select_one(where_id_equal(int(parent))))
+            ans[parent] = list(map(self.to_dict, lists))
+        return ans
 
     def select_file(self):
         return list(map(self.to_dict, self.database.select_by(where_select_all_file)))

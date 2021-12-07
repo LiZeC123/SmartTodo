@@ -14,6 +14,16 @@ def group_all_item_with(owner: str, parent: int):
     return group_by
 
 
+def group_today_task_by_parent(owner: str):
+    def group_by(item: dict) -> str:
+        if owner == item['owner'] and item['tomato_type'] == 'today':
+            return str(item['parent'])
+        else:
+            return "miss"
+
+    return group_by
+
+
 def where_select_activate_with(owner: str, parent: int):
     def select(item: dict) -> bool:
         return owner == item['owner'] and parent == item['parent'] and item['tomato_type'] == 'activate'
@@ -27,10 +37,8 @@ def where_select_all_file(item: dict) -> bool:
 
 def where_can_delete(item: dict) -> bool:
     # 1. 不是不可回收的特殊类型
-    # 2. 位于可回收列表中
-    # 3. 处于完成状态
+    # 2. 处于完成状态
     return item['repeatable'] is False and item['specific'] == 0 \
-           and item['tomato_type'] in ['today', 'urgent'] \
            and item['expected_tomato'] == item['used_tomato']
 
 

@@ -29,7 +29,7 @@
     <a v-if="isAdmin && isMainPage" @click="backUpData">备份数据</a>
     <a v-if="isAdmin && isMainPage" @click="updateLogs">查看日志</a>
     <a v-if="isAdmin" @click="gc">垃圾回收</a>
-    <a v-if="isMainPage" @click="tomato">番茄钟</a>
+    <a v-if="isMainPage" @click="gotoTodaySummary">任务汇总</a>
     <a @click="doLogout">退出登录</a>
   </div>
 
@@ -39,7 +39,7 @@
 </template>
 
 <script>
-import router from "../router";
+import router from "@/router";
 
 export default {
   name: "Main",
@@ -64,6 +64,7 @@ export default {
   methods: {
     gotoHome:function () {
       router.push({path: '/home/todo'})
+      document.title = "待办事项列表"
     },
     commitTodo: function () {
       this.todoContent = this.todoContent.trim();
@@ -132,8 +133,8 @@ export default {
         alert("垃圾回收完毕")
       })
     },
-    tomato: function () {
-      window.open("/home/tomato");
+    gotoTodaySummary: function () {
+      this.$router.push("/home/summary")
     }
   }
 }

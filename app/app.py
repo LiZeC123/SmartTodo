@@ -98,6 +98,13 @@ def get_activate_item():
     return manager.activate_items(owner, parent=parent)
 
 
+@app.route('/api/item/getSummary', methods=['POST'])
+@logged
+def get_summary():
+    owner: str = token.get_username(request)
+    return manager.get_summary(owner)
+
+
 @app.route('/api/item/back', methods=['POST'])
 @logged
 def back_item() -> bool:

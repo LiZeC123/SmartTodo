@@ -4,7 +4,7 @@ import Main from "@/view/Main";
 import NoteComponent from "@/components/NoteComponent";
 import TodoComponent from "@/components/TodoComponent";
 import LogTypeComponent from "@/components/LogTypeComponent";
-import TomatoPage from "@/components/TomatoPage";
+import SummaryPage from "@/components/SummaryPage";
 
 const routes = [
     {path: '/', redirect: '/home/todo'},
@@ -15,7 +15,7 @@ const routes = [
             {path: 'todo', component: TodoComponent},
             {path: 'note/:id', component: NoteComponent},
             {path: 'log/:type', component: LogTypeComponent},
-            {path: 'tomato', component: TomatoPage},
+            {path: 'summary', component: SummaryPage}
         ]
     },
 ]
