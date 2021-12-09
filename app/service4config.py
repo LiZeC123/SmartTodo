@@ -26,3 +26,6 @@ class ConfigManager:
             return users[username]['role']
         else:
             return None
+
+    def is_admin_user(self, username: str):
+        return "ROLE_ADMIN" in self.get_roles(username)

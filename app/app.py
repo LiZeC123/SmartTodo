@@ -273,7 +273,7 @@ def undo_tomato_task():
 @logged
 def is_admin():
     username = token.get_username(request)
-    return config.get_roles(username)
+    return config.is_admin_user(username)
 
 
 @app.route("/api/log/data", methods=["GET"])
