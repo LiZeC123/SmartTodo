@@ -24,7 +24,7 @@ export default {
     reload: function () {
       this.axios.post("/item/getSummary", {}).then(res => {
         let ans = []
-        let data = res.data.data
+        let data = res.data
         for (let key in data) {
           let mList = data[key]
           for (let i = 0; i < mList.length; i++) {

@@ -28,7 +28,7 @@ export default {
         this.title = "数据";
     }
     document.title = this.title;
-    this.axios.get("/log/" + type).then(rep => this.content = rep.data.data);
+    this.axios.get("/log/" + type).then(rep => this.content = rep.data);
   }
 }
 </script>

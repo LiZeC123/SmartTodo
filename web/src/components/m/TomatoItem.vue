@@ -71,7 +71,7 @@ export default {
   methods: {
     reload: function (reset) {
       this.axios.get("/tomato/getTask").then(res => {
-        let d = res.data.data
+        let d = res.data
         let tsStart = d.startTime * 1000
 
         this.startTime = new Date(tsStart)
@@ -137,7 +137,7 @@ export default {
     },
     forceFinishTask: function () {
       this.axios.post("/tomato/finishTaskManually", {"id": this.taskId}).then(res => {
-        let isSuccess = res.data.success
+        let isSuccess = res.data
         if (isSuccess) {
           this.$emit('done-task', "done", this.taskId)
           localStorage.setItem("hasShowFocusMessage", "done")
@@ -149,7 +149,7 @@ export default {
     },
     finishTask: function () {
       this.axios.post("/tomato/finishTask", {"id": this.taskId}).then(res => {
-        let isSuccess = res.data.success
+        let isSuccess = res.data
         if (isSuccess) {
           this.$emit('done-task', "done", this.taskId)
           new Notification("完成一个番茄钟了, 休息一下吧~", {body: this.bodyMessage()})

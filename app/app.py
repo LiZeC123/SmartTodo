@@ -17,8 +17,8 @@ token = TokenManager()
 config = ConfigManager()
 
 
-def make_success(data=None) -> str:
-    return json.dumps({"success": True, "data": data})
+def make_result(data) -> str:
+    return json.dumps(data)
 
 
 def logged(func=None, role='ROLE_USER', wrap=True):
@@ -30,7 +30,7 @@ def logged(func=None, role='ROLE_USER', wrap=True):
         if not wrap:
             return func(*args, **kw)
         elif token.check_token(request, role):
-            return make_success(func(*args, **kw))
+            return make_result(func(*args, **kw))
         else:
             abort(401)
 
@@ -43,7 +43,7 @@ def login():
     username = data.get('username')
     password = data.get('password')
     if config.try_login(username, password):
-        return make_success(token.create_token({"username": username, "role": config.get_roles(username)}))
+        return token.create_token({"username": username, "role": config.get_roles(username)})
     else:
         real_ip = request.headers.get("X-Real-IP")
         logger.warning(f"已拒绝来自{real_ip}的请求, 此请求尝试以'{password}'为密码登录账号'{username}'")
@@ -267,13 +267,13 @@ def finish_tomato_task():
     return manager.finish_tomato_task(iid, owner)
 
 
-
 @app.route('/api/tomato/finishTaskManually', methods=['POST'])
 @logged
 def finish_tomato_task_manually():
     iid = get_xid_from_request()
     owner = token.get_username(request)
     return manager.finish_tomato_task_manually(iid, owner)
+
 
 @app.route('/api/tomato/clearTask', methods=['POST'])
 @logged

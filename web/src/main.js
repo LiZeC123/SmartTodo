@@ -56,7 +56,5 @@ router.beforeEach((to, from, next) => {
 // 请求发送通知权限, 用于番茄钟提醒
 Notification.requestPermission().then(() => {})
 
-// createApp(App).use(store).use(router).use(VueAxios, axios).mount('#app')
-
 createApp(App).use(store).use(router).use(VueAxios, axios).component('font-awesome-icon', FontAwesomeIcon)
     .mount('#app')

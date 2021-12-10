@@ -54,7 +54,7 @@ export default {
     }
   },
   created() {
-    this.axios.get('/meta/isAdmin').then(rep => this.isAdmin = rep.data.data);
+    this.axios.get('/meta/isAdmin').then(rep => this.isAdmin = rep.data);
   },
   computed: {
     isMainPage: function () {
@@ -75,11 +75,12 @@ export default {
 
       let match = /func (\S+) (.+)/.exec(this.todoContent)
       if (match !== null) {
-        this.axios.post("/admin/func", {
+        const data = {
           "cmd": match[1],
           "data": match[2],
-          "parent": this.$route.params.id}
-        ).then(() => this.updateTodo += 1)
+          "parent": this.$route.params.id
+        }
+        this.axios.post("/admin/func", data).then(() => this.updateTodo += 1)
       } else {
         const data = parseTitleToData(this.todoContent, this.todoType, this.$route.params.id)
         // 通过修改updateTodo变量触发子组件的Todo部分更新操作

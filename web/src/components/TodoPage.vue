@@ -34,7 +34,7 @@ export default {
         {"name": "sort-amount-up", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
       ],
       urgentConfig: [
-        {"name": "level-down-alt", "desc": "退回此项目", "function": this.backItem},
+        {"name": "long-arrow-alt-down", "desc": "退回此项目", "function": this.backItem},
         {"name": "clock", "desc": "启动番茄钟", "function": this.startTomatoTimer},
         {"name": "sort-amount-up", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
       ],
@@ -81,16 +81,15 @@ export default {
     },
     reload: function () {
       this.axios.post("/item/getAll", {"parent": this.parent}).then(res => {
-        // console.log(res.data.data)
-        this.todayTask = res.data.data.todayTask
-        this.urgentTask = res.data.data.urgentTask
-        this.activeTask = res.data.data.activeTask
+        this.todayTask = res.data.todayTask
+        this.urgentTask = res.data.urgentTask
+        this.activeTask = res.data.activeTask
       })
     },
     backItem: function (index, id) {
       this.axios.post("/item/back", {"id": id, "parent": this.parent}).then(res => {
         this.findItem(index, id).splice(index, 1)
-        this.activeTask = res.data.data
+        this.activeTask = res.data
       })
     },
     removeItem: function (index, id) {
