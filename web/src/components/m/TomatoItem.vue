@@ -3,8 +3,12 @@
     <h2 v-show="show">当前任务</h2>
     <ol v-show="show">
       <li :class="stage" :title="desc">【{{ timeWithMin }}】{{ taskName }}
-        <a class="function function-0" title="取消任务" @click="cancelTask">R</a>
-        <a class="function function-1" title="完成任务" @click="forceFinishTask">D</a>
+        <a class="function function-1" title="取消任务" @click="cancelTask">
+          <font-awesome-icon :icon="['fas', 'undo']"/>
+        </a>
+        <a class="function function-0" title="提前完成任务" @click="forceFinishTask">
+          <font-awesome-icon :icon="['fas', 'check']"/>
+        </a>
       </li>
     </ol>
   </div>
@@ -134,7 +138,7 @@ export default {
     forceFinishTask: function () {
       this.axios.post("/tomato/finishTaskManually", {"id": this.taskId}).then(res => {
         let isSuccess = res.data.success
-        if(isSuccess) {
+        if (isSuccess) {
           this.$emit('done-task', "done", this.taskId)
           localStorage.setItem("hasShowFocusMessage", "done")
           this.reload(false)
@@ -146,7 +150,7 @@ export default {
     finishTask: function () {
       this.axios.post("/tomato/finishTask", {"id": this.taskId}).then(res => {
         let isSuccess = res.data.success
-        if(isSuccess) {
+        if (isSuccess) {
           this.$emit('done-task', "done", this.taskId)
           new Notification("完成一个番茄钟了, 休息一下吧~", {body: this.bodyMessage()})
           localStorage.setItem("hasShowFocusMessage", "done")
@@ -231,25 +235,21 @@ ol, ul {
   display: inline-block;
   width: 14px;
   height: 12px;
-  border-radius: 14px;
-  border: 6px double #FFF;
-  background: #CCC;
   line-height: 14px;
   text-align: center;
-  color: #FFF;
+  color: #888;
   font-weight: bold;
-  font-size: 14px;
+  font-size: 20px;
   cursor: pointer;
 }
 
 .function-0 {
-  top: 4px;
-  right: 4px;
+  top: 6px;
+  right: 14px;
 }
 
 .function-1 {
-  top: 4px;
-  right: 34px;
+  top: 6px;
+  right: 44px;
 }
-
 </style>

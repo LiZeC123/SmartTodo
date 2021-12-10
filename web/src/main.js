@@ -4,12 +4,11 @@ import router from './router'
 import store from './store'
 import axios from 'axios'
 import VueAxios from 'vue-axios'
-// import { library } from '@fortawesome/fontawesome-svg-core'
-// import { faUserSecret, faCheck } from '@fortawesome/free-solid-svg-icons'
-// import {faSquare} from '@fortawesome/free-regular-svg-icons'
-// import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
-//
-// library.add(faUserSecret, faSquare, faCheck)
+import { library } from '@fortawesome/fontawesome-svg-core'
+import {faBiohazard, faLongArrowAltDown, faSortAmountUp, faTrashAlt, faClock, faCheck, faUndo } from '@fortawesome/free-solid-svg-icons'
+import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
+
+library.add(faBiohazard, faLongArrowAltDown, faSortAmountUp, faTrashAlt, faClock, faCheck, faUndo)
 
 axios.defaults.baseURL = '/api'
 axios.interceptors.request.use(config => {
@@ -57,7 +56,7 @@ router.beforeEach((to, from, next) => {
 // 请求发送通知权限, 用于番茄钟提醒
 Notification.requestPermission().then(() => {})
 
-createApp(App).use(store).use(router).use(VueAxios, axios).mount('#app')
+// createApp(App).use(store).use(router).use(VueAxios, axios).mount('#app')
 
-// createApp(App).use(store).use(router).use(VueAxios, axios).component('font-awesome-icon', FontAwesomeIcon)
-//     .mount('#app')
+createApp(App).use(store).use(router).use(VueAxios, axios).component('font-awesome-icon', FontAwesomeIcon)
+    .mount('#app')

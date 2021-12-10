@@ -10,7 +10,7 @@
         <p @click='jumpTo(item.url)'>{{ mapName(item) }}</p>
 
         <a v-for="(btn, idxBtn) in btnConfig" :key="btn.name" :class="['function', 'function-'+idxBtn]"
-           @click="btn['function'](idxItem, item.id)" :title="btn.desc">{{ btn.name }}</a>
+           @click="btn['function'](idxItem, item.id)" :title="btn.desc"> <font-awesome-icon :icon="['fas', btn.name]" /> </a>
       </li>
     </ol>
   </div>
@@ -249,36 +249,32 @@ p {
   display: inline-block;
   width: 14px;
   height: 12px;
-  border-radius: 14px;
-  border: 6px double #FFF;
-  background: #CCC;
   line-height: 14px;
   text-align: center;
-  color: #FFF;
+  color: #888;
   font-weight: bold;
-  font-size: 14px;
+  font-size: 20px;
   cursor: pointer;
 }
 
 .function-0 {
-  top: 4px;
-  right: 4px;
+  top: 6px;
+  right: 10px;
 }
 
 .function-1 {
-  top: 4px;
-  right: 34px;
+  top: 6px;
+  right: 44px;
 }
 
 .function-2 {
-  top: 4px;
-  right: 64px;
+  top: 6px;
+  right: 78px;
 }
 
-
 .function-3 {
-  top: 4px;
-  right: 94px;
+  top: 6px;
+  right: 112px;
 }
 
 
