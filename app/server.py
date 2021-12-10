@@ -96,7 +96,10 @@ class TomatoManager:
         return self.data[owner]
 
     def check_id(self, xid: int, owner: str):
-        return self.data[owner]['id'] == xid
+        if owner in self.data:
+            return self.data[owner]['id'] == xid
+        else:
+            return False
 
     def clear_task(self, owner: str):
         self.data[owner] = {"id": 0, "name": "当前无任务", "startTime": 0}
@@ -204,14 +207,27 @@ class Manager:
     def get_tomato_task(self, owner: str):
         return self.tomato_manager.get_task(owner)
 
+    def undo_tomato_task(self, xid: int, owner: str) -> bool:
+        return self.clear_tomato_task(xid, owner)
+
     def finish_tomato_task(self, xid: int, owner: str):
         if self.tomato_manager.check_id(xid, owner):
             self.increase_used_tomato(xid, owner)
-            self.tomato_manager.clear_task(owner)
+            return True
+        return False
 
-    def undo_tomato_task(self, xid: int, owner: str):
+    def clear_tomato_task(self, xid: int, owner: str):
         if self.tomato_manager.check_id(xid, owner):
             self.tomato_manager.clear_task(owner)
+            return True
+        return False
+
+    def finish_tomato_task_manually(self, xid: int, owner: str):
+        if self.tomato_manager.check_id(xid, owner):
+            self.increase_used_tomato(xid, owner)
+            self.tomato_manager.clear_task(owner)
+            return True
+        return False
 
     def __update_state(self):
         self.database.update_by(where_update_repeatable_item, update_repeatable_item)

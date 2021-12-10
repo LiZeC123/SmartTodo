@@ -3,8 +3,8 @@
     <h2 v-show="show">当前任务</h2>
     <ol v-show="show">
       <li :class="stage" :title="desc">【{{ timeWithMin }}】{{ taskName }}
-        <a class="function function-0" title="取消任务" @click="undoTask">R</a>
-        <a class="function function-1" title="完成任务" @click="finishTask">D</a>
+        <a class="function function-0" title="取消任务" @click="cancelTask">R</a>
+        <a class="function function-1" title="完成任务" @click="forceFinishTask">D</a>
       </li>
     </ol>
   </div>
@@ -90,56 +90,76 @@ export default {
       if (this.taskId === 0) {
         this.stage = "DONE"
         this.timeSeconds = 0
-        return
+        return;
       }
 
+      // 不超过一个番茄钟时间, 直接设置状态并返回
       if (delta < tomatoTomeMS) {
         this.stage = "FOCUS"
         this.timeSeconds = Math.floor((tomatoTomeMS - delta) / 1000)
+        return;
       }
 
-      if (delta > tomatoTomeMS) {
-
-        // 无论当前具体处于哪个状态, 只要经过了REST状态, 就发送对应的通知
-        const hasShowFocusMessage = localStorage.getItem("hasShowFocusMessage")
-        if (hasShowFocusMessage === null) {
-          console.log(delta)
-          new Notification("完成一个番茄钟了, 休息一下吧~", {body: this.bodyMessage()})
-          localStorage.setItem("hasShowFocusMessage", "done")
-        }
-
-        if (delta < tomatoTomeMS + resetTimeMS) {
-          this.stage = "REST"
-          this.timeSeconds = Math.floor((tomatoTomeMS + resetTimeMS - delta) / 1000)
-        }
-      }
-
-      if (delta > tomatoTomeMS + resetTimeMS) {
-        const hasShowRestMessage = localStorage.getItem("hasShowRestMessage")
-        if (hasShowRestMessage === null) {
-          new Notification("休息结束, 继续加油学习吧~", {body: this.bodyMessage()})
-          localStorage.setItem("hasShowRestMessage", "done")
-        }
-
-        this.stage = "DONE"
-        this.timeSeconds = 0
-
-        // 只要大于时间就发送完成任务请求, 从而刷新当前页面
+      // 否则无论当前具体处于哪个状态, 都要先判定是否发送过消息
+      const hasShowFocusMessage = localStorage.getItem("hasShowFocusMessage")
+      if (hasShowFocusMessage === null) {
         this.finishTask()
       }
+
+      // 不超过休息时间, 则正常设置休息状态并返回
+      if (delta < tomatoTomeMS + resetTimeMS) {
+        this.stage = "REST"
+        this.timeSeconds = Math.floor((tomatoTomeMS + resetTimeMS - delta) / 1000)
+        return;
+      }
+
+      // 超过休息时间, 则无论出于那个状态, 都先判定是否提示过休息消息
+      const hasShowRestMessage = localStorage.getItem("hasShowRestMessage")
+      if (hasShowRestMessage === null) {
+        this.clearTask()
+      }
+
+      this.stage = "DONE"
+      this.timeSeconds = 0
     },
     bodyMessage: function () {
       return "任务: " + this.taskName;
     },
-    undoTask: function () {
+    cancelTask: function () {
       this.axios.post("/tomato/undoTask", {"id": this.taskId}).then(() => {
         this.$emit('done-task', "undo")
         this.reload(false)
       })
     },
+    forceFinishTask: function () {
+      this.axios.post("/tomato/finishTaskManually", {"id": this.taskId}).then(res => {
+        let isSuccess = res.data.success
+        if(isSuccess) {
+          this.$emit('done-task', "done", this.taskId)
+          localStorage.setItem("hasShowFocusMessage", "done")
+          this.reload(false)
+        } else {
+          console.warn("finishTask请求无效")
+        }
+      })
+    },
     finishTask: function () {
-      this.axios.post("/tomato/finishTask", {"id": this.taskId}).then(() => {
-        this.$emit('done-task', "done", this.taskId)
+      this.axios.post("/tomato/finishTask", {"id": this.taskId}).then(res => {
+        let isSuccess = res.data.success
+        if(isSuccess) {
+          this.$emit('done-task', "done", this.taskId)
+          new Notification("完成一个番茄钟了, 休息一下吧~", {body: this.bodyMessage()})
+          localStorage.setItem("hasShowFocusMessage", "done")
+          this.reload(false)
+        } else {
+          console.warn("finishTask请求无效")
+        }
+      })
+    },
+    clearTask: function () {
+      this.axios.post("/tomato/clearTask", {"id": this.taskId}).then(() => {
+        new Notification("休息结束, 继续加油学习吧~", {body: this.bodyMessage()})
+        localStorage.setItem("hasShowRestMessage", "done")
         this.reload(false)
       })
     },
@@ -152,7 +172,7 @@ export default {
     "resetCount": function () {
       this.reload(true)
     },
-    "reloadCount":function () {
+    "reloadCount": function () {
       this.reload(false)
     }
   }

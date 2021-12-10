@@ -81,7 +81,7 @@ export default {
     },
     reload: function () {
       this.axios.post("/item/getAll", {"parent": this.parent}).then(res => {
-        console.log(res.data.data)
+        // console.log(res.data.data)
         this.todayTask = res.data.data.todayTask
         this.urgentTask = res.data.data.urgentTask
         this.activeTask = res.data.data.activeTask
