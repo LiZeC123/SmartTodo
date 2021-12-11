@@ -1,12 +1,8 @@
 import os
-import random
-import string
 from collections import defaultdict
-from datetime import timedelta
 from os import mkdir
 from os.path import join, exists
-from typing import Optional
-from threading import Timer
+
 from werkzeug.exceptions import abort
 
 from entity import Item, from_dict
@@ -19,90 +15,9 @@ from tool4item import where_can_delete, \
     urgent_task, today_task, group_today_task_by_parent
 from tool4key import activate_key, create_time_key
 from tool4log import logger
-from tool4time import now
+from tool4task import TaskManager
+from tool4tomato import TomatoManager
 from tool4web import extract_title, download
-
-
-def generate_token_str():
-    return ''.join(random.sample(string.ascii_letters + string.digits, 16))
-
-
-class TokenManager:
-    def __init__(self):
-        self.data = {}
-
-    def create_token(self, info: dict) -> str:
-        token = generate_token_str()
-        self.data[token] = info
-        return token
-
-    def query_info(self, token: str) -> Optional[dict]:
-        return self.data.get(token)
-
-    def check_token(self, request, role) -> bool:
-        token = request.headers.get('token')
-        return token in self.data and role in self.data[token].get('role')
-
-    def get_username(self, request) -> Optional[str]:
-        token = request.headers.get('token')
-        info = self.data.get(token, {})
-        return info.get('username')
-
-    def remove_token(self, token: str) -> None:
-        if token in self.data:
-            del self.data[token]
-
-
-class TaskManager:
-    def __init__(self) -> None:
-        self.tasks = [[] for _ in range(24)]
-        self.ONE_HOUR = 60 * 60
-
-    def add_task(self, task, hour: int):
-        self.tasks[hour].append(task)
-
-    def start(self):
-        now_time = now()
-        t0 = timedelta(hours=now_time.hour, minutes=now_time.minute, seconds=now_time.second)
-        t1 = timedelta(hours=now_time.hour + 1)
-        dt = t1 - t0
-
-        logger.info(f"TimeTask: Now is {now_time}. Sleep {dt.seconds} seconds to the hour")
-        # 等待到下一个整点时刻再开始执行任务
-        Timer(dt.seconds, self.__start0).start()
-
-    def __start0(self):
-        now_hour = now().hour
-        logger.info(f"TimeTask: Do Task For Hour {now_hour}")
-
-        for task in self.tasks[now_hour]:
-            task()
-
-        Timer(self.ONE_HOUR, self.__start0).start()
-
-
-class TomatoManager:
-    def __init__(self):
-        self.data = {}
-        self.taskName = ""
-        self.startTime = now()
-
-    def set_task(self, xid: int, name: str, owner: str):
-        self.data[owner] = {"id": xid, "name": name, "startTime": now().timestamp()}
-
-    def get_task(self, owner: str):
-        if owner not in self.data:
-            self.clear_task(owner)
-        return self.data[owner]
-
-    def check_id(self, xid: int, owner: str):
-        if owner in self.data:
-            return self.data[owner]['id'] == xid
-        else:
-            return False
-
-    def clear_task(self, owner: str):
-        self.data[owner] = {"id": 0, "name": "当前无任务", "startTime": 0}
 
 
 class Manager:
@@ -202,7 +117,7 @@ class Manager:
 
     def set_tomato_task(self, xid: int, owner: str):
         title = self.get_title(xid, owner)
-        self.tomato_manager.set_task(xid, title, owner)
+        self.tomato_manager.start_task(xid, title, owner)
 
     def get_tomato_task(self, owner: str):
         return self.tomato_manager.get_task(owner)
@@ -213,6 +128,7 @@ class Manager:
     def finish_tomato_task(self, xid: int, owner: str):
         if self.tomato_manager.check_id(xid, owner):
             self.increase_used_tomato(xid, owner)
+            self.tomato_manager.finish_task(xid, owner)
             return True
         return False
 
@@ -225,6 +141,7 @@ class Manager:
     def finish_tomato_task_manually(self, xid: int, owner: str):
         if self.tomato_manager.check_id(xid, owner):
             self.increase_used_tomato(xid, owner)
+            self.tomato_manager.finish_task(xid, owner)
             self.tomato_manager.clear_task(owner)
             return True
         return False

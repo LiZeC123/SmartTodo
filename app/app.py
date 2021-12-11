@@ -5,10 +5,11 @@ from typing import Dict
 from flask import Flask, request, abort
 
 from entity import Item
-from server import Manager, TokenManager
+from server import Manager
 from service4config import ConfigManager
 from tool4log import logger, Log_File
 from tool4time import parse_deadline_timestamp
+from tool4token import TokenManager
 
 app = Flask(__name__)
 

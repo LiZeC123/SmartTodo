@@ -57,6 +57,9 @@ def get_timestamp_from_str(t: str) -> float:
 
 # ################################# API For Server ################################# #
 
+def parse_timestamp(timestamp: int) -> str:
+    return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(timestamp))
+
 
 def parse_deadline_timestamp(timestamp: int) -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(timestamp / 1000))
