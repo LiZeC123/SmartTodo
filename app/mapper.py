@@ -25,7 +25,7 @@ class MemoryDataBase:
         self.data: List = []
         if exists(self.filename):
             self.data = load_data(self.filename)
-            logger.info(f"{MemoryDataBase.__name__}: Load Data From File")
+            logger.debug(f"{MemoryDataBase.__name__}: Load Data From File")
         if self.data:
             self.current_id = max(map(lambda i: i['id'], self.data))
         else:
@@ -95,4 +95,4 @@ class MemoryDataBase:
         json_data = json.dumps(self.data)
         with open(self.filename, "w", encoding="utf8") as f:
             f.write(json_data)
-        logger.info(f"{MemoryDataBase.__name__}: Success Save Date to File")
+        logger.debug(f"{MemoryDataBase.__name__}: Success Save Date to File")
