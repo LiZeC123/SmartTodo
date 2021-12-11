@@ -25,7 +25,7 @@ class TaskManager:
 
     def __start0(self):
         now_hour = now().hour
-        logger.info(f"TimeTask: Do Task For Hour {now_hour}")
+        logger.debug(f"TimeTask: Do Task For Hour {now_hour}")
 
         for task in self.tasks[now_hour]:
             task()
