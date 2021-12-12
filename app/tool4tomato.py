@@ -1,6 +1,12 @@
+import threading
+from collections import defaultdict
 from os.path import join
 
 from tool4time import now, now_str, parse_timestamp
+
+
+def make_task(xid=0, name="当前无任务", startTime=0.0, finished=True):
+    return {"id": xid, "name": name, "startTime": startTime, "finished": finished}
 
 
 class TomatoManager:
@@ -8,30 +14,35 @@ class TomatoManager:
     DATA_FILE = join(DATABASE_FOLDER, "TomatoRecord.dat")
 
     def __init__(self):
-        self.data = {}
+        self.data = defaultdict(make_task)
         self.taskName = ""
         self.startTime = 0
+        self.lock = threading.Lock()
 
     def start_task(self, xid: int, name: str, owner: str):
-        self.data[owner] = {"id": xid, "name": name, "startTime": now().timestamp()}
+        self.data[owner] = make_task(xid=xid, name=name, startTime=now().timestamp(), finished=False)
 
-    def finish_task(self, xid: int, owner: str):
-        if self.check_id(xid, owner):
-            self.__insert_record(owner)
-
-    def get_task(self, owner: str):
-        if owner not in self.data:
-            self.data[owner] = {"id": 0, "name": "当前无任务", "startTime": 0}
-        return self.data[owner]
-
-    def check_id(self, xid: int, owner: str):
-        if owner in self.data:
-            return self.data[owner]['id'] == xid
-        else:
+    def finish_task(self, xid: int, owner: str) -> bool:
+        with self.lock:
+            if self.match(xid, owner):
+                if not self.data[owner]['finished']:
+                    self.__insert_record(owner)
+                    self.data[owner]['finished'] = True
+                    return True
             return False
 
-    def clear_task(self, owner: str):
-        self.data[owner] = {"id": 0, "name": "当前无任务", "startTime": 0}
+    def clear_task(self, xid: int, owner: str) -> bool:
+        with self.lock:
+            if self.match(xid, owner):
+                self.data.pop(owner)
+                return True
+            return False
+
+    def get_task(self, owner: str):
+        return self.data[owner]
+
+    def match(self, xid: int, owner: str):
+        return owner in self.data and self.data[owner]['id'] == xid
 
     def __insert_record(self, owner: str):
         record = self.data[owner]

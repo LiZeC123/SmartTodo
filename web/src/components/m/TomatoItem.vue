@@ -16,8 +16,8 @@
 
 <script>
 
-const resetTime = 5 * 60
-const tomatoTime = 25 * 60
+const resetTime = 5
+const tomatoTime = 15
 
 const resetTimeMS = 1000 * resetTime
 const tomatoTomeMS = 1000 * tomatoTime
@@ -37,7 +37,6 @@ export default {
       timeSeconds: 0,
       stage: "DONE",
       hasShowFocusMessage: false,
-      hasShowRestMessage: false,
     }
   },
   mounted() {
@@ -69,18 +68,15 @@ export default {
     },
   },
   methods: {
-    reload: function (reset) {
+    reload: function () {
       this.axios.get("/tomato/getTask").then(res => {
-        let d = res.data
-        let tsStart = d.startTime * 1000
+        const d = res.data
+        const tsStart = d.startTime * 1000
 
         this.startTime = new Date(tsStart)
         this.taskName = d.name
         this.taskId = d.id
-
-        if (reset) {
-          this.resetTaskStates()
-        }
+        this.hasShowFocusMessage = d.finished
 
         this.updateTimeSecond()
       })
@@ -105,8 +101,7 @@ export default {
       }
 
       // 否则无论当前具体处于哪个状态, 都要先判定是否发送过消息
-      const hasShowFocusMessage = localStorage.getItem("hasShowFocusMessage")
-      if (hasShowFocusMessage === null) {
+      if (this.hasShowFocusMessage === false) {
         this.finishTask()
       }
 
@@ -117,12 +112,8 @@ export default {
         return;
       }
 
-      // 超过休息时间, 则无论出于那个状态, 都先判定是否提示过休息消息
-      const hasShowRestMessage = localStorage.getItem("hasShowRestMessage")
-      if (hasShowRestMessage === null) {
-        this.clearTask()
-      }
-
+      // 超过休息时间, 清除任务
+      this.clearTask()
       this.stage = "DONE"
       this.timeSeconds = 0
     },
@@ -132,52 +123,42 @@ export default {
     cancelTask: function () {
       this.axios.post("/tomato/undoTask", {"id": this.taskId}).then(() => {
         this.$emit('done-task', "undo")
-        this.reload(false)
+        this.reload()
       })
     },
     forceFinishTask: function () {
-      this.axios.post("/tomato/finishTaskManually", {"id": this.taskId}).then(res => {
-        let isSuccess = res.data
-        if (isSuccess) {
-          this.$emit('done-task', "done", this.taskId)
-          localStorage.setItem("hasShowFocusMessage", "done")
-          this.reload(false)
-        } else {
-          console.warn("finishTask请求无效")
-        }
+      this.axios.post("/tomato/finishTaskManually", {"id": this.taskId}).then(() => {
+        this.$emit('done-task', "done", this.taskId)
+        this.reload()
       })
     },
     finishTask: function () {
       this.axios.post("/tomato/finishTask", {"id": this.taskId}).then(res => {
         let isSuccess = res.data
         if (isSuccess) {
-          this.$emit('done-task', "done", this.taskId)
           new Notification("完成一个番茄钟了, 休息一下吧~", {body: this.bodyMessage()})
-          localStorage.setItem("hasShowFocusMessage", "done")
-          this.reload(false)
-        } else {
-          console.warn("finishTask请求无效")
         }
+
+        this.$emit('done-task', "done", this.taskId)
+        this.reload()
       })
     },
     clearTask: function () {
-      this.axios.post("/tomato/clearTask", {"id": this.taskId}).then(() => {
-        new Notification("休息结束, 继续加油学习吧~", {body: this.bodyMessage()})
-        localStorage.setItem("hasShowRestMessage", "done")
-        this.reload(false)
+      this.axios.post("/tomato/clearTask", {"id": this.taskId}).then(res => {
+        const isSuccess = res.data
+        if(isSuccess) {
+          new Notification("休息结束, 继续加油学习吧~", {body: this.bodyMessage()})
+        }
+        this.reload()
       })
     },
-    resetTaskStates: function () {
-      localStorage.removeItem("hasShowFocusMessage")
-      localStorage.removeItem("hasShowRestMessage")
-    }
   },
   watch: {
     "resetCount": function () {
-      this.reload(true)
+      this.reload()
     },
     "reloadCount": function () {
-      this.reload(false)
+      this.reload()
     }
   }
 }
