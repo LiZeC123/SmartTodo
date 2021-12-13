@@ -5,8 +5,8 @@ from os.path import join
 from tool4time import now, now_str, parse_timestamp
 
 
-def make_task(xid=0, name="当前无任务", startTime=0.0, finished=True):
-    return {"id": xid, "name": name, "startTime": startTime, "finished": finished}
+def make_task(xid=0, name="当前无任务", start_time=0.0, finished=True):
+    return {"id": xid, "name": name, "startTime": start_time, "finished": finished}
 
 
 class TomatoManager:
@@ -20,7 +20,7 @@ class TomatoManager:
         self.lock = threading.Lock()
 
     def start_task(self, xid: int, name: str, owner: str):
-        self.data[owner] = make_task(xid=xid, name=name, startTime=now().timestamp(), finished=False)
+        self.data[owner] = make_task(xid=xid, name=name, start_time=now().timestamp(), finished=False)
 
     def finish_task(self, xid: int, owner: str) -> bool:
         with self.lock:

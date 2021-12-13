@@ -127,10 +127,14 @@ export default {
       })
     },
     forceFinishTask: function () {
-      this.axios.post("/tomato/finishTaskManually", {"id": this.taskId}).then(() => {
-        this.$emit('done-task', "done", this.taskId)
-        this.reload()
-      })
+      if( this.stage === "FOCUS") {
+        this.axios.post("/tomato/finishTaskManually", {"id": this.taskId}).then(() => {
+          this.$emit('done-task', "done", this.taskId)
+          this.reload()
+        })
+      } else {
+        this.cancelTask()
+      }
     },
     finishTask: function () {
       this.axios.post("/tomato/finishTask", {"id": this.taskId}).then(res => {
