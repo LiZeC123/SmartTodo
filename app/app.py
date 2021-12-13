@@ -293,12 +293,11 @@ def is_admin():
     return config.is_admin_user(username)
 
 
-@app.route("/api/log/data", methods=["GET"])
+@app.route("/api/log/tomato", methods=["GET"])
 @logged(role='ROLE_ADMIN')
 def back_up():
-    with open(manager.database.DATA_FILE) as f:
-        # data数据是不换行存储的JSON数据, 因此只需要取值第一行
-        return f.readline()
+    with open(manager.tomato_manager.DATA_FILE, encoding='utf-8') as f:
+        return "".join(f.readlines())
 
 
 @app.route("/api/log/log", methods=["GET"])

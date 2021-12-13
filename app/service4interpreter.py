@@ -28,5 +28,7 @@ class OpInterpreter:
             return self.batch_create_item(data, parent, owner)
         elif command == "backup":
             return self.instance_backup(parent, owner)
+        elif command == "gc":
+            return self.manager.garbage_collection()
         else:
             logger.error("Unknown Command")
