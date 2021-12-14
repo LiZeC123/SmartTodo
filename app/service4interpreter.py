@@ -31,4 +31,4 @@ class OpInterpreter:
         elif command == "gc":
             return self.manager.garbage_collection()
         else:
-            logger.error("Unknown Command")
+            logger.error(f"Unknown Command: {command} {data}")
