@@ -1,6 +1,7 @@
 <template>
   <div>
-    <tomato-page :reset-count="tomatoResetCount" :reload-count="tomatoReloadCount" @done-task="doneTomatoTask"></tomato-page>
+    <tomato-page :reset-count="tomatoResetCount" :reload-count="tomatoReloadCount"
+                 @done-task="doneTomatoTask"></tomato-page>
     <item-list title="今日任务" :btnConfig="todayConfig" :data="todayTask"
                @checkbox-change="increaseUsedTomatoTime"></item-list>
     <item-list title="紧急任务" :btnConfig="urgentConfig" :data="urgentTask"
@@ -64,21 +65,21 @@ export default {
       }
       return null
     },
-    findItemById: function (id) {
-      for (let i = 0; i < this.todayTask.length; i++) {
-        const e = this.todayTask[i];
-        if (e.id === id) {
-          return [i, e]
-        }
-      }
-      for (let i = 0; i < this.urgentTask.length; i++) {
-        const e = this.urgentTask[i];
-        if (e.id === id) {
-          return [i, e]
-        }
-      }
-      return [-1, null]
-    },
+    // findItemById: function (id) {
+    //   for (let i = 0; i < this.todayTask.length; i++) {
+    //     const e = this.todayTask[i];
+    //     if (e.id === id) {
+    //       return [i, e]
+    //     }
+    //   }
+    //   for (let i = 0; i < this.urgentTask.length; i++) {
+    //     const e = this.urgentTask[i];
+    //     if (e.id === id) {
+    //       return [i, e]
+    //     }
+    //   }
+    //   return [-1, null]
+    // },
     reload: function () {
       this.axios.post("/item/getAll", {"parent": this.parent}).then(res => {
         this.todayTask = res.data.todayTask
@@ -134,12 +135,9 @@ export default {
       // 只要重新回到当前页面, 就刷新番茄钟状态
       this.tomatoReloadCount += 1
     },
-    doneTomatoTask: function (type, id) {
+    doneTomatoTask: function (type) {
       if (type === 'done') {
-        const [index, item] = this.findItemById(id)
-        if (item !== null) {
-          this.increaseUsedTomatoTime(index, id)
-        }
+        this.reload()
       }
     }
   },
