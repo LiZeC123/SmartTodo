@@ -79,7 +79,7 @@ export default {
     },
     mapSubTask: function (item) {
       if (item.subTask) {
-        return "subTask-1"
+        return "subTask"
       }
     },
     mapName: function (item) {
@@ -217,18 +217,9 @@ ol, ul {
   border-left: 5px solid #EE0000;
 }
 
-.subTask-1 {
-  margin-left: 20px;
-}
-
-.subTask-2 {
+.subTask {
   margin-left: 40px;
 }
-
-.subTask-3 {
-  margin-left: 60px;
-}
-
 
 /*任务单选框*/
 li input {

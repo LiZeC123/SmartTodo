@@ -11,6 +11,9 @@ import ItemList from "@/components/m/ItemList";
 export default {
   name: "SummaryPage",
   components: {ItemList},
+  props: {
+    updateTodo: Number,
+  },
   data: function () {
     return {
       todaySummary: [],
@@ -47,7 +50,11 @@ export default {
       })
     },
   },
-  watch: {}
+  watch: {
+    "updateTodo": function () {
+      this.reload()
+    },
+  }
 }
 </script>
 
