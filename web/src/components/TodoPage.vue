@@ -7,7 +7,7 @@
     <item-list title="紧急任务" :btnConfig="urgentConfig" :data="urgentTask"
                @checkbox-change="increaseUsedTomatoTime"></item-list>
     <item-list title="活动任务" :btnConfig="activeConfig" :data="activeTask"
-               @checkbox-change="toTodayTask"></item-list>
+               @checkbox-change="increaseUsedTomatoTime"></item-list>
   </div>
 </template>
 
@@ -30,19 +30,19 @@ export default {
       activeTask: [],
       lastUpdateDate: new Date().getDate(),
       todayConfig: [
-        {"name": "long-arrow-alt-down", "desc": "退回此项目", "function": this.backItem},
+        {"name": "angle-double-down", "desc": "退回此项目", "function": this.backItem},
         {"name": "clock", "desc": "启动番茄钟", "function": this.startTomatoTimer},
-        {"name": "sort-amount-up", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
+        {"name": "calculator", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
       ],
       urgentConfig: [
         {"name": "long-arrow-alt-down", "desc": "退回此项目", "function": this.backItem},
         {"name": "clock", "desc": "启动番茄钟", "function": this.startTomatoTimer},
-        {"name": "sort-amount-up", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
+        {"name": "calculator", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
       ],
       activeConfig: [
         {"name": "trash-alt", "desc": "删除此项目", "function": this.removeItem},
-        {"name": "biohazard", "desc": "转为紧急任务", "function": this.toUrgentTask},
-        {"name": "sort-amount-up", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
+        {"name": "list-ol", "desc": "转为今日任务", "function": this.toTodayTask},
+        {"name": "calculator", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
       ],
       tomatoResetCount: 0,
       tomatoReloadCount: 0,

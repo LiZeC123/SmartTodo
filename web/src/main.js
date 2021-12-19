@@ -5,10 +5,10 @@ import store from './store'
 import axios from 'axios'
 import VueAxios from 'vue-axios'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import {faBiohazard, faLongArrowAltDown, faSortAmountUp, faTrashAlt, faClock, faCheck, faUndo } from '@fortawesome/free-solid-svg-icons'
+import { faTrashAlt, faClock, faCheck, faUndo, faAngleDoubleDown, faListOl, faCalculator } from '@fortawesome/free-solid-svg-icons'
 import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
 
-library.add(faBiohazard, faLongArrowAltDown, faSortAmountUp, faTrashAlt, faClock, faCheck, faUndo)
+library.add(faTrashAlt, faClock, faCheck, faUndo, faAngleDoubleDown, faListOl, faCalculator)
 
 axios.defaults.baseURL = '/api'
 axios.interceptors.request.use(config => {
