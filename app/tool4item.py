@@ -50,6 +50,10 @@ def where_equal(xid: int, owner: str):
     return lambda item: item['id'] == xid and item['owner'] == owner
 
 
+def where_same_parent(parent: int, owner: str):
+    return lambda item: item['parent'] == parent and item['owner'] == owner
+
+
 def select_id(item: dict):
     return item['id']
 
@@ -100,3 +104,9 @@ def update_repeatable_item(item: dict) -> NoReturn:
 
 def update_note_url(item: dict) -> NoReturn:
     item['url'] = f"note/{item['id']}"
+
+
+def shrink_item(item: dict) -> NoReturn:
+    # 如果Item至少完成过一次, 并且有多余的预计时间, 那么将多余的预计时间都删除
+    if item['expected_tomato'] > item['used_tomato'] > 0:
+        item['expected_tomato'] = item['used_tomato']

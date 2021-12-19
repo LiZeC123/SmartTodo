@@ -23,6 +23,9 @@ class OpInterpreter:
         item.url = f"/file/{name}.zip"
         self.manager.item_manager.create(item)
 
+    def shrink_item_with_parent(self, parent: int, owner: str):
+        return self.manager.shrink(parent, owner)
+
     def exec_function(self, command: str, data: str, parent: int, owner: str):
         if command == "m":
             return self.batch_create_item(data, parent, owner)
@@ -30,5 +33,7 @@ class OpInterpreter:
             return self.instance_backup(parent, owner)
         elif command == "gc":
             return self.manager.garbage_collection()
+        elif command == "shrink":
+            return self.shrink_item_with_parent(parent, owner)
         else:
             logger.error(f"Unknown Command: {command} {data}")
