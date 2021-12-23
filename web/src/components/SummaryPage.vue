@@ -1,5 +1,9 @@
 <template>
   <div>
+    <h2>统计信息</h2>
+    <p>累计完成番茄钟数量: {{stats.total.count}} 累计学习时间: {{stats.total.hour}}小时 日均学习时间: {{stats.total.average}}分钟</p>
+    <p>今日完成番茄钟数量: {{stats.today.count}} 今日累计学习时间: {{stats.today.minute}}分钟</p>
+
     <item-list title="今日任务(汇总)" :btn-config="[]" :data="todaySummary"
                @checkbox-change="increaseUsedTomatoTime"></item-list>
   </div>
@@ -17,6 +21,17 @@ export default {
   data: function () {
     return {
       todaySummary: [],
+      stats: {
+        total:{
+          count: 0,
+          hour: 0,
+          average: 0
+        },
+        today: {
+          count: 0,
+          minute: 0,
+        },
+      }
     }
   },
   mounted() {
@@ -27,7 +42,7 @@ export default {
     reload: function () {
       this.axios.post("/item/getSummary", {}).then(res => {
         let ans = []
-        let data = res.data
+        let data = res.data.items
         for (let key in data) {
           let mList = data[key]
           for (let i = 0; i < mList.length; i++) {
@@ -36,6 +51,8 @@ export default {
           ans = ans.concat(mList)
         }
         this.todaySummary = ans
+        this.stats = res.data.stats
+        console.log(this.stats)
       })
     },
     findItem: function (index) {
