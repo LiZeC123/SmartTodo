@@ -79,6 +79,9 @@ def create_item():
     if "today" in f:
         item.tomato_type = "today"
 
+    if "exp" in f:
+        item.expected_tomato = int(f["exp"])
+
     manager.create(item)
 
 

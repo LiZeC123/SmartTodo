@@ -52,7 +52,6 @@ export default {
         }
         this.todaySummary = ans
         this.stats = res.data.stats
-        console.log(this.stats)
       })
     },
     findItem: function (index) {
