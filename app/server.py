@@ -15,6 +15,7 @@ from tool4item import where_can_delete, \
     urgent_task, today_task, group_today_task_by_parent, shrink_item, where_same_parent
 from tool4key import activate_key, create_time_key
 from tool4log import logger
+from tool4stat import report
 from tool4task import TaskManager
 from tool4tomato import TomatoManager
 from tool4web import extract_title, download
@@ -66,7 +67,10 @@ class Manager:
         return self.item_manager.select_activate(owner, parent)
 
     def get_summary(self, owner: str):
-        return self.item_manager.select_summary(owner)
+        return {
+            "items": self.item_manager.select_summary(owner),
+            "stats": report(owner)
+        }
 
     def files(self):
         return self.item_manager.select_file()
