@@ -330,4 +330,4 @@ def exec_function():
 
 
 if __name__ == '__main__':
-    app.run("0.0.0.0", 4231, threaded=True)
+    app.run("localhost", 4231, threaded=True)
