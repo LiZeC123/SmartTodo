@@ -27,6 +27,7 @@ class OpInterpreter:
         return self.manager.shrink(parent, owner)
 
     def exec_function(self, command: str, data: str, parent: int, owner: str):
+        logger.info(f"执行指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
         if command == "m":
             return self.batch_create_item(data, parent, owner)
         elif command == "backup":
