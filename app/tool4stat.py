@@ -41,10 +41,6 @@ def total_stat(data: list) -> dict:
         "average": int(average_time / 60)
     }
 
-    # return f"累计完成番茄钟数量:{count} " \
-    #        f"累计学习时间: {int(time.total_seconds() / 60 / 60)}小时 " \
-    #        f"日均学习时间: {int(average_time / 60)}分钟 "
-
 
 def today_stat(data: list) -> dict:
     today = now().date()
@@ -61,8 +57,19 @@ def today_stat(data: list) -> dict:
         "minute": int(time.total_seconds() / 60)
     }
 
-    # return f"今日完成番茄钟数量: {count} " \
-    #        f"今日累计学习时间: {int(time.total_seconds() / 60)}分钟 "
+
+def week_stat(data: list) -> list:
+    WEEK_LENGTH = 7
+    today = now().date()
+    counts = [timedelta() for _ in range(WEEK_LENGTH)]
+    for record in data:
+        start = record['start']
+        finish = record['finish']
+        delta = (today - start.date()).days
+        if delta < WEEK_LENGTH:
+            counts[delta] += (finish - start)
+
+    return list(map(lambda time: int(time.total_seconds() / 60), counts))
 
 
 def task_sort_key(record) -> float:
@@ -95,7 +102,7 @@ def report(owner: str) -> dict:
         return {}
     else:
         d = dataset[owner]
-        return {"total": total_stat(d), "today": today_stat(d)}
+        return {"total": total_stat(d), "today": today_stat(d), "week": week_stat(d)}
 
 
 if __name__ == '__main__':
