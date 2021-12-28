@@ -26,8 +26,8 @@
     </div>
     <div class="footer" id="footerFunctionContainer">
       <a @click="selectFile">上传文件</a>
-      <a v-if="isAdmin && isMainPage" @click="updateLogs">查看日志</a>
-      <a v-if="isMainPage" @click="gotoTodaySummary">任务汇总</a>
+      <a v-if="isAdmin" @click="updateLogs">查看日志</a>
+      <a @click="gotoTodaySummary">任务汇总</a>
       <a @click="doLogout">退出登录</a>
     </div>
 
@@ -53,11 +53,6 @@ export default {
   },
   created() {
     this.axios.get('/meta/isAdmin').then(rep => this.isAdmin = rep.data);
-  },
-  computed: {
-    isMainPage: function () {
-      return this.$route.fullPath === "/home/todo"
-    }
   },
   methods: {
     gotoHome: function () {
@@ -127,15 +122,8 @@ export default {
         alert("请先选择文件后再上传")
       }
     },
-    backUpData: function () {
-      this.axios.post("/admin/func", {"cmd": "backup", "data": "now", "parent": this.$route.params.id})
-          .then(() => {
-            this.updateTodo += 1
-            alert("备份成功")
-          })
-    },
     updateLogs: function () {
-      this.$router.push("/home/log/log");
+      window.open("/home/log/log")
     },
     gc: function () {
       this.axios.post("/admin/gc").then(() => {
@@ -144,7 +132,7 @@ export default {
       })
     },
     gotoTodaySummary: function () {
-      this.$router.push("/home/summary")
+      window.open("/home/summary")
     }
   }
 }
