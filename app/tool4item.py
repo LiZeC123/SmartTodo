@@ -50,6 +50,10 @@ def where_equal(xid: int, owner: str):
     return lambda item: item['id'] == xid and item['owner'] == owner
 
 
+def where_contain_name(name: str, parent: int, owner: str):
+    return lambda item: name in item['name'] and item['parent'] == parent and item['owner'] == owner
+
+
 def where_same_parent(parent: int, owner: str):
     return lambda item: item['parent'] == parent and item['owner'] == owner
 
@@ -110,3 +114,10 @@ def shrink_item(item: dict) -> NoReturn:
     # 如果Item至少完成过一次, 并且有多余的预计时间, 那么将多余的预计时间都删除
     if item['expected_tomato'] > item['used_tomato'] > 0:
         item['expected_tomato'] = item['used_tomato']
+
+
+def rename(new_name):
+    def f(item: dict):
+        item['name'] = new_name
+
+    return f

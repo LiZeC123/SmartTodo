@@ -1,4 +1,8 @@
+from typing import List, Optional
+
 from entity import Item
+from mapper import MemoryDataBase
+from tool4item import where_contain_name, where_equal, rename
 from tool4log import logger
 from tool4time import now_str_fn
 
@@ -23,8 +27,28 @@ class OpInterpreter:
         item.url = f"/file/{name}.zip"
         self.manager.item_manager.create(item)
 
-    def shrink_item_with_parent(self, parent: int, owner: str):
-        return self.manager.shrink(parent, owner)
+    def get_item_by_name(self, name: str, parent: int, owner: str) -> Optional[Item]:
+        db: MemoryDataBase = self.manager.database
+        p_item: List[Item] = db.select_by(where_contain_name(name, parent, owner))
+
+        if len(p_item) != 1:
+            logger.error(f"待办事项获取失败: 多个待办事项符合名称要求: {[p.name for p in p_item]}")
+            return None
+
+        return p_item[0]
+
+    def split_item_with_number(self, name: str, num: int, suffix: str, parent: int, owner: str):
+        subtasks = [f"第{i + 1}{suffix}" for i in range(num)]
+        return self.split_item_with_subtask(name, subtasks, parent,owner)
+
+    def split_item_with_subtask(self, name, subtasks: list, parent: int, owner: str):
+        item = self.get_item_by_name(name, parent, owner)
+        if item is None:
+            return
+        for subtask in subtasks:
+            sub_item = Item(0, f"{item.name}：{subtask}", "single", owner)
+            sub_item.parent = parent
+            self.manager.create(sub_item)
 
     def exec_function(self, command: str, data: str, parent: int, owner: str):
         logger.info(f"执行指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
@@ -35,6 +59,50 @@ class OpInterpreter:
         elif command == "gc":
             return self.manager.garbage_collection()
         elif command == "shrink":
-            return self.shrink_item_with_parent(parent, owner)
+            return self.manager.shrink(parent, owner)
+        elif command == "sn":
+            name, num, suffix = parse_sn_data(data)
+            return self.split_item_with_number(name, num, suffix, parent, owner)
+        elif command == "sx":
+            name, subtasks = parse_sx_data(data)
+            return self.split_item_with_subtask(name, subtasks, parent, owner)
+        elif command == "rename":
+            old, new_name = data.split()
+            item = self.get_item_by_name(old, parent, owner)
+            db: MemoryDataBase = self.manager.database
+            db.update_by(where_equal(item.id, owner), rename(new_name))
         else:
-            logger.error(f"Unknown Command: {command} {data}")
+            logger.error(f"未知的指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
+
+
+def parse_sn_data(data):
+    # 被拆分项目名称 拆分数量 拆分后缀
+    try:
+        elem = data.split(" ")
+        if len(elem) == 3:
+            name = elem[0]
+            num = int(elem[1])
+            suffix = elem[2]
+            return name, num, suffix
+        elif len(elem) == 2:
+            name = elem[0]
+            num = int(elem[1])
+            return name, num, "部分"
+        elif len(elem) == 1:
+            name = elem[0]
+            return name, 3, "部分"
+        else:
+            logger.error("解析sn指令数据失败: 参数数量不匹配")
+    except ValueError as e:
+        logger.error("解析sn指令数据失败: 数据解析失败")
+
+
+def parse_sx_data(data):
+    # 被拆分项目名称  - 子任务1名称 -子任务2名称 ...
+    elem = data.split("-")
+    if len(elem) >= 2:
+        name = elem[0].strip()
+        subtasks = [e.strip() for e in elem[1:] if not e.isspace()]
+        return name, subtasks
+    else:
+        logger.error("解析sx指令数据失败: 参数数量不匹配")

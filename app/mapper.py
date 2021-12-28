@@ -48,7 +48,8 @@ class MemoryDataBase:
         return None
 
     def select_by(self, where: Callable[[dict], bool] = lambda _: True,
-                  select: Callable[[dict], tuple] = lambda x: from_dict(x)) -> list:
+                  select: Callable[[dict], tuple] = lambda x: from_dict(x)) -> List:
+        """从数据库选择符合条件的数据. 默认返回Item类型的数据"""
         return list(map(select, filter(where, self.data)))
 
     def select_one(self, where: Callable[[dict], bool] = lambda _: True,

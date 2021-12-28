@@ -11,7 +11,7 @@ from service4interpreter import OpInterpreter
 from tool4item import where_can_delete, \
     where_update_repeatable_item, update_repeatable_item, where_id_equal, \
     undo_item, where_equal, group_all_item_with, where_select_activate_with, update_note_url, \
-    where_select_all_file, where_unreferenced, select_id, select_title, inc_expected_tomato, inc_used_tomato, \
+    where_unreferenced, select_id, select_title, inc_expected_tomato, inc_used_tomato, \
     urgent_task, today_task, group_today_task_by_parent, shrink_item, where_same_parent
 from tool4key import activate_key, create_time_key
 from tool4log import logger
@@ -23,11 +23,10 @@ from tool4web import extract_title, download
 
 class Manager:
     def __init__(self):
-        database = MemoryDataBase()
-        self.database = database
-        self.item_manager = ItemManager(database)
-        self.file_manager = FileItemManager(database)
-        self.note_manager = NoteItemManager(database)
+        self.database: MemoryDataBase = MemoryDataBase()
+        self.item_manager = ItemManager(self.database)
+        self.file_manager = FileItemManager(self.database)
+        self.note_manager = NoteItemManager(self.database)
         self.manager = {"single": self.item_manager, "file": self.file_manager, "note": self.note_manager}
         self.op = OpInterpreter(self)
         self.task_manager = TaskManager()
@@ -56,9 +55,6 @@ class Manager:
         item.url = url
         self.item_manager.create(item)
 
-    def select(self):
-        pass
-
     def all_items(self, owner: str, /, parent: int = 0):
         # 可以考虑在前端请求的时候, 返回一个是否需要刷新的标记, 如果检测到变化, 则要求前端刷新, 否则不变
         return self.item_manager.select_all(owner, parent)
@@ -71,9 +67,6 @@ class Manager:
             "items": self.item_manager.select_summary(owner),
             "stats": report(owner)
         }
-
-    def files(self):
-        return self.item_manager.select_file()
 
     def remove(self, xid: int, owner: str):
         self.check_authority(xid, owner)
@@ -99,7 +92,7 @@ class Manager:
     def get_title(self, xid: int, owner: str) -> str:
         return self.database.select_one(where_equal(xid, owner), select_title)
 
-    def shrink(self,  parent: int, owner: str):
+    def shrink(self, parent: int, owner: str):
         return self.database.update_by(where_same_parent(parent, owner), shrink_item)
 
     def get_note(self, nid: int, owner: str) -> str:
@@ -151,11 +144,9 @@ class Manager:
         self.op.exec_function(command, data, parent, owner)
 
 
-
-
 class ItemManager:
     def __init__(self, database: MemoryDataBase):
-        self.database = database
+        self.database: MemoryDataBase = database
 
     def create(self, item: Item) -> int:
         if item.name.startswith("http"):
@@ -194,9 +185,6 @@ class ItemManager:
             ans[parent] = list(map(self.to_dict, lists))
         return ans
 
-    def select_file(self):
-        return list(map(self.to_dict, self.database.select_by(where_select_all_file)))
-
     def remove(self, item: Item):
         self.database.remove(item)
 
@@ -212,7 +200,7 @@ class FileItemManager(ItemManager):
     def __init__(self, database: MemoryDataBase):
         super().__init__(database)
         self.__init_folder()
-        self.database = database
+        self.database: MemoryDataBase = database
 
     def __init_folder(self):
         if not exists(self._FILE_FOLDER):
@@ -253,7 +241,7 @@ class NoteItemManager(ItemManager):
     def __init__(self, database: MemoryDataBase):
         super().__init__(database)
         self.__init_folder()
-        self.database = database
+        self.database: MemoryDataBase = database
         if not exists(NoteItemManager._NOTE_FOLDER):
             mkdir(NoteItemManager._NOTE_FOLDER)
 

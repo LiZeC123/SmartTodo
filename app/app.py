@@ -183,12 +183,6 @@ def try_get_parent_from_request() -> int:
 
 # ####################### API For File #######################
 
-@app.route("/api/file/getAll", methods=["POST"])
-@logged
-def file_get_all_items():
-    return manager.files()
-
-
 @app.route("/api/file/upload", methods=["POST"])
 @logged
 def file_do_upload():
