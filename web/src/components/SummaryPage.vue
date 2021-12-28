@@ -62,7 +62,7 @@ export default {
       })
     },
     draw: function () {
-      const labels = [0,1,2,3,4,5,6];
+      const labels = [0, 1, 2, 3, 4, 5, 6];
 
       const data = {
         labels: labels,
@@ -71,6 +71,7 @@ export default {
           backgroundColor: 'rgb(27,141,227)',
           borderColor: 'rgb(27,141,227)',
           data: this.stats.week,
+          tension: 0.3,
         }]
       };
 
