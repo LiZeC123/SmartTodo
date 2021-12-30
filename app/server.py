@@ -40,11 +40,14 @@ class Manager:
 
     def check_authority(self, xid: int, owner: str):
         # select_by 方法返回一个数组, 因此需要取出其中的值
-        expected_owner = self.database.select_by(where_id_equal(xid), lambda it: it['owner'])[0]
-        if expected_owner != owner:
-            logger.warning(f"{Manager.__name__}: User {owner} dose not have authority For xID {xid}"
-                           f"(expected owner : {expected_owner})")
-            abort(401)
+        owners = self.database.select_by(where_id_equal(xid), lambda it: it['owner'])
+        if len(owners) > 0:
+            expected_owner = self.database.select_by(where_id_equal(xid), lambda it: it['owner'])[0]
+            if expected_owner == owner:
+                return
+
+        logger.warning(f"{Manager.__name__}: User {owner} dose not have authority For xID {xid}")
+        abort(401)
 
     def create(self, item: Item):
         self.manager[item.item_type].create(item)
