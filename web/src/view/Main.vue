@@ -173,7 +173,7 @@ function parseTitleToData(todoContent, todoType, parent) {
     } else if (values[i] === "-sp" && i + 1 < values.length) {
       data.specific = values[i + 1];
       i++;
-    } else if (values[i] === "-td") {
+    } else if (values[i] === "-td" || values[i] === "-t") {
       data.today = true;
     } else if (values[i] === "-ep" && i + 1 < values.length) {
       data.exp = values[i + 1];
