@@ -33,6 +33,7 @@ export default {
     return {
       startTime: new Date(),
       taskId: 0,
+      seqId: 0,
       taskName: "任务名",
       timeSeconds: 0,
       stage: "DONE",
@@ -76,6 +77,7 @@ export default {
         this.startTime = new Date(tsStart)
         this.taskName = d.name
         this.taskId = d.id
+        this.seqId = d.tid
         this.hasShowFocusMessage = d.finished
 
         this.updateTimeSecond()
@@ -120,15 +122,18 @@ export default {
     bodyMessage: function () {
       return "任务: " + this.taskName;
     },
+    param: function () {
+      return {"tid": this.seqId, "id": this.taskId}
+    },
     cancelTask: function () {
-      this.axios.post("/tomato/undoTask", {"id": this.taskId}).then(() => {
+      this.axios.post("/tomato/undoTask", this.param()).then(() => {
         this.$emit('done-task', "undo")
         this.reload()
       })
     },
     forceFinishTask: function () {
-      if( this.stage === "FOCUS") {
-        this.axios.post("/tomato/finishTaskManually", {"id": this.taskId}).then(() => {
+      if (this.stage === "FOCUS") {
+        this.axios.post("/tomato/finishTaskManually", this.param()).then(() => {
           this.$emit('done-task', "done", this.taskId)
           this.reload()
         })
@@ -137,7 +142,7 @@ export default {
       }
     },
     finishTask: function () {
-      this.axios.post("/tomato/finishTask", {"id": this.taskId}).then(res => {
+      this.axios.post("/tomato/finishTask", this.param()).then(res => {
         let isSuccess = res.data
         if (isSuccess) {
           new Notification("完成一个番茄钟了, 休息一下吧~", {body: this.bodyMessage()})
@@ -148,9 +153,9 @@ export default {
       })
     },
     clearTask: function () {
-      this.axios.post("/tomato/clearTask", {"id": this.taskId}).then(res => {
+      this.axios.post("/tomato/clearTask", this.param()).then(res => {
         const isSuccess = res.data
-        if(isSuccess) {
+        if (isSuccess) {
           new Notification("休息结束, 继续加油学习吧~", {body: this.bodyMessage()})
         }
         this.reload()

@@ -173,6 +173,12 @@ def get_xid_from_request() -> int:
     return xid
 
 
+def get_tid_from_request() -> int:
+    f: Dict = request.get_json()
+    tid = int(f.get('tid'))
+    return tid
+
+
 def try_get_parent_from_request() -> int:
     f: Dict = request.get_json()
     if f is not None:
@@ -182,12 +188,6 @@ def try_get_parent_from_request() -> int:
 
 
 # ####################### API For File #######################
-
-@app.route("/api/file/getAll", methods=["POST"])
-@logged
-def file_get_all_items():
-    return manager.files()
-
 
 @app.route("/api/file/upload", methods=["POST"])
 @logged
@@ -258,33 +258,37 @@ def get_tomato_task():
 @app.route('/api/tomato/undoTask', methods=['POST'])
 @logged
 def undo_tomato_task():
+    tid = get_tid_from_request()
     iid = get_xid_from_request()
     owner = token.get_username(request)
-    return manager.undo_tomato_task(iid, owner)
+    return manager.undo_tomato_task(tid, iid, owner)
 
 
 @app.route('/api/tomato/finishTask', methods=['POST'])
 @logged
 def finish_tomato_task():
+    tid = get_tid_from_request()
     iid = get_xid_from_request()
     owner = token.get_username(request)
-    return manager.finish_tomato_task(iid, owner)
+    return manager.finish_tomato_task(tid, iid, owner)
 
 
 @app.route('/api/tomato/finishTaskManually', methods=['POST'])
 @logged
 def finish_tomato_task_manually():
+    tid = get_tid_from_request()
     iid = get_xid_from_request()
     owner = token.get_username(request)
-    return manager.finish_tomato_task_manually(iid, owner)
+    return manager.finish_tomato_task_manually(tid, iid, owner)
 
 
 @app.route('/api/tomato/clearTask', methods=['POST'])
 @logged
 def clear_tomato_task():
+    tid = get_tid_from_request()
     iid = get_xid_from_request()
     owner = token.get_username(request)
-    return manager.clear_tomato_task(iid, owner)
+    return manager.clear_tomato_task(tid, iid, owner)
 
 
 # ####################### API For Functions #######################
