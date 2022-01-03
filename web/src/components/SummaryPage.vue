@@ -1,14 +1,12 @@
 <template>
   <div>
-
-
-    <item-list title="今日任务(汇总)" :btn-config="[]" :data="todaySummary"
-               @checkbox-change="increaseUsedTomatoTime"></item-list>
-
     <h2>统计信息</h2>
     <p>累计完成番茄钟数量: {{ stats.total.count }} 累计学习时间: {{ stats.total.hour }}小时 日均学习时间: {{ stats.total.average }}分钟</p>
     <p>今日完成番茄钟数量: {{ stats.today.count }} 今日累计学习时间: {{ stats.today.minute }}分钟</p>
     <canvas id="myChart"></canvas>
+
+    <item-list title="今日任务(汇总)" :btn-config="[]" :data="todaySummary"
+               @checkbox-change="increaseUsedTomatoTime"></item-list>
 
   </div>
 </template>
@@ -78,7 +76,13 @@ export default {
       const config = {
         type: 'line',
         data: data,
-        options: {}
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          },
+        }
       };
 
       // eslint-disable-next-line no-undef
