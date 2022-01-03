@@ -26,7 +26,6 @@ export default {
   name: "TomatoPage",
   emits: ['done-task'],
   props: {
-    resetCount: Number,
     reloadCount: Number,
   },
   data: function () {
@@ -163,9 +162,6 @@ export default {
     },
   },
   watch: {
-    "resetCount": function () {
-      this.reload()
-    },
     "reloadCount": function () {
       this.reload()
     }

@@ -1,7 +1,6 @@
 <template>
   <div>
-    <tomato-page :reset-count="tomatoResetCount" :reload-count="tomatoReloadCount"
-                 @done-task="doneTomatoTask"></tomato-page>
+    <tomato-page :reload-count="tomatoReloadCount" @done-task="doneTomatoTask"></tomato-page>
     <item-list title="今日任务" :btnConfig="todayConfig" :data="todayTask"
                @checkbox-change="increaseUsedTomatoTime"></item-list>
     <item-list title="紧急任务" :btnConfig="urgentConfig" :data="urgentTask"
@@ -44,7 +43,6 @@ export default {
         {"name": "list-ol", "desc": "转为今日任务", "function": this.toTodayTask},
         {"name": "calculator", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
       ],
-      tomatoResetCount: 0,
       tomatoReloadCount: 0,
     }
   },
@@ -65,21 +63,6 @@ export default {
       }
       return null
     },
-    // findItemById: function (id) {
-    //   for (let i = 0; i < this.todayTask.length; i++) {
-    //     const e = this.todayTask[i];
-    //     if (e.id === id) {
-    //       return [i, e]
-    //     }
-    //   }
-    //   for (let i = 0; i < this.urgentTask.length; i++) {
-    //     const e = this.urgentTask[i];
-    //     if (e.id === id) {
-    //       return [i, e]
-    //     }
-    //   }
-    //   return [-1, null]
-    // },
     reload: function () {
       this.axios.post("/item/getAll", {"parent": this.parent}).then(res => {
         this.todayTask = res.data.todayTask
@@ -108,15 +91,15 @@ export default {
       })
     },
     startTomatoTimer: function (index, id) {
-      this.axios.post("/tomato/setTask", {"id": id}).then(() => this.tomatoResetCount += 1)
+      this.axios.post("/tomato/setTask", {"id": id}).then(() => this.tomatoReloadCount += 1)
     },
-    toUrgentTask: function (index, id) {
-      this.axios.post("/item/toUrgentTask", {"id": id}).then(() => {
-        let item = this.activeTask[index]
-        this.activeTask.splice(index, 1)
-        this.urgentTask.push(item)
-      })
-    },
+    // toUrgentTask: function (index, id) {
+    //   this.axios.post("/item/toUrgentTask", {"id": id}).then(() => {
+    //     let item = this.activeTask[index]
+    //     this.activeTask.splice(index, 1)
+    //     this.urgentTask.push(item)
+    //   })
+    // },
     toTodayTask: function (index, id) {
       this.axios.post("/item/toTodayTask", {"id": id}).then(() => {
         let item = this.activeTask[index]
@@ -144,6 +127,7 @@ export default {
   watch: {
     "updateTodo": function () {
       this.reload()
+      this.tomatoReloadCount += 1
     },
     "createPlaceHold": function () {
       this.activeTask.unshift({

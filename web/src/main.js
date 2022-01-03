@@ -25,9 +25,14 @@ const doNone = function () {
 
 axios.interceptors.response.use(res => {
     return res;
-}, ()=> {
-    store.commit('del_token')
-    router.push({path: '/login'}).then(doNone);
+}, error=> {
+    if (error.response.status === 401) {
+        console.log("返回401, 跳转到登录页面")
+        store.commit('del_token')
+        router.push({path: '/login'}).then(doNone)
+    } else {
+        console.log("返回错误代码:", error.response.status)
+    }
 });
 
 // 页面刷新时，重新赋值token

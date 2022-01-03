@@ -39,7 +39,7 @@ class OpInterpreter:
 
     def split_item_with_number(self, name: str, num: int, suffix: str, parent: int, owner: str):
         subtasks = [f"第{i + 1}{suffix}" for i in range(num)]
-        return self.split_item_with_subtask(name, subtasks, parent,owner)
+        return self.split_item_with_subtask(name, subtasks, parent, owner)
 
     def split_item_with_subtask(self, name, subtasks: list, parent: int, owner: str):
         item = self.get_item_by_name(name, parent, owner)
@@ -49,6 +49,14 @@ class OpInterpreter:
             sub_item = Item(0, f"{item.name}：{subtask}", "single", owner)
             sub_item.parent = parent
             self.manager.create(sub_item)
+
+    def create_tomato_task_immediately(self, name: str, parent: int, owner: str):
+        item = Item(0, name, "single", owner, tomato_type="today")
+        item.parent = parent
+        self.manager.create(item)
+
+        task = self.get_item_by_name(name, parent, owner)
+        self.manager.set_tomato_task(task.id, task.owner)
 
     def exec_function(self, command: str, data: str, parent: int, owner: str):
         logger.info(f"执行指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
@@ -71,6 +79,8 @@ class OpInterpreter:
             item = self.get_item_by_name(old, parent, owner)
             db: MemoryDataBase = self.manager.database
             db.update_by(where_equal(item.id, owner), rename(new_name))
+        elif command == "clk":
+            self.create_tomato_task_immediately(data, parent, owner)
         else:
             logger.error(f"未知的指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
 
