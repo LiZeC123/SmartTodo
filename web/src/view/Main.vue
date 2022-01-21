@@ -155,11 +155,12 @@ function parseTitleToData(todoContent, todoType, parent) {
   }
 
   // 更新任务名称重新分析任务类型
-  data.itemType = inferType(data.name, data.itemType);
+  const isMainPage = (parent === undefined)
+  data.itemType = inferType(data.name, data.itemType, isMainPage);
   data.repeatable = inferRepeatable(data.name)
 
   // 分析参数
-  if (parent !== undefined) {
+  if (!isMainPage) {
     data.parent = parent;
   }
   for (let i = 1; i < values.length; i++) {
@@ -184,14 +185,14 @@ function parseTitleToData(todoContent, todoType, parent) {
   return data;
 }
 
-function inferType(name, itemType) {
+function inferType(name, itemType, isMainPage) {
   if (itemType !== "single") {
     return itemType;
   }
 
   if (inferFileType(name)) {
     return "file";
-  } else if (inferNoteType(name)) {
+  } else if (isMainPage && inferNoteType(name)) {
     return 'note'
   } else {
     return "single"
