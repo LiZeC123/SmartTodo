@@ -79,8 +79,8 @@ def create_item():
     if "today" in f:
         item.tomato_type = "today"
 
-    if "exp" in f:
-        item.expected_tomato = int(f["exp"])
+    if "habit" in f:
+        item.habit = True
 
     manager.create(item)
 
@@ -230,14 +230,6 @@ def note_get_todo_item():
     nid = get_xid_from_request()
     return manager.activate_items(owner, parent=nid)
 
-
-# ####################### API For SubTasks #######################
-
-def sub_task_items():
-    pass
-
-
-# 1. 根据文本创建 / 查询已有记录 / 修改记录状态 / 记录转文本 / 根据文本更新记录
 
 # ####################### API For Tomato #########################
 @app.route('/api/tomato/setTask', methods=['POST'])

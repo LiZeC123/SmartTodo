@@ -119,8 +119,8 @@ class Manager:
             logger.info(f"Garbage Collection(Unreferenced): {item.name}")
 
     def set_tomato_task(self, xid: int, owner: str):
-        title = self.get_title(xid, owner)
-        return self.tomato_manager.start_task(xid, title, owner)
+        item = self.item_manager.select(xid)
+        return self.tomato_manager.start_task(item, owner)
 
     def get_tomato_task(self, owner: str):
         return self.tomato_manager.get_task(owner)

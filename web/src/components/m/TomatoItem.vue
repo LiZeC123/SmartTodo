@@ -36,6 +36,7 @@ export default {
       taskName: "任务名",
       timeSeconds: 0,
       stage: "DONE",
+      habit: false,
       hasShowFocusMessage: false,
     }
   },
@@ -71,18 +72,29 @@ export default {
     reload: function () {
       this.axios.get("/tomato/getTask").then(res => {
         const d = res.data
-        const tsStart = d.startTime * 1000
+        const tsStart = d.start * 1000
+
 
         this.startTime = new Date(tsStart)
         this.taskName = d.name
         this.taskId = d.id
         this.seqId = d.tid
         this.hasShowFocusMessage = d.finished
+        this.habit = d.habit
+
+        console.log(res.data ,tsStart, this.startTime)
 
         this.updateTimeSecond()
       })
     },
     updateTimeSecond: function () {
+      if (!this.habit) {
+        this.updateTomato()
+      } else {
+        this.updateHabit()
+      }
+    },
+    updateTomato: function () {
       const tsStart = this.startTime
       let tsNow = new Date().getTime()
       let delta = tsNow - tsStart
@@ -117,6 +129,13 @@ export default {
       this.clearTask()
       this.stage = "DONE"
       this.timeSeconds = 0
+    },
+    updateHabit: function () {
+      const tsStart = this.startTime
+      let tsNow = new Date().getTime()
+      this.timeSeconds = (tsNow - tsStart) / 1000
+
+      this.stage = "FOCUS"
     },
     bodyMessage: function () {
       return "任务: " + this.taskName;

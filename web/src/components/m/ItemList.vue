@@ -99,9 +99,8 @@ export default {
         showName = "【" + item.deadline.split(" ")[0] + "】" + showName
       }
 
-      // 如果是工作时间段, 加入工作时间段的标记
-      if (item.work) {
-        showName = "【工作】" + showName;
+      if (item.habit) {
+        showName = "【习惯】" + showName;
       }
 
       if (item.specific) {
