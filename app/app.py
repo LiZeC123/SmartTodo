@@ -48,7 +48,7 @@ def login():
     else:
         real_ip = request.headers.get("X-Real-IP")
         logger.warning(f"已拒绝来自{real_ip}的请求, 此请求尝试以'{password}'为密码登录账号'{username}'")
-        return abort(401)
+        return ""
 
 
 @app.route('/api/logout', methods=['POST'])

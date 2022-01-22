@@ -54,7 +54,7 @@ export default {
           "password": this.password
         }
       }).then(response => {
-        if (response.data) {
+        if (response.data !== "") {
           const token = response.data;
           this.$store.commit('set_token', token);
           this.$router.push('/home/todo');
