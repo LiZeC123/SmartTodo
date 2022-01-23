@@ -8,6 +8,8 @@
     <item-list title="今日任务(汇总)" :btn-config="[]" :data="todaySummary"
                @checkbox-change="increaseUsedTomatoTime"></item-list>
 
+    <item-list title="习惯统计" :btn-config="[]" :data="stats.habitSummary"></item-list>
+
   </div>
 </template>
 
@@ -33,8 +35,9 @@ export default {
           count: 0,
           minute: 0,
         },
-        week: [0, 0, 0, 0, 0, 0, 0]
-      }
+        week: [0, 0, 0, 0, 0, 0, 0],
+        habitSummary: []
+      },
     }
   },
   mounted() {

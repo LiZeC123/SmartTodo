@@ -62,7 +62,9 @@ class TomatoManager:
         name = record.name
 
         with open(TomatoManager.DATA_FILE, "a", encoding="utf-8") as f:
+            values = [start_time, now_str(), owner, name]
             if record.habit:
-                f.write(f"{start_time} | {now_str()} | {owner} | {name} | hb\n")
-            else:
-                f.write(f"{start_time} | {now_str()} | {owner} | {name}\n")
+                values.append("hb")
+
+            f.write(" | ".join(values))
+            f.write("\n")

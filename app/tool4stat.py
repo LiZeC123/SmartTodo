@@ -20,7 +20,7 @@ def load_data() -> dict:
                 start=get_datetime_from_str(start),
                 finish=get_datetime_from_str(finish),
                 title=title.strip(),
-                extend=extend
+                extend=[ex.strip() for ex in extend]
             ))
     return ans
 
@@ -83,21 +83,26 @@ def task_sort_key(task) -> float:
     return count * DAY_SECONDS + time.timestamp()
 
 
-def task_stat(data: List[Record]) -> str:
+def task_stat(data: List[Record]) -> list:
     tasks = {}
     for record in data:
+        if "hb" not in record.extend:
+            continue
+
         title = record.title
         finish = record.finish
+        elapsed = record.finish - record.start
         if title not in tasks:
-            tasks[title] = {"name": title, "lastTime": finish, "count": 1}
+            tasks[title] = {"name": title, "lastTime": finish, "elapsed": elapsed, "count": 1}
         else:
             tasks[title]['lastTime'] = finish
             tasks[title]['count'] += 1
+            tasks[title]['elapsed'] += elapsed
     leader_board = list(sorted(tasks.values(), key=task_sort_key, reverse=True))
 
     # 至多显示最近的10条记录
-    content = list(map(lambda x: f"{x['name']:<8s}(x{x['count']})", leader_board[:10]))
-    return "最近项目完成情况: \n" + " ".join(content[:5]) + "\n" + " ".join(content[5:10])
+    return [{"name": f"【已完成{task['count']:2d}次 累计{task['elapsed'].total_seconds() / 3600.0:.2f}小时】 {task['name']}"}
+            for task in leader_board[:10]]
 
 
 def report(owner: str) -> dict:
@@ -106,7 +111,7 @@ def report(owner: str) -> dict:
         return {}
     else:
         d = dataset[owner]
-        return {"total": total_stat(d), "today": today_stat(d), "week": week_stat(d)}
+        return {"total": total_stat(d), "today": today_stat(d), "week": week_stat(d), "habitSummary": task_stat(d)}
 
 
 def local_report(owner: str) -> dict:
@@ -115,8 +120,10 @@ def local_report(owner: str) -> dict:
         return {}
     else:
         d = dataset[owner]
-        print({"total": total_stat(d), "today": today_stat(d), "week": week_stat(d)})
-        print(task_stat(d))
+        print({"总体统计": total_stat(d), "今日数据": today_stat(d), "近7日数据": week_stat(d)})
+        print("习惯排行榜:")
+        for task in task_stat(d):
+            print(task)
 
 
 if __name__ == '__main__':

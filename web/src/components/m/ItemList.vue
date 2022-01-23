@@ -10,7 +10,9 @@
         <p @click='jumpTo(item.url)'>{{ mapName(item) }}</p>
 
         <a v-for="(btn, idxBtn) in btnConfig" :key="btn.name" :class="['function', 'function-'+idxBtn]"
-           @click="btn['function'](idxItem, item.id)" :title="btn.desc"> <font-awesome-icon :icon="['fas', btn.name]" /> </a>
+           @click="btn['function'](idxItem, item.id)" :title="btn.desc">
+          <font-awesome-icon :icon="['fas', btn.name]"/>
+        </a>
       </li>
     </ol>
   </div>
@@ -38,7 +40,12 @@ export default {
         Ec += d.expected_tomato
         Uc += d.used_tomato
       }
-      return Uc + " / " + Ec
+
+      if (isNaN(Uc) || isNaN(Ec)) {
+        return "NA"
+      } else {
+        return Uc + " / " + Ec
+      }
     }
   },
   methods: {
@@ -46,7 +53,11 @@ export default {
       this.$emit('checkbox-change', index, id)
     },
     doneItem: function (item) {
-      return item.used_tomato === item.expected_tomato;
+      if (item.used_tomato && item.expected_tomato) {
+        return item.used_tomato === item.expected_tomato
+      } else {
+        return false
+      }
     },
     jumpTo: function (url) {
       if (url !== null) {
@@ -89,12 +100,12 @@ export default {
         showName = "【便签】" + item.name;
       } else if (item.item_type === "file") {
         showName = "【文件】" + item.name;
-      } else if (item.url !== null) {
+      } else if (item.url) {
         showName = "【链接】" + item.name;
       }
 
       // 如果有截止时间, 加入截止日期标记
-      if (item.deadline !== null) {
+      if (item.deadline) {
         // 截止日期只展示日期部分
         showName = "【" + item.deadline.split(" ")[0] + "】" + showName
       }
@@ -107,7 +118,7 @@ export default {
         showName = "【" + getWeekByDay(item.specific) + "】" + showName
       }
 
-      if (item.expected_tomato !== 1) {
+      if (item.expected_tomato && item.expected_tomato !== 1) {
         showName = "【" + item.used_tomato + "/" + item.expected_tomato + "】" + showName
       }
 
