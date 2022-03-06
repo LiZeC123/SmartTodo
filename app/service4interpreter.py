@@ -66,8 +66,6 @@ class OpInterpreter:
             return self.instance_backup(parent, owner)
         elif command == "gc":
             return self.manager.garbage_collection()
-        elif command == "shrink":
-            return self.manager.shrink(parent, owner)
         elif command == "sn":
             name, num, suffix = parse_sn_data(data)
             return self.split_item_with_number(name, num, suffix, parent, owner)

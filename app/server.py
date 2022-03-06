@@ -12,7 +12,7 @@ from tool4item import where_can_delete, \
     where_update_repeatable_item, update_repeatable_item, where_id_equal, \
     undo_item, where_equal, group_all_item_with, where_select_activate_with, update_note_url, \
     where_unreferenced, select_id, select_title, inc_expected_tomato, inc_used_tomato, \
-    urgent_task, today_task, group_today_task_by_parent, shrink_item, where_same_parent
+    urgent_task, today_task, group_today_task_by_parent
 from tool4key import activate_key, create_time_key
 from tool4log import logger
 from tool4stat import report
@@ -94,9 +94,6 @@ class Manager:
 
     def get_title(self, xid: int, owner: str) -> str:
         return self.database.select_one(where_equal(xid, owner), select_title)
-
-    def shrink(self, parent: int, owner: str):
-        return self.database.update_by(where_same_parent(parent, owner), shrink_item)
 
     def get_note(self, nid: int, owner: str) -> str:
         self.check_authority(nid, owner)
@@ -203,7 +200,6 @@ class FileItemManager(ItemManager):
     def __init__(self, database: MemoryDataBase):
         super().__init__(database)
         self.__init_folder()
-        self.database: MemoryDataBase = database
 
     def __init_folder(self):
         if not exists(self._FILE_FOLDER):
@@ -244,7 +240,6 @@ class NoteItemManager(ItemManager):
     def __init__(self, database: MemoryDataBase):
         super().__init__(database)
         self.__init_folder()
-        self.database: MemoryDataBase = database
         if not exists(NoteItemManager._NOTE_FOLDER):
             mkdir(NoteItemManager._NOTE_FOLDER)
 
