@@ -17,7 +17,7 @@
 <script>
 
 const resetTime = 5 * 60
-const tomatoTime = 25 * 60
+const tomatoTime = 30 * 60
 
 const resetTimeMS = 1000 * resetTime
 const tomatoTomeMS = 1000 * tomatoTime

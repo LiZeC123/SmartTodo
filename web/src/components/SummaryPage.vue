@@ -46,6 +46,8 @@ export default {
   computed: {},
   methods: {
     reload: function () {
+      document.title = "任务统计"
+
       this.axios.post("/item/getSummary", {}).then(res => {
         let ans = []
         let data = res.data.items

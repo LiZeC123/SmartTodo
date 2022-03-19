@@ -5,7 +5,7 @@
                @checkbox-change="increaseUsedTomatoTime"></item-list>
     <item-list title="紧急任务" :btnConfig="urgentConfig" :data="urgentTask"
                @checkbox-change="increaseUsedTomatoTime"></item-list>
-    <item-list title="活动任务" :btnConfig="activeConfig" :data="activeTask"
+    <item-list title="活动清单" :btnConfig="activeConfig" :data="activeTask"
                @checkbox-change="increaseUsedTomatoTime"></item-list>
   </div>
 </template>
