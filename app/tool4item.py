@@ -37,7 +37,7 @@ def where_select_all_file(item: dict) -> bool:
 
 def where_select_habit(owner: str):
     def select(item: dict):
-        return owner == item['owner'] and item['habit_expected'] != 0
+        return owner == item['owner'] and "habit_expected" in item and item['habit_expected'] != 0
     
     return select
 
