@@ -176,8 +176,8 @@ function parseTitleToData(todoContent, todoType, parent) {
       i++;
     } else if (values[i] === "-td" || values[i] === "-t") {
       data.today = true;
-    } else if (values[i] === "-hb") {
-      data.habit = true;
+    // } else if (values[i] === "-hb") {
+    //   data.habit = true;
     }
   }
 

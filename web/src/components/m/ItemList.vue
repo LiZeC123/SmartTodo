@@ -110,8 +110,14 @@ export default {
         showName = "【" + item.deadline.split(" ")[0] + "】" + showName
       }
 
-      if (item.habit) {
-        showName = "【习惯】" + showName;
+      if (item.habit_expected !== 0) {
+        let done = item.habit_done
+        let expected = item.habit_expected
+        if (expected === -1) {
+          showName = "【无限期打卡挑战】【已打卡" + done + "天】" + showName;
+        } else {
+          showName = "【" + expected + "天打卡挑战】【已打卡" + done + "天】" + showName;
+        }
       }
 
       if (item.specific) {

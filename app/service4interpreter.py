@@ -58,6 +58,14 @@ class OpInterpreter:
         task = self.get_item_by_name(name, parent, owner)
         self.manager.set_tomato_task(task.id, task.owner)
 
+    def create_habit(self, data: str, parent: int, owner: str):
+        name, count = parse_habit_data(data)
+        item = Item(0, name, "single", owner)
+        item.parent = parent
+        item.habit_expected = count
+        item.repeatable = True
+        self.manager.create(item)
+
     def exec_function(self, command: str, data: str, parent: int, owner: str):
         logger.info(f"执行指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
         if command == "m":
@@ -79,6 +87,8 @@ class OpInterpreter:
             db.update_by(where_equal(item.id, owner), rename(new_name))
         elif command == "clk":
             self.create_tomato_task_immediately(data, parent, owner)
+        elif command == "habit":
+            self.create_habit(data, parent, owner)
         else:
             logger.error(f"未知的指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
 
@@ -114,3 +124,22 @@ def parse_sx_data(data):
         return name, subtasks
     else:
         logger.error("解析sx指令数据失败: 参数数量不匹配")
+
+
+def parse_habit_data(data):
+    try:
+        elem = data.split(" ")
+        name = elem[0]
+        count = -1
+
+        if len(elem) == 2:
+            count = int(elem[1])
+
+        return name, count
+    except ValueError:
+        return None, -1
+
+
+if __name__ == '__main__':
+    ans = parse_habit_data("")
+    print(ans)

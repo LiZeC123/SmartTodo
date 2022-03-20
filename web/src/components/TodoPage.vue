@@ -85,7 +85,10 @@ export default {
     increaseUsedTomatoTime: function (index, id) {
       this.axios.post("/item/increaseUsedTomatoTime", {"id": id}).then(() => {
         let item = this.findItem(index, id)[index]
-        if (item.used_tomato < item.expected_tomato) {
+        if (item.habit_expected !== 0 && (item.habit_done < item.habit_expected) || item.habit_expected === -1) {
+          item.habit_done += 1
+          item.used_tomato = 1 // 前端变成完成样式
+        } else if (item.used_tomato < item.expected_tomato) {
           item.used_tomato += 1
         }
       })

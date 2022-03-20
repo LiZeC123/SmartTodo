@@ -1,7 +1,7 @@
 from typing import NoReturn
 
 from tool4log import logger
-from tool4time import now_str
+from tool4time import now_str, get_day_from_str, today
 
 
 def group_all_item_with(owner: str, parent: int):
@@ -54,7 +54,6 @@ def where_contain_name(name: str, parent: int, owner: str):
     return lambda item: name in item['name'] and item['parent'] == parent and item['owner'] == owner
 
 
-
 def select_id(item: dict):
     return item['id']
 
@@ -78,6 +77,10 @@ def inc_expected_tomato(item: dict):
 
 
 def inc_used_tomato(item: dict):
+    if item['habit_expected'] != 0:
+        if get_day_from_str(item['last_check_time']) != today():
+            item['habit_done'] += 1
+
     if item['used_tomato'] < item['expected_tomato']:
         logger.info("完成任务: " + item['name'])
         item['used_tomato'] += 1

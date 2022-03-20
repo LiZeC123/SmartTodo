@@ -4,12 +4,12 @@ import os
 
 from tool4log import logger
 
-is_time_debug = os.path.exists("database/time.debug")
+is_time_debug = os.path.exists("data/database/time.debug")
 
 
 def get_debug_time() -> datetime:
     if is_time_debug:
-        with open("database/time.debug") as f:
+        with open("data/database/time.debug") as f:
             return datetime.strptime(f.readline(), "%Y-%m-%d %H:%M:%S")
 
 
@@ -84,10 +84,13 @@ def is_work_time():
     return 9 <= now().hour < 18 and 0 <= now().weekday() <= 4
 
 
+def zero_time() -> str:
+    return datetime(2022, 2, 2, 2, 2).strftime("%Y-%m-%d %H:%M:%S")
+
+
 if is_time_debug:
     # 对是否开启时间的DEBUG模式进行检测, 并给出警告
     logger.warning(f"Time API is in DEBUG mode and now is {now_str()}")
 
 if __name__ == '__main__':
-    delta = get_datetime_from_str("2020-2-13 12:00:00") - get_datetime_from_str("2020-2-14 12:00:00")
-    print(delta.total_seconds())
+    print(parse_timestamp(0))

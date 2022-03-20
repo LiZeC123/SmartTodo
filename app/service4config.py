@@ -29,3 +29,15 @@ class ConfigManager:
 
     def is_admin_user(self, username: str):
         return "ROLE_ADMIN" in self.get_roles(username)
+
+    def get_mail_info(self):
+        info = self.config['MAIL_INFO']
+        return info["SENDER"], info["PASSWORD"]
+
+    def get_mail_users(self):
+        ans = []
+        for username, user_config in self.config["USER_INFO"].items():
+            email = user_config["email"]
+            if len(email) != 0:
+                ans.append((username, email))
+        return ans
