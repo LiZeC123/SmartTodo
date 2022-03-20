@@ -21,7 +21,9 @@ class TaskManager:
 
         logger.info(f"TimeTask: Now is {now_time}. Sleep {dt.seconds} seconds to the hour")
         # 等待到下一个整点时刻再开始执行任务
-        Timer(dt.seconds, self.__start0).start()
+        T = Timer(dt.seconds, self.__start0)
+        T.daemon = True
+        T.start()
 
     def __start0(self):
         now_hour = now().hour
@@ -30,4 +32,6 @@ class TaskManager:
         for task in self.tasks[now_hour]:
             task()
 
-        Timer(self.ONE_HOUR, self.__start0).start()
+        T = Timer(self.ONE_HOUR, self.__start0)
+        T.daemon = True
+        T.start()
