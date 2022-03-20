@@ -7,18 +7,22 @@ from werkzeug.exceptions import abort
 
 from entity import Item, from_dict
 from mapper import MemoryDataBase
+from service4config import ConfigManager
 from service4interpreter import OpInterpreter
 from tool4item import where_can_delete, \
     where_update_repeatable_item, update_repeatable_item, where_id_equal, \
     undo_item, where_equal, group_all_item_with, where_select_activate_with, update_note_url, \
     where_unreferenced, select_id, select_title, inc_expected_tomato, inc_used_tomato, \
-    urgent_task, today_task, group_today_task_by_parent
+    urgent_task, today_task, group_today_task_by_parent, where_select_habit
 from tool4key import activate_key, create_time_key
 from tool4log import logger
+from tool4mail import send_daily_report
 from tool4stat import report
 from tool4task import TaskManager
 from tool4tomato import TomatoManager
 from tool4web import extract_title, download
+
+config = ConfigManager()
 
 
 class Manager:
@@ -36,6 +40,7 @@ class Manager:
     def __init_task(self):
         self.task_manager.add_task(self.__update_state, 1)
         self.task_manager.add_task(self.garbage_collection, 2)
+        self.task_manager.add_task(self.mail_report, 22)
         self.task_manager.start()
 
     def check_authority(self, xid: int, owner: str):
@@ -68,7 +73,8 @@ class Manager:
     def get_summary(self, owner: str):
         return {
             "items": self.item_manager.select_summary(owner),
-            "stats": report(owner)
+            "stats": report(owner),
+            "habit": self.item_manager.select_habit(owner)
         }
 
     def remove(self, xid: int, owner: str):
@@ -143,6 +149,10 @@ class Manager:
     def exec_function(self, command: str, data: str, parent: int, owner: str):
         self.op.exec_function(command, data, parent, owner)
 
+    def mail_report(self):
+        for user, email in config.get_mail_users():
+            send_daily_report(user, email, self.get_summary(user))
+
 
 class ItemManager:
     def __init__(self, database: MemoryDataBase):
@@ -176,14 +186,20 @@ class ItemManager:
         res = defaultdict(list)
         self.database.select_group_by(res, group_today_task_by_parent(owner), limited=False)
 
-        del res['0']
-        del res['miss']
+        if "0" in res:
+            del res['0']
+
+        if "miss" in res:
+            del res['miss']
 
         ans = {}
         for parent, lists in res.items():
             lists.insert(0, self.database.select_one(where_id_equal(int(parent))))
             ans[parent] = list(map(self.to_dict, lists))
         return ans
+
+    def select_habit(self, owner: str):
+        return list(self.database.select_by(where_select_habit(owner), lambda x: x))
 
     def remove(self, item: Item):
         self.database.remove(item)
@@ -285,3 +301,8 @@ class NoteItemManager(ItemManager):
                       f"<div>====================</div>" \
                       f"<div><br></div><div><br></div><div><br></div><div><br></div>"
             f.write(content)
+
+
+if __name__ == '__main__':
+    manager = Manager()
+    manager.mail_report()

@@ -8,7 +8,7 @@ Log_File = join(_LOG_BASE, "log.txt")
 
 if not exists(_LOG_BASE):
     import os
-    print(os.getcwd())
+    print(f"当前路径{os.getcwd()}")
     mkdir(_LOG_BASE)
 
 

@@ -35,6 +35,13 @@ def where_select_all_file(item: dict) -> bool:
     return item['item_type'] == 'file'
 
 
+def where_select_habit(owner: str):
+    def select(item: dict):
+        return owner == item['owner'] and item['habit_expected'] != 0
+    
+    return select
+
+
 def where_can_delete(item: dict) -> bool:
     # 1. 不是不可回收的特殊类型
     # 2. 处于完成状态
