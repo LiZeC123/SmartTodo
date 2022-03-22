@@ -84,7 +84,7 @@ def inc_expected_tomato(item: dict):
 
 
 def inc_used_tomato(item: dict):
-    if item['habit_expected'] != 0:
+    if 'habit_expected' in item and item['habit_expected'] != 0:
         if get_day_from_str(item['last_check_time']) != today():
             item['habit_done'] += 1
 
