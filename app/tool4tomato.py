@@ -5,11 +5,11 @@ from os.path import join
 from entity import Item
 from tool4time import now, now_str, parse_timestamp
 
-Task = namedtuple("Task", ["tid", "id", "name", "habit", "start", "finished"])
+Task = namedtuple("Task", ["tid", "id", "name", "start", "finished"])
 
 
-def make_task(tid=0, xid=0, name="当前无任务", habit=False, start_time=0.0, finished=True):
-    return Task(tid, xid, name, habit, start_time, finished)
+def make_task(tid=0, xid=0, name="当前无任务", start_time=0.0, finished=True):
+    return Task(tid, xid, name, start_time, finished)
 
 
 class TomatoManager:
@@ -30,8 +30,7 @@ class TomatoManager:
 
     def start_task(self, item: Item, owner: str):
         tid = self.inc()
-        self.data[owner] = make_task(tid=tid, xid=item.id, name=item.name, habit=item.habit,
-                                     start_time=now().timestamp(), finished=False)
+        self.data[owner] = make_task(tid=tid, xid=item.id, name=item.name, start_time=now().timestamp(), finished=False)
         return tid
 
     def finish_task(self, tid: int, xid: int, owner: str) -> bool:
@@ -63,8 +62,6 @@ class TomatoManager:
 
         with open(TomatoManager.DATA_FILE, "a", encoding="utf-8") as f:
             values = [start_time, now_str(), owner, name]
-            if record.habit:
-                values.append("hb")
 
             f.write(" | ".join(values))
             f.write("\n")
