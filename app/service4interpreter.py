@@ -43,10 +43,10 @@ class OpInterpreter:
 
     def split_item_with_subtask(self, name, subtasks: list, parent: int, owner: str):
         item = self.get_item_by_name(name, parent, owner)
-        if item is None:
-            return
+        if item is not None:
+            name = item.name
         for subtask in subtasks:
-            sub_item = Item(0, f"{item.name}：{subtask}", "single", owner)
+            sub_item = Item(0, f"{name}：{subtask}", "single", owner)
             sub_item.parent = parent
             self.manager.create(sub_item)
 
@@ -92,11 +92,13 @@ class OpInterpreter:
         else:
             logger.error(f"未知的指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
 
+def not_empty(s):
+    return len(s) != 0
 
 def parse_sn_data(data):
     # 被拆分项目名称 拆分数量 拆分后缀
     try:
-        elem = data.split(" ")
+        elem = list(filter(not_empty, data.split(" ")))
         if len(elem) == 3:
             name = elem[0]
             num = int(elem[1])
@@ -128,7 +130,7 @@ def parse_sx_data(data):
 
 def parse_habit_data(data):
     try:
-        elem = data.split(" ")
+        elem = list(filter(not_empty, data.split(" ")))
         name = elem[0]
         count = -1
 
