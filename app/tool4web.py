@@ -1,3 +1,4 @@
+import html
 from urllib.parse import urlparse
 import re
 
@@ -13,7 +14,7 @@ headers = {"User-Agent": "Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN; rv:1.9
            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
            "Accept-Language": "en-us",
            "Connection": "keep-alive",
-           "Accept-Charset": "GB2312,utf-8;q=0.7,*;q=0.7"}
+           }
 
 title_pattern = re.compile("<title.*?>(.*?)</title>")
 encoding_pattern = re.compile('<meta charset=(.*?)>')
@@ -58,7 +59,8 @@ def parse_encoding(r: Response) -> str:
 def parse_title(r: Response) -> str:
     match = title_pattern.search(r.text)
     if match:
-        return match.group(1)
+        title = match.group(1)
+        return html.unescape(title)  # 解析#&格式编码的字符
     else:
         raise Exception("HTML file not contain title tag")
 
