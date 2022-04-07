@@ -123,6 +123,10 @@ class Manager:
 
     def set_tomato_task(self, xid: int, owner: str):
         item = self.item_manager.select(xid)
+        
+        if item.used_tomato == item.expected_tomato:
+            self.increase_expected_tomato(xid, owner)
+
         return self.tomato_manager.start_task(item, owner)
 
     def get_tomato_task(self, owner: str):

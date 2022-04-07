@@ -3,8 +3,6 @@
     <tomato-page :reload-count="tomatoReloadCount" @done-task="doneTomatoTask"></tomato-page>
     <item-list title="今日任务" :btnConfig="todayConfig" :data="todayTask"
                @checkbox-change="increaseUsedTomatoTime"></item-list>
-    <item-list title="紧急任务" :btnConfig="urgentConfig" :data="urgentTask"
-               @checkbox-change="increaseUsedTomatoTime"></item-list>
     <item-list title="活动清单" :btnConfig="activeConfig" :data="activeTask"
                @checkbox-change="increaseUsedTomatoTime"></item-list>
   </div>
@@ -24,17 +22,11 @@ export default {
   },
   data: function () {
     return {
-      urgentTask: [],
       todayTask: [],
       activeTask: [],
       lastUpdateDate: new Date().getDate(),
       todayConfig: [
         {"name": "angle-double-down", "desc": "退回此项目", "function": this.backItem},
-        {"name": "clock", "desc": "启动番茄钟", "function": this.startTomatoTimer},
-        {"name": "calculator", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
-      ],
-      urgentConfig: [
-        {"name": "long-arrow-alt-down", "desc": "退回此项目", "function": this.backItem},
         {"name": "clock", "desc": "启动番茄钟", "function": this.startTomatoTimer},
         {"name": "calculator", "desc": "增加预计时间", "function": this.increaseExpectedTomatoTime},
       ],
@@ -54,9 +46,7 @@ export default {
   },
   methods: {
     findItem: function (index, id) {
-      if (this.urgentTask.length > index && this.urgentTask[index].id === id) {
-        return this.urgentTask
-      } else if (this.todayTask.length > index && this.todayTask[index].id === id) {
+      if (this.todayTask.length > index && this.todayTask[index].id === id) {
         return this.todayTask
       } else if (this.activeTask.length > index && this.activeTask[index].id === id) {
         return this.activeTask
@@ -66,7 +56,6 @@ export default {
     reload: function () {
       this.axios.post("/item/getAll", {"parent": this.parent}).then(res => {
         this.todayTask = res.data.todayTask
-        this.urgentTask = res.data.urgentTask
         this.activeTask = res.data.activeTask
       })
     },
@@ -94,15 +83,11 @@ export default {
       })
     },
     startTomatoTimer: function (index, id) {
-      this.axios.post("/tomato/setTask", {"id": id}).then(() => this.tomatoReloadCount += 1)
+      this.axios.post("/tomato/setTask", {"id": id}).then(() => {
+        this.tomatoReloadCount += 1
+        this.reload()
+      })
     },
-    // toUrgentTask: function (index, id) {
-    //   this.axios.post("/item/toUrgentTask", {"id": id}).then(() => {
-    //     let item = this.activeTask[index]
-    //     this.activeTask.splice(index, 1)
-    //     this.urgentTask.push(item)
-    //   })
-    // },
     toTodayTask: function (index, id) {
       this.axios.post("/item/toTodayTask", {"id": id}).then(() => {
         let item = this.activeTask[index]
