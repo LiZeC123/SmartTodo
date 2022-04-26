@@ -1,10 +1,10 @@
 import functools
 import json
-from typing import Dict
+from typing import Dict, Optional
 
 from flask import Flask, request, abort
 
-from entity import Item
+from entity import Item, TomatoType
 from server import Manager
 from service4config import ConfigManager
 from tool4log import logger, Log_File
@@ -62,7 +62,7 @@ def logout():
 @logged
 def create_item():
     f: Dict = request.get_json()
-    item: Item = Item(0, f['name'], f['itemType'], token.get_username(request))
+    item = Item(name=f['name'], item_type=f['itemType'], owner=token.get_username(request))
 
     if "deadline" in f:
         item.deadline = parse_deadline_timestamp(f["deadline"])
@@ -77,7 +77,7 @@ def create_item():
         item.parent = int(f["parent"])
 
     if "today" in f:
-        item.tomato_type = "today"
+        item.tomato_type = TomatoType.Today
 
     if "habit" in f:
         item.habit = True
@@ -142,14 +142,6 @@ def increase_used_tomato() -> bool:
     return manager.increase_used_tomato(xid=xid, owner=owner)
 
 
-@app.route('/api/item/toUrgentTask', methods=['POST'])
-@logged
-def to_urgent_task() -> bool:
-    xid = get_xid_from_request()
-    owner = token.get_username(request)
-    return manager.to_urgent_task(xid=xid, owner=owner)
-
-
 @app.route('/api/item/toTodayTask', methods=['POST'])
 @logged
 def to_today_task() -> bool:
@@ -179,12 +171,12 @@ def get_tid_from_request() -> int:
     return tid
 
 
-def try_get_parent_from_request() -> int:
+def try_get_parent_from_request() -> Optional[int]:
     f: Dict = request.get_json()
-    if f is not None:
-        return int(f.get("parent", "0"))
+    if f is not None and "parent" in f:
+        return int(f.get("parent"))
     else:
-        return 0
+        return None
 
 
 # ####################### API For File #######################
@@ -192,6 +184,7 @@ def try_get_parent_from_request() -> int:
 @app.route("/api/file/upload", methods=["POST"])
 @logged
 def file_do_upload():
+    # TODO: 上传文件时parent的处理
     file = request.files['myFile']
     parent = int(request.form['parent'])
     owner = token.get_username(request)

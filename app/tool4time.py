@@ -61,8 +61,8 @@ def parse_timestamp(timestamp: float) -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(timestamp))
 
 
-def parse_deadline_timestamp(timestamp: float) -> str:
-    return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(timestamp / 1000))
+def parse_deadline_timestamp(timestamp: float) -> datetime:
+    return datetime.fromtimestamp(timestamp / 1000)
 
 
 def parse_deadline_str(date_str: str) -> str:
@@ -84,8 +84,8 @@ def is_work_time():
     return 9 <= now().hour < 18 and 0 <= now().weekday() <= 4
 
 
-def zero_time() -> str:
-    return datetime(2022, 2, 2, 2, 2).strftime("%Y-%m-%d %H:%M:%S")
+def zero_time() -> datetime:
+    return datetime(2022, 2, 2, 2, 2)
 
 
 if is_time_debug:

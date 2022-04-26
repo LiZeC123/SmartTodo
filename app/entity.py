@@ -1,75 +1,94 @@
-from typing import Dict, Optional, List
+from datetime import datetime
+from typing import Dict
 
-from tool4time import now_str, zero_time
+from sqlalchemy import Column, DateTime, Integer, String, Text, SmallInteger, ForeignKey
+from sqlalchemy.orm import declarative_base
+
+from tool4time import zero_time, now
+
+Base = declarative_base()
 
 
-class Item:
-    def __init__(self, item_id, name, item_type, owner, /,
-                 tomato_type: str = "activate", deadline: Optional[str] = None, repeatable: bool = False,
-                 specific: int = 0, url: Optional[str] = None, parent: int = 0):
-        self.id: int = item_id
-        self.name: str = name
+class ItemType:
+    Single = "single"
+    File = "file"
+    Note = "note"
 
-        # single, file, note 三种类型
-        self.item_type: str = item_type
 
-        # activate, urgent, today 三种类型
-        self.tomato_type: str = tomato_type
+class TomatoType:
+    Activate = "activate"
+    Today = "today"
 
-        self.create_time: str = now_str()
-        self.deadline: Optional[str] = deadline
-        self.repeatable: bool = repeatable
-        self.specific: int = specific
-        self.url: Optional[str] = url
 
-        # 指示此Item是否附属于某个note, 0表示不附属任何note
-        self.parent: int = parent
+class Item(Base):
+    __tablename__ = "item"
 
-        # 番茄钟相关属性
-        self.expected_tomato: int = 1
-        self.used_tomato: int = 0
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(Text, nullable=False)
+    # Item类型，具体取值见 ItemType 类
+    item_type = Column(String(10), nullable=False)
+    owner = Column(String(15), nullable=False)
 
-        # 打卡相关属性
-        self.habit_done: int = 0
-        self.habit_expected: int = 0
-        self.last_check_time: str = zero_time()
+    create_time = Column(DateTime, nullable=False, default=now)
+    deadline = Column(DateTime, default=None)
+    url = Column(Text, default=None)
 
-        self.owner: str = owner
+    repeatable = Column(SmallInteger, nullable=False, default=False)
+    specific = Column(SmallInteger, nullable=False, default=0)
+    # 指示此Item是否附属于某个note, None表示不属于任何note
+    parent = Column(Integer, ForeignKey("item.id"), default=None)
+
+    # 番茄钟相关属性
+    # 番茄钟类型，具体取值见 TomatoType 类
+    tomato_type = Column(String(10), nullable=False, default=TomatoType.Activate)
+    expected_tomato = Column(SmallInteger, nullable=False, default=1)
+    used_tomato = Column(SmallInteger, nullable=False, default=0)
+
+    # 打卡相关属性
+    habit_done = Column(SmallInteger, nullable=False, default=0)
+    habit_expected = Column(SmallInteger, nullable=False, default=0)
+    last_check_time = Column(DateTime, nullable=False, default=zero_time)
 
     def to_dict(self) -> Dict:
-        return self.__dict__
+        d = {}
+        for c in self.__table__.columns:
+            v = getattr(self, c.name, None)
+            if type(v) == datetime:
+                d[c.name] = v.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                d[c.name] = v
+        return d
 
     def __str__(self) -> str:
         return str(self.to_dict())
 
-    def done_item(self) -> bool:
-        return self.expected_tomato == self.used_tomato
+
+class TomatoTaskRecord(Base):
+    __tablename__ = "tomato_task_record"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    start_time = Column(DateTime, nullable=False)
+    finish_time = Column(DateTime, nullable=False)
+    owner = Column(String(15), nullable=False)
+    name = Column(Text, nullable=False)
 
 
-def from_dict(raw: Dict) -> Item:
-    item = Item(int(raw['id']), raw['name'], raw['item_type'], raw['owner'])
-    if "tomato_type" in raw:
-        item.tomato_type = raw['tomato_type']
-    if "create_time" in raw:
-        item.create_time = raw['create_time']
-    if "deadline" in raw:
-        item.deadline = raw['deadline']
-    if "repeatable" in raw:
-        item.repeatable = bool(raw['repeatable'])
-    if "specific" in raw:
-        item.specific = int(raw['specific'])
-    if "url" in raw:
-        item.url = raw['url']
-    if "parent" in raw:
-        item.parent = int(raw['parent'])
-    if "expected_tomato" in raw:
-        item.expected_tomato = int(raw['expected_tomato'])
-    if "used_tomato" in raw:
-        item.used_tomato = int(raw['used_tomato'])
-    if "habit_done" in raw:
-        item.habit_done = int(raw['habit_done'])
-    if "habit_expected" in raw:
-        item.habit_expected = int(raw['habit_expected'])
-    if "last_check_time" in raw:
-        item.last_check_time = raw['last_check_time']
-    return item
+if __name__ == '__main__':
+    # 使用SQLite内存数据库测试对象构建是否正常
+    import sqlalchemy as sal
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    engine = create_engine("sqlite://", echo=True, future=True)
+    Base.metadata.create_all(engine)
+    session = Session(engine)
+    with session.begin():
+        item = Item(name="A", item_type=ItemType.Single, owner="lizec")
+        session.add(item)
+        session.commit()
+
+    with session.begin():
+        stmt = sal.select(Item).where(Item.name == "A", Item.owner == "lizec")
+        item = session.scalar(stmt)
+        item.deadline = now()
+        print(item.to_dict())

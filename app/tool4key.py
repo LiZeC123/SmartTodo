@@ -3,7 +3,7 @@ from tool4time import get_timestamp_from_str, now_stamp, get_datetime_from_str, 
 
 
 def activate_key(item: Item):
-    value = get_timestamp_from_str(item.create_time)
+    value = item.create_time.timestamp()
     day_second = 60 * 60 * 24
 
     if item.specific != 0:
@@ -15,18 +15,18 @@ def activate_key(item: Item):
         # 首先消除创建时间的分值, 统一使用当前时间
         # <3天:置顶; <7天,给予一定的权重; > 7天降低权重
         value = now_stamp()
-        deadline = get_datetime_from_str(item.deadline)
+        deadline = item.deadline
         delta = deadline - now()
         value += (56 - 8 * delta.days) * day_second - 8 * delta.seconds
     return value
 
 
 def create_time_key(item: Item):
-    value = get_timestamp_from_str(item.create_time)
+    value = item.create_time.timestamp()
     day_second = 60 * 60 * 24
 
     # 已经完成的任务排到最下方
-    if item.done_item():
+    if item.used_tomato == item.expected_tomato:
         value += 100 * day_second
 
     return value

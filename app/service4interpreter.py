@@ -1,13 +1,12 @@
 from typing import List, Optional
 
 from entity import Item
-from mapper import MemoryDataBase
-from tool4item import where_contain_name, where_equal, rename
 from tool4log import logger
 from tool4time import now_str_fn
 
 
 class OpInterpreter:
+    # TODO： 指令可用性检查
     def __init__(self, manager):
         self.manager = manager
 
@@ -28,14 +27,15 @@ class OpInterpreter:
         self.manager.item_manager.create(item)
 
     def get_item_by_name(self, name: str, parent: int, owner: str) -> Optional[Item]:
-        db: MemoryDataBase = self.manager.database
-        p_item: List[Item] = db.select_by(where_contain_name(name, parent, owner))
-
-        if len(p_item) != 1:
-            logger.error(f"待办事项获取失败: 多个待办事项符合名称要求: {[p.name for p in p_item]}")
-            return None
-
-        return p_item[0]
+        pass
+        # db = self.manager.database
+        # p_item: List[Item] = db.select_by(where_contain_name(name, parent, owner))
+        #
+        # if len(p_item) != 1:
+        #     logger.error(f"待办事项获取失败: 多个待办事项符合名称要求: {[p.name for p in p_item]}")
+        #     return None
+        #
+        # return p_item[0]
 
     def split_item_with_number(self, name: str, num: int, suffix: str, parent: int, owner: str):
         subtasks = [f"第{i + 1}{suffix}" for i in range(num)]
@@ -81,10 +81,11 @@ class OpInterpreter:
             name, subtasks = parse_sx_data(data)
             return self.split_item_with_subtask(name, subtasks, parent, owner)
         elif command == "rename":
-            old, new_name = data.split()
-            item = self.get_item_by_name(old, parent, owner)
-            db: MemoryDataBase = self.manager.database
-            db.update_by(where_equal(item.id, owner), rename(new_name))
+            pass
+            # old, new_name = data.split()
+            # item = self.get_item_by_name(old, parent, owner)
+            # db: MemoryDataBase = self.manager.database
+            # db.update_by(where_equal(item.id, owner), rename(new_name))
         elif command == "clk":
             self.create_tomato_task_immediately(data, parent, owner)
         elif command == "habit":
@@ -92,8 +93,10 @@ class OpInterpreter:
         else:
             logger.error(f"未知的指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
 
+
 def not_empty(s):
     return len(s) != 0
+
 
 def parse_sn_data(data):
     # 被拆分项目名称 拆分数量 拆分后缀
