@@ -8,6 +8,7 @@ from werkzeug.exceptions import abort
 
 from entity import Item, TomatoType, ItemType, db_session
 from service4config import ConfigManager
+from service4interpreter import OpInterpreter
 from tool4key import activate_key, create_time_key
 from tool4log import logger
 from tool4mail import send_daily_report
@@ -32,7 +33,7 @@ class Manager:
             ItemType.Note: self.note_manager
         }
 
-        # self.op = OpInterpreter(self)
+        self.op = OpInterpreter(self)
         self.task_manager = TaskManager()
         self.tomato_manager = TomatoManager()
         self.__init_task()
@@ -43,7 +44,8 @@ class Manager:
         self.task_manager.add_task(self.mail_report, 22)
         self.task_manager.start()
 
-    def check_authority(self, xid: int, owner: str):
+    @staticmethod
+    def check_authority(xid: int, owner: str):
         stmt = sal.select(Item.owner).where(Item.id == xid)
         expected_owner = db_session.scalar(stmt)
         if expected_owner != owner:
@@ -86,7 +88,8 @@ class Manager:
         db_session.commit()
         return self.activate_items(owner, parent=parent)
 
-    def increase_expected_tomato(self, xid: int, owner: str):
+    @staticmethod
+    def increase_expected_tomato(xid: int, owner: str):
         stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
         item = db_session.scalar(stmt)
         if item:
@@ -94,7 +97,8 @@ class Manager:
         db_session.commit()
         return item is not None
 
-    def increase_used_tomato(self, xid: int, owner: str):
+    @staticmethod
+    def increase_used_tomato(xid: int, owner: str):
         stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
         item = db_session.scalar(stmt)
         if item:
@@ -105,7 +109,8 @@ class Manager:
         db_session.commit()
         return item is not None
 
-    def to_today_task(self, xid: int, owner: str):
+    @staticmethod
+    def to_today_task(xid: int, owner: str):
         stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
         item = db_session.scalar(stmt)
         if item:
@@ -114,7 +119,8 @@ class Manager:
         db_session.commit()
         return item is not None
 
-    def get_title(self, xid: int, owner: str) -> str:
+    @staticmethod
+    def get_title(xid: int, owner: str) -> str:
         stmt = sal.select(Item.name).where(Item.id == xid, Item.owner == owner)
         return db_session.scalar(stmt)
 
@@ -127,21 +133,19 @@ class Manager:
         self.note_manager.update(nid, content)
 
     def garbage_collection(self):
-        # TODO:测试垃圾回收状态
         # 1. 不是不可回收的特殊类型
         # 2. 处于完成状态
         stmt = sal.select(Item).where(Item.repeatable == False, Item.specific == 0,
                                       Item.used_tomato == Item.expected_tomato)
-        items = db_session.scalar(stmt)
+        items = db_session.execute(stmt).scalars().all()
         for item in items:
-            self.manager[item.item_type].remove(item.id)
+            self.manager[item.item_type].remove(item)
             logger.info(f"Garbage Collection(Expired): {item.name}")
 
         stmt = sal.select(Item.id)
-        ids = db_session.scalar(stmt)
-        ids.append(None)
+        ids = db_session.execute(stmt).scalars().all()
         stmt = sal.select(Item).where(Item.parent.not_in(ids))
-        unreferenced = db_session.scalar(stmt)
+        unreferenced = db_session.execute(stmt).scalars().all()
         for item in unreferenced:
             self.manager[item.item_type].remove(item)
             logger.info(f"Garbage Collection(Unreferenced): {item.name}")
@@ -174,7 +178,8 @@ class Manager:
     def finish_tomato_task_manually(self, tid: int, xid: int, owner: str):
         return self.finish_tomato_task(tid, xid, owner) and self.clear_tomato_task(tid, xid, owner)
 
-    def __update_state(self):
+    @staticmethod
+    def __update_state():
         stmt = sal.select(Item).where(Item.repeatable == True)
         items = db_session.scalar(stmt)
         for item in items:
@@ -183,8 +188,7 @@ class Manager:
         db_session.commit()
 
     def exec_function(self, command: str, data: str, parent: int, owner: str):
-        pass
-        # self.op.exec_function(command, data, parent, owner)
+        self.op.exec_function(command, data, parent, owner)
 
     def mail_report(self):
         for user, email in config.get_mail_users():
@@ -210,7 +214,8 @@ class ItemManager(BaseManager):
         db_session.commit()
         return item
 
-    def select(self, iid: int) -> Item:
+    @staticmethod
+    def select(iid: int) -> Item:
         return db_session.scalar(sal.select(Item).where(Item.id == iid))
 
     def select_all(self, owner: str, parent: int):
@@ -255,7 +260,8 @@ class ItemManager(BaseManager):
         habits = db_session.execute(stmt).scalars().all()
         return list(map(self.to_dict, habits))
 
-    def update_note_url(self, item: Item, url: str) -> Item:
+    @staticmethod
+    def update_note_url(item: Item, url: str) -> Item:
         item.url = url
         db_session.commit()
         return item

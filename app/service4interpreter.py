@@ -1,41 +1,39 @@
-from typing import List, Optional
+from typing import Optional
 
-from entity import Item
+import sqlalchemy as sal
+
+from entity import Item, ItemType, db_session
 from tool4log import logger
 from tool4time import now_str_fn
 
 
 class OpInterpreter:
-    # TODO： 指令可用性检查
     def __init__(self, manager):
         self.manager = manager
 
     def batch_create_item(self, data: str, parent: int, owner: str):
         names = [d.strip() for d in data.split("-") if not d.isspace()]
         for name in names:
-            item = Item(0, name, "single", owner)
-            item.parent = parent
+            item = Item(name=name, item_type=ItemType.Single, owner=owner, parent=parent)
             self.manager.create(item)
 
     def instance_backup(self, parent: int, owner: str):
         import shutil
         name = f"SmartTodo_Database({now_str_fn()})"
         shutil.make_archive(f"data/filebase/{name}", 'zip', "data/database")
-        item = Item(0, f"{name}.zip", "file", owner)
-        item.parent = parent
-        item.url = f"/file/{name}.zip"
+        item = Item(name=f"{name}.zip", item_type=ItemType.File, owner=owner, parent=parent, url=f"/file/{name}.zip")
         self.manager.item_manager.create(item)
 
-    def get_item_by_name(self, name: str, parent: int, owner: str) -> Optional[Item]:
+    @staticmethod
+    def get_item_by_name(name: str, parent: int, owner: str) -> Optional[Item]:
         pass
-        # db = self.manager.database
-        # p_item: List[Item] = db.select_by(where_contain_name(name, parent, owner))
-        #
-        # if len(p_item) != 1:
-        #     logger.error(f"待办事项获取失败: 多个待办事项符合名称要求: {[p.name for p in p_item]}")
-        #     return None
-        #
-        # return p_item[0]
+        stmt = sal.select(Item).where(Item.name.like(f"%{name}%"), Item.parent == parent, Item.owner == owner)
+        items = db_session.execute(stmt).scalars().all()
+
+        if len(items) != 1:
+            logger.error(f"待办事项获取失败: 多个待办事项符合名称要求: {[p.name for p in items]}")
+            return None
+        return items[0]
 
     def split_item_with_number(self, name: str, num: int, suffix: str, parent: int, owner: str):
         subtasks = [f"第{i + 1}{suffix}" for i in range(num)]
@@ -46,22 +44,12 @@ class OpInterpreter:
         if item is not None:
             name = item.name
         for subtask in subtasks:
-            sub_item = Item(0, f"{name}：{subtask}", "single", owner)
-            sub_item.parent = parent
+            sub_item = Item(name=f"{name}：{subtask}", item_type=ItemType.Single, owner=owner, parent=parent)
             self.manager.create(sub_item)
-
-    def create_tomato_task_immediately(self, name: str, parent: int, owner: str):
-        item = Item(0, name, "single", owner, tomato_type="today")
-        item.parent = parent
-        self.manager.create(item)
-
-        task = self.get_item_by_name(name, parent, owner)
-        self.manager.set_tomato_task(task.id, task.owner)
 
     def create_habit(self, data: str, parent: int, owner: str):
         name, count = parse_habit_data(data)
-        item = Item(0, name, "single", owner)
-        item.parent = parent
+        item = Item(name=name, item_type=ItemType.Single, owner=owner, parent=parent)
         item.habit_expected = count
         item.repeatable = True
         self.manager.create(item)
@@ -81,13 +69,11 @@ class OpInterpreter:
             name, subtasks = parse_sx_data(data)
             return self.split_item_with_subtask(name, subtasks, parent, owner)
         elif command == "rename":
-            pass
-            # old, new_name = data.split()
-            # item = self.get_item_by_name(old, parent, owner)
-            # db: MemoryDataBase = self.manager.database
-            # db.update_by(where_equal(item.id, owner), rename(new_name))
-        elif command == "clk":
-            self.create_tomato_task_immediately(data, parent, owner)
+            old, new_name = data.split()
+            item = self.get_item_by_name(old, parent, owner)
+            if item is not None:
+                item.name = new_name
+                db_session.commit()
         elif command == "habit":
             self.create_habit(data, parent, owner)
         else:
@@ -116,7 +102,7 @@ def parse_sn_data(data):
             return name, 3, "部分"
         else:
             logger.error("解析sn指令数据失败: 参数数量不匹配")
-    except ValueError as e:
+    except ValueError:
         logger.error("解析sn指令数据失败: 数据解析失败")
 
 
