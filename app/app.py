@@ -4,7 +4,7 @@ from typing import Dict, Optional
 
 from flask import Flask, request, abort
 
-from entity import Item, TomatoType
+from entity import Item, TomatoType, db_session
 from server import Manager
 from service4config import ConfigManager
 from tool4log import logger, Log_File
@@ -316,6 +316,11 @@ def exec_function():
     owner = token.get_username(request)
     parent = try_get_parent_from_request()
     manager.exec_function(command, data, parent, owner)
+
+
+@app.teardown_appcontext
+def remove_session(*args, **kwargs):
+    db_session.remove()
 
 
 if __name__ == '__main__':

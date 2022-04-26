@@ -2,8 +2,8 @@ import threading
 from collections import defaultdict, namedtuple
 from os.path import join
 
-from entity import Item
-from tool4time import now, now_str, parse_timestamp
+from entity import Item, TomatoTaskRecord, db_session
+from tool4time import now, parse_timestamp
 
 Task = namedtuple("Task", ["tid", "id", "name", "start", "finished"])
 
@@ -17,7 +17,7 @@ class TomatoManager:
     DATA_FILE = join(DATABASE_FOLDER, "TomatoRecord.dat")
 
     def __init__(self):
-        self.data = defaultdict(make_task)
+        self.state = defaultdict(make_task)
         self.taskName = ""
         self.startTime = 0
         self.tid = 0
@@ -30,38 +30,34 @@ class TomatoManager:
 
     def start_task(self, item: Item, owner: str):
         tid = self.inc()
-        self.data[owner] = make_task(tid=tid, xid=item.id, name=item.name, start_time=now().timestamp(), finished=False)
+        self.state[owner] = make_task(tid=tid, xid=item.id, name=item.name, start_time=now().timestamp(),
+                                      finished=False)
         return tid
 
     def finish_task(self, tid: int, xid: int, owner: str) -> bool:
         with self.lock:
             if self.match(tid, xid, owner):
-                if not self.data[owner].finished:
+                if not self.state[owner].finished:
                     self.__insert_record(owner)
-                    self.data[owner] = self.data[owner]._replace(finished=True)
+                    self.state[owner] = self.state[owner]._replace(finished=True)
                     return True
             return False
 
     def clear_task(self, tid: int, xid: int, owner: str) -> bool:
         with self.lock:
             if self.match(tid, xid, owner):
-                self.data.pop(owner)
+                self.state.pop(owner)
                 return True
             return False
 
     def get_task(self, owner: str):
-        return self.data[owner]._asdict()
+        return self.state[owner]._asdict()
 
     def match(self, tid: int, xid: int, owner: str):
-        return owner in self.data and self.data[owner].id == xid and self.data[owner].tid == tid
+        return owner in self.state and self.state[owner].id == xid and self.state[owner].tid == tid
 
     def __insert_record(self, owner: str):
-        record = self.data[owner]
-        start_time = parse_timestamp(record.start)
-        name = record.name
-
-        with open(TomatoManager.DATA_FILE, "a", encoding="utf-8") as f:
-            values = [start_time, now_str(), owner, name]
-
-            f.write(" | ".join(values))
-            f.write("\n")
+        state = self.state[owner]
+        record = TomatoTaskRecord(start_time=parse_timestamp(state.start), finish_time=now(),
+                                  owner=owner, name=state.name)
+        db_session.add(record)

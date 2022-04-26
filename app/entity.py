@@ -1,11 +1,11 @@
 from datetime import datetime
 from typing import Dict
-
-from sqlalchemy import Column, DateTime, Integer, String, Text, SmallInteger, ForeignKey
-from sqlalchemy.orm import declarative_base
-
 from tool4time import zero_time, now
+from sqlalchemy import create_engine, Column, DateTime, Integer, String, Text, SmallInteger, ForeignKey
+from sqlalchemy.orm import scoped_session, sessionmaker, declarative_base
 
+engine = create_engine('sqlite:///data/database/data.db', echo=True, future=True)
+db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 Base = declarative_base()
 
 
@@ -72,6 +72,9 @@ class TomatoTaskRecord(Base):
     owner = Column(String(15), nullable=False)
     name = Column(Text, nullable=False)
 
+
+# 初始化所有的表
+Base.metadata.create_all(engine)
 
 if __name__ == '__main__':
     # 使用SQLite内存数据库测试对象构建是否正常

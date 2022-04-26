@@ -4,13 +4,10 @@ from os.path import join, exists
 from typing import Optional
 
 import sqlalchemy as sal
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 from werkzeug.exceptions import abort
 
-from entity import Item, Base, TomatoType, ItemType
+from entity import Item, TomatoType, ItemType, db_session
 from service4config import ConfigManager
-from service4interpreter import OpInterpreter
 from tool4key import activate_key, create_time_key
 from tool4log import logger
 from tool4mail import send_daily_report
@@ -25,11 +22,7 @@ config = ConfigManager()
 
 class Manager:
     def __init__(self):
-        url = "sqlite:///data/database/data.db?check_same_thread=false"
-        self.engine = create_engine(url, echo=True, future=True)
-        Base.metadata.create_all(self.engine)
-        self.session = Session(self.engine)
-        self.item_manager = ItemManager(self.session)
+        self.item_manager = ItemManager()
         self.file_manager = FileItemManager(self.item_manager)
         self.note_manager = NoteItemManager(self.item_manager)
 
@@ -51,12 +44,11 @@ class Manager:
         self.task_manager.start()
 
     def check_authority(self, xid: int, owner: str):
-        with self.session.begin():
-            stmt = sal.select(Item.owner).where(Item.id == xid)
-            expected_owner = self.session.scalar(stmt)
-            if expected_owner != owner:
-                logger.warning(f"{Manager.__name__}: User {owner} dose not have authority For xID {xid}")
-                abort(401)
+        stmt = sal.select(Item.owner).where(Item.id == xid)
+        expected_owner = db_session.scalar(stmt)
+        if expected_owner != owner:
+            logger.warning(f"{Manager.__name__}: User {owner} dose not have authority For xID {xid}")
+            abort(401)
 
     def create(self, item: Item):
         self.manager[item.item_type].create(item)
@@ -87,46 +79,45 @@ class Manager:
         self.manager[item.item_type].remove(item)
 
     def undo(self, xid: int, owner: str, parent: Optional[int] = None):
-        with self.session.begin():
-            stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
-            item = self.session.scalar(stmt)
-            item.create_time = now()
-            item.tomato_type = TomatoType.Activate
-            logger.info(f"回退任务到活动列表: {item.name}")
+        stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
+        item = db_session.scalar(stmt)
+        item.create_time = now()
+        item.tomato_type = TomatoType.Activate
+        logger.info(f"回退任务到活动列表: {item.name}")
+        db_session.commit()
         return self.activate_items(owner, parent=parent)
 
     def increase_expected_tomato(self, xid: int, owner: str):
-        with self.session.begin():
-            stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
-            item = self.session.scalar(stmt)
-            if item:
-                item.expected_tomato += 1
-            return item is not None
+        stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
+        item = db_session.scalar(stmt)
+        if item:
+            item.expected_tomato += 1
+        db_session.commit()
+        return item is not None
 
     def increase_used_tomato(self, xid: int, owner: str):
-        with self.session.begin():
-            stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
-            item = self.session.scalar(stmt)
-            if item:
-                if item.habit_expected != 0 and item.last_check_time.date() != today():
-                    item.habit_done += 1
-                if item.used_tomato < item.expected_tomato:
-                    item.used_tomato += 1
-            return item is not None
+        stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
+        item = db_session.scalar(stmt)
+        if item:
+            if item.habit_expected != 0 and item.last_check_time.date() != today():
+                item.habit_done += 1
+            if item.used_tomato < item.expected_tomato:
+                item.used_tomato += 1
+        db_session.commit()
+        return item is not None
 
     def to_today_task(self, xid: int, owner: str):
-        with self.session.begin():
-            stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
-            item = self.session.scalar(stmt)
-            if item:
-                item.create_time = now()
-                item.tomato_type = TomatoType.Today
+        stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
+        item = db_session.scalar(stmt)
+        if item:
+            item.create_time = now()
+            item.tomato_type = TomatoType.Today
+        db_session.commit()
         return item is not None
 
     def get_title(self, xid: int, owner: str) -> str:
-        with self.session.begin():
-            stmt = sal.select(Item.name).where(Item.id == xid, Item.owner == owner)
-            return self.session.scalar(stmt)
+        stmt = sal.select(Item.name).where(Item.id == xid, Item.owner == owner)
+        return db_session.scalar(stmt)
 
     def get_note(self, nid: int, owner: str) -> str:
         self.check_authority(nid, owner)
@@ -142,21 +133,21 @@ class Manager:
         # 2. 处于完成状态
         stmt = sal.select(Item).where(Item.repeatable == False, Item.specific == 0,
                                       Item.used_tomato == Item.expected_tomato)
-        items = self.session.scalar(stmt)
+        items = db_session.scalar(stmt)
         for item in items:
             self.manager[item.item_type].remove(item.id)
             logger.info(f"Garbage Collection(Expired): {item.name}")
 
         stmt = sal.select(Item.id)
-        ids = self.session.scalar(stmt)
+        ids = db_session.scalar(stmt)
         ids.append(None)
         stmt = sal.select(Item).where(Item.parent.not_in(ids))
-        unreferenced = self.session.scalar(stmt)
+        unreferenced = db_session.scalar(stmt)
         for item in unreferenced:
             self.manager[item.item_type].remove(item)
             logger.info(f"Garbage Collection(Unreferenced): {item.name}")
 
-        self.session.commit()
+        db_session.commit()
 
     def set_tomato_task(self, xid: int, owner: str):
         item = self.item_manager.select(xid)
@@ -186,10 +177,11 @@ class Manager:
 
     def __update_state(self):
         stmt = sal.select(Item).where(Item.repeatable == True)
-        items = self.session.scalar(stmt)
+        items = db_session.scalar(stmt)
         for item in items:
             item.used_tomato = 0
             logger.info(f"重置可重复任务: {item.name}")
+        db_session.commit()
 
     def exec_function(self, command: str, data: str, parent: int, owner: str):
         pass
@@ -209,43 +201,38 @@ class BaseManager:
 
 
 class ItemManager(BaseManager):
-    def __init__(self, session: Session):
-        self.session = session
 
     def create(self, item: Item) -> Item:
         if item.name.startswith("http"):
             title = extract_title(item.name)
             item.url = item.name
             item.name = title
-        self.session.add(item)
-        self.session.commit()
+        db_session.add(item)
+        db_session.commit()
         return item
 
     def select(self, iid: int) -> Item:
-        with self.session.begin():
-            return self.session.scalar(sal.select(Item).where(Item.id == iid))
+        return db_session.scalar(sal.select(Item).where(Item.id == iid))
 
     def select_all(self, owner: str, parent: int):
-        with self.session.begin():
-            stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
-                                          Item.tomato_type == TomatoType.Today)
-            todays = self.session.execute(stmt).scalars().all()
+        stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
+                                      Item.tomato_type == TomatoType.Today)
+        todays = db_session.execute(stmt).scalars().all()
 
-            stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
-                                          Item.tomato_type == TomatoType.Activate)
-            activates = self.session.execute(stmt).scalars().all()
+        stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
+                                      Item.tomato_type == TomatoType.Activate)
+        activates = db_session.execute(stmt).scalars().all()
 
-            return {
-                "todayTask": list(map(self.to_dict, sorted(todays, key=create_time_key))),
-                "activeTask": list(map(self.to_dict, sorted(activates, key=activate_key, reverse=True)))
-            }
+        return {
+            "todayTask": list(map(self.to_dict, sorted(todays, key=create_time_key))),
+            "activeTask": list(map(self.to_dict, sorted(activates, key=activate_key, reverse=True)))
+        }
 
     def select_activate(self, owner: str, parent: int):
-        with self.session.begin():
-            stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
-                                          Item.tomato_type == TomatoType.Activate)
-            activates = self.session.execute(stmt).scalars().all()
-            return list(map(self.to_dict, sorted(activates, key=activate_key, reverse=True)))
+        stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
+                                      Item.tomato_type == TomatoType.Activate)
+        activates = db_session.execute(stmt).scalars().all()
+        return list(map(self.to_dict, sorted(activates, key=activate_key, reverse=True)))
 
     def select_summary(self, owner: str):
         pass
@@ -265,19 +252,18 @@ class ItemManager(BaseManager):
         # return ans
 
     def select_habit(self, owner: str):
-        with self.session.begin():
-            stmt = sal.select(Item).where(Item.owner == owner, Item.habit_expected != 0)
-            habits = self.session.execute(stmt).scalars().all()
-            return list(map(self.to_dict, habits))
+        stmt = sal.select(Item).where(Item.owner == owner, Item.habit_expected != 0)
+        habits = db_session.execute(stmt).scalars().all()
+        return list(map(self.to_dict, habits))
 
     def update_note_url(self, item: Item, url: str) -> Item:
         item.url = url
-        self.session.commit()
+        db_session.commit()
         return item
 
     def remove(self, item: Item):
-        self.session.delete(item)
-        self.session.commit()
+        db_session.delete(item)
+        db_session.commit()
 
     @staticmethod
     def to_dict(item: Item) -> dict:
