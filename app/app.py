@@ -184,9 +184,13 @@ def try_get_parent_from_request() -> Optional[int]:
 @app.route("/api/file/upload", methods=["POST"])
 @logged
 def file_do_upload():
-    # TODO: 上传文件时parent的处理
     file = request.files['myFile']
     parent = int(request.form['parent'])
+
+    # 0表示不属于任何类型，转换为None类型进行存储
+    if parent == 0:
+        parent = None
+
     owner = token.get_username(request)
     return manager.create_upload_file(file, parent, owner)
 
@@ -319,8 +323,11 @@ def exec_function():
 
 
 @app.teardown_appcontext
-def remove_session(*args, **kwargs):
+def remove_session(exception=None):
     db_session.remove()
+    if exception:
+        logger.exception("Teardown过程中发生异常")
+        logger.exception(exception)
 
 
 if __name__ == '__main__':

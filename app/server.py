@@ -55,8 +55,7 @@ class Manager:
 
     def create_upload_file(self, f, parent: int, owner: str):
         name, url = self.file_manager.create_upload_file(f)
-        item = Item(0, name, 'file', owner, parent=parent)
-        item.url = url
+        item = Item(name=name, item_type=ItemType.File, owner=owner, parent=parent, url=url)
         self.item_manager.create(item)
 
     def all_items(self, owner: str, /, parent: Optional[int] = None):
