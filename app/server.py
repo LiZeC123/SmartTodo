@@ -39,9 +39,9 @@ class Manager:
         self.__init_task()
 
     def __init_task(self):
-        self.task_manager.add_task(self.__update_state, 1)
-        self.task_manager.add_task(self.garbage_collection, 2)
-        self.task_manager.add_task(self.mail_report, 22)
+        self.task_manager.add_task("更新Item状态", self.__update_state, 1)
+        self.task_manager.add_task("垃圾回收", self.garbage_collection, 1, half=True)
+        self.task_manager.add_task("发送每日总结邮件", self.mail_report, 22, half=True)
         self.task_manager.start()
 
     @staticmethod
