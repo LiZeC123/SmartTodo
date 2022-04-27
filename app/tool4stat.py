@@ -1,40 +1,31 @@
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 from datetime import timedelta
-from os.path import join
 from typing import List
 
-from tool4time import get_datetime_from_str, now
+import sqlalchemy as sal
 
-DATABASE_FOLDER = "data/database"
-DATA_FILE = join(DATABASE_FOLDER, "TomatoRecord.dat")
+from entity import db_session, TomatoTaskRecord
+from tool4time import now
 
 Record = namedtuple("Record", ["start", "finish", "title", "extend"])
 
 
-def load_data() -> dict:
-    ans = defaultdict(list)
-    with open(DATA_FILE, encoding='utf-8') as f:
-        for line in f.readlines():
-            start, finish, owner, title, *extend = line.split(" | ")
-            ans[owner].append(Record(
-                start=get_datetime_from_str(start),
-                finish=get_datetime_from_str(finish),
-                title=title.strip(),
-                extend=[ex.strip() for ex in extend]
-            ))
-    return ans
+def load_data(owner: str) -> List[TomatoTaskRecord]:
+    stmt = sal.select(TomatoTaskRecord).where(TomatoTaskRecord.owner == owner) \
+        .order_by(TomatoTaskRecord.id.desc()).limit(200)
+    return db_session.execute(stmt).scalars().all()
 
 
-def total_stat(data: List[Record]) -> dict:
+def total_stat(data: List[TomatoTaskRecord]) -> dict:
     count = len(data)
     time = timedelta()
     for record in data:
-        start = record.start
-        finish = record.finish
+        start = record.start_time
+        finish = record.finish_time
         time += (finish - start)
 
-    first_time = data[0].start
-    last_time = data[-1].finish
+    first_time = data[-1].start_time
+    last_time = data[0].finish_time
 
     elapsed_day = (last_time - first_time).days + 1
     average_time = time.total_seconds() / elapsed_day
@@ -46,13 +37,13 @@ def total_stat(data: List[Record]) -> dict:
     }
 
 
-def today_stat(data: List[Record]) -> dict:
+def today_stat(data: List[TomatoTaskRecord]) -> dict:
     today = now().date()
     count = 0
     time = timedelta()
     for record in data:
-        start = record.start
-        finish = record.finish
+        start = record.start_time
+        finish = record.finish_time
         if start.date() == today:
             count += 1
             time += (finish - start)
@@ -62,13 +53,13 @@ def today_stat(data: List[Record]) -> dict:
     }
 
 
-def week_stat(data: List[Record]) -> list:
+def week_stat(data: List[TomatoTaskRecord]) -> list:
     WEEK_LENGTH = 7
     today = now().date()
     counts = [timedelta() for _ in range(WEEK_LENGTH)]
     for record in data:
-        start = record.start
-        finish = record.finish
+        start = record.start_time
+        finish = record.finish_time
         delta = (today - start.date()).days
         if delta < WEEK_LENGTH:
             counts[delta] += (finish - start)
@@ -83,47 +74,14 @@ def task_sort_key(task) -> float:
     return count * DAY_SECONDS + time.timestamp()
 
 
-def task_stat(data: List[Record]) -> list:
-    tasks = {}
-    for record in data:
-        if "hb" not in record.extend:
-            continue
-
-        title = record.title
-        finish = record.finish
-        elapsed = record.finish - record.start
-        if title not in tasks:
-            tasks[title] = {"name": title, "lastTime": finish, "elapsed": elapsed, "count": 1}
-        else:
-            tasks[title]['lastTime'] = finish
-            tasks[title]['count'] += 1
-            tasks[title]['elapsed'] += elapsed
-    leader_board = list(sorted(tasks.values(), key=task_sort_key, reverse=True))
-
-    # 至多显示最近的10条记录
-    return [{"name": f"【已完成{task['count']:2d}次 累计{task['elapsed'].total_seconds() / 3600.0:.2f}小时】 {task['name']}"}
-            for task in leader_board[:10]]
-
-
 def report(owner: str) -> dict:
-    dataset = load_data()
-    if owner is None or owner not in dataset:
-        return {}
-    else:
-        d = dataset[owner]
-        return {"total": total_stat(d), "today": today_stat(d), "week": week_stat(d), "habitSummary": task_stat(d)}
+    d = load_data(owner)
+    return {"total": total_stat(d), "today": today_stat(d), "week": week_stat(d)}
 
 
-def local_report(owner: str) -> dict:
-    dataset = load_data()
-    if owner is None or owner not in dataset:
-        return {}
-    else:
-        d = dataset[owner]
-        print({"总体统计": total_stat(d), "今日数据": today_stat(d), "近7日数据": week_stat(d)})
-        print("习惯排行榜:")
-        for task in task_stat(d):
-            print(task)
+def local_report(owner: str):
+    d = load_data(owner)
+    print({"总体统计": total_stat(d), "今日数据": today_stat(d), "近7日数据": week_stat(d)})
 
 
 if __name__ == '__main__':

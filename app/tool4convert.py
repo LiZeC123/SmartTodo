@@ -1,42 +1,49 @@
 # -*- coding: UTF-8 -*-
 import getopt
-import os
 import sys
+from collections import namedtuple, defaultdict
+from os.path import join
 
-
-def update_web_files():
-    import shutil
-    shutil.rmtree('static')
-    shutil.copytree("web/dist", "static")
-
-
-def commit_web_file():
-    os.system('git add static/')
-    os.system('git commit -m "更新前端文件"')
-
-
-def static_file_updated():
-    try:
-        # 1. 遍历源代码, 找到最近更新的文件时间
-        st = 0.0
-        for root, dirs, files in os.walk("web/src"):
-            for file in files:
-                full_path = os.path.join(root, file)
-                st = max(os.path.getmtime(full_path), st)
-
-        # 2. 比对目标目录的修改时间
-        dt = os.path.getmtime("web/dist")
-        return dt > st
-    except FileNotFoundError as e:
-        print(f"Check Static File Update Time Error: {e}")
-        # 文件不存在时都重新生成文件
-        # 如果出现没有考虑到的异常, 则应该使程序崩溃
-        return False
+from entity import TomatoTaskRecord, db_session
+from tool4time import get_datetime_from_str
 
 
 def print_help():
     print("tool4convert: 数据转换工具. 安全的初始化和转换项目的数据")
-    print("-u   更新前端文件")
+    print("-u   迁移数据到4.0+版本")
+
+
+def move_user_data():
+    pass
+
+
+DATABASE_FOLDER = "data/database"
+DATA_FILE = join(DATABASE_FOLDER, "TomatoRecord.dat")
+
+Record = namedtuple("Record", ["start", "finish", "title", "extend"])
+
+
+def load_record_data() -> dict:
+    ans = defaultdict(list)
+    with open(DATA_FILE, encoding='utf-8') as f:
+        for line in f.readlines():
+            start, finish, owner, title, *extend = line.split(" | ")
+            ans[owner].append(Record(
+                start=get_datetime_from_str(start),
+                finish=get_datetime_from_str(finish),
+                title=title.strip(),
+                extend=[ex.strip() for ex in extend]
+            ))
+    return ans
+
+
+def move_record_data():
+    records = load_record_data()
+    for owner, record in records.items():
+        for r in record:
+            nr = TomatoTaskRecord(start_time=r.start, finish_time=r.finish, owner=owner, name=r.title)
+            db_session.add(nr)
+    db_session.commit()
 
 
 if __name__ == '__main__':
@@ -46,14 +53,10 @@ if __name__ == '__main__':
             print_help()
             exit()
         if opt_name in ('-u',):
-            if static_file_updated():
-                update_web_files()
-                commit_web_file()
-            else:
-                print("Error: web file is not updated.")
+            move_user_data()
+            move_record_data()
             exit()
         if opt_name in ("--test",):
-            print(static_file_updated())
             exit()
     # 如果没有执行以上的任何一个分支, 则输入帮助信息
     print_help()
