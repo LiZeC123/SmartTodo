@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 from os import mkdir
 from os.path import join, exists
 from typing import Optional
@@ -239,21 +240,20 @@ class ItemManager(BaseManager):
         return list(map(self.to_dict, sorted(activates, key=activate_key, reverse=True)))
 
     def select_summary(self, owner: str):
-        pass
-        # res = defaultdict(list)
-        # self.database.select_group_by(res, group_today_task_by_parent(owner), limited=False)
-        #
-        # if "0" in res:
-        #     del res['0']
-        #
-        # if "miss" in res:
-        #     del res['miss']
-        #
-        # ans = {}
-        # for parent, lists in res.items():
-        #     lists.insert(0, self.database.select_one(where_id_equal(int(parent))))
-        #     ans[parent] = list(map(self.to_dict, lists))
-        # return ans
+        stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today)
+        items = db_session.execute(stmt).scalars().all()
+        res = defaultdict(list)
+        for item in items:
+            res[item.parent].append(item)
+
+        ans = {}
+        for parent, lists in res.items():
+            if parent is None:
+                # 汇总页面上仅显示各个Note之中的任务
+                continue
+            lists.insert(0, self.select(parent))
+            ans[parent] = list(map(self.to_dict, lists))
+        return ans
 
     def select_habit(self, owner: str):
         stmt = sal.select(Item).where(Item.owner == owner, Item.habit_expected != 0)

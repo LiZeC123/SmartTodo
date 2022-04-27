@@ -326,8 +326,7 @@ def exec_function():
 def remove_session(exception=None):
     db_session.remove()
     if exception:
-        logger.exception("Teardown过程中发生异常")
-        logger.exception(exception)
+        logger.exception(f"清理Session: 此Session中存在异常 {exception}")
 
 
 if __name__ == '__main__':
