@@ -110,7 +110,7 @@ export default {
         showName = "【" + item.deadline.split(" ")[0] + "】" + showName
       }
 
-      if (item.habit_expected !== 0) {
+      if (item.habit_expected && item.habit_expected !== 0) {
         let done = item.habit_done
         let expected = item.habit_expected
         if (expected === -1) {
