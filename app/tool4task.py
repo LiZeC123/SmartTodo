@@ -32,10 +32,11 @@ class TaskManager:
         now_time = now()
 
         hour = now_time.hour
-        half = now_time.minute > 15
+        half = 15 < now_time.minute < 45
 
+        logger.info(f"now = {now_time}, hour = {hour}, half = {half}, tasks = {self.tasks[hour + half]}")
         for t in self.tasks[hour + half]:
-            logger.debug(f"定时任务管理器: 执行任务: {t.name}")
+            logger.info(f"定时任务管理器: 执行任务: {t.name}")
             t.task()
 
         T = Timer(self.HALF_HOUR_SEC, self.__start0)
