@@ -85,7 +85,7 @@ class Manager:
         item = db_session.scalar(stmt)
         item.create_time = now()
         item.tomato_type = TomatoType.Activate
-        logger.info(f"回退任务到活动列表: {item.name}")
+        logger.info(f"回退任务到活动任务列表: {item.name}")
         db_session.commit()
         return self.activate_items(owner, parent=parent)
 
@@ -105,8 +105,10 @@ class Manager:
         if item:
             if item.habit_expected != 0 and item.last_check_time.date() != today():
                 item.habit_done += 1
+                logger.info(f"完成打卡任务: {item.name}")
             if item.used_tomato < item.expected_tomato:
                 item.used_tomato += 1
+                logger.info(f"手动完成任务: {item.name}")
         db_session.commit()
         return item is not None
 
@@ -117,6 +119,7 @@ class Manager:
         if item:
             item.create_time = now()
             item.tomato_type = TomatoType.Today
+            logger.info(f"添加任务到今日任务列表: {item.name}")
         db_session.commit()
         return item is not None
 
@@ -288,7 +291,7 @@ class FileItemManager(BaseManager):
             mkdir(self._FILE_FOLDER)
 
     def create(self, item: Item) -> Item:
-        """将指定URL对应的文件下载到公共空间"""
+        """从指定的URL下载文件到服务器"""
         remote_url = item.name
         path = download(remote_url, FileItemManager._FILE_FOLDER)
         item.url = path.replace(FileItemManager._FILE_FOLDER, '/file').replace("\\", "/")
@@ -296,7 +299,7 @@ class FileItemManager(BaseManager):
 
     @staticmethod
     def create_upload_file(f):
-        """将上传的文件保存到私有空间"""
+        """将上传的文件保存到服务器"""
         path = join(FileItemManager._FILE_FOLDER, f.filename)
         f.save(path)
         url = path.replace("\\", "/").replace(FileItemManager._FILE_FOLDER, '/file')

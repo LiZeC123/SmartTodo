@@ -30,9 +30,15 @@ class TaskManager:
 
     def __start0(self):
         now_time = now()
-
-        hour = now_time.hour
-        half = 15 < now_time.minute < 45
+        if now_time.minute < 15:
+            hour = now_time.hour
+            half = False
+        elif now_time.minute < 45:
+            hour = now_time.hour
+            half = True
+        else:
+            hour = now_time.hour + 1
+            half = False
 
         logger.info(f"now = {now_time}, hour = {hour}, half = {half}, tasks = {self.tasks[hour + half]}")
         for t in self.tasks[hour + half]:
