@@ -1,3 +1,4 @@
+from cmath import log
 from collections import namedtuple, defaultdict
 from datetime import timedelta
 from threading import Timer
@@ -14,7 +15,8 @@ class TaskManager:
         self.HALF_HOUR_SEC = 30 * 60
 
     def add_task(self, name, task, hour: int, half=False):
-        self.tasks[hour + half].append(TimedTask(name=name, task=task, hour=hour, half=half))
+        idx = 2 * hour + half
+        self.tasks[idx].append(TimedTask(name=name, task=task, hour=hour, half=half))
 
     def start(self):
         now_time = now()
@@ -23,6 +25,7 @@ class TaskManager:
         dt = t1 - t0
 
         logger.info(f"定时任务管理器:现在是{now_time}. 休眠{dt.seconds}秒后调度下一个整点时刻任务")
+        logger.info(f"当前已注册任务列表: {self}")
         # 等待到下一个整点时刻再开始执行任务
         T = Timer(dt.seconds, self.__start0)
         T.daemon = True
@@ -40,11 +43,18 @@ class TaskManager:
             hour = now_time.hour + 1
             half = False
 
-        logger.info(f"now = {now_time}, hour = {hour}, half = {half}, tasks = {self.tasks[hour + half]}")
-        for t in self.tasks[hour + half]:
+        idx = 2 * hour + half
+        for t in self.tasks[idx]:
             logger.info(f"定时任务管理器: 执行任务: {t.name}")
             t.task()
 
         T = Timer(self.HALF_HOUR_SEC, self.__start0)
         T.daemon = True
         T.start()
+
+    def __str__(self):
+        ans = []
+        for _, tasks in self.tasks.items():
+            for task in tasks:
+                ans.append(f"<{task.name}@{task.hour}:{'30' if task.half else '00'}>")
+        return "".join(ans)
