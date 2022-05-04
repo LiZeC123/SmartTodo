@@ -185,7 +185,7 @@ class Manager:
     @staticmethod
     def __update_state():
         stmt = sal.select(Item).where(Item.repeatable == True)
-        items = db_session.scalar(stmt)
+        items = db_session.execute(stmt).scalars().all()
         for item in items:
             item.used_tomato = 0
             logger.info(f"重置可重复任务: {item.name}")
