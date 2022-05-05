@@ -202,7 +202,12 @@ function inferFileType(name) {
   const dot = name.lastIndexOf(".");
   const fileType = name.substring(dot + 1);
 
-  const knowTypes = ["zip", "jpg", "png", "exe", "rar"];
+  const knowTypes = [
+    "zip", "rar", "tar", "gz", "7z",
+    "jpg", "png", "gif",
+    "exe", "msi",
+    "pdf", "xls", "xlsx", "doc", "docx", "ppt", "txt"
+    ];
 
   if (knowTypes.indexOf(fileType) !== -1 && name.indexOf("http") !== -1) {
     return confirm("检测到链接类型为文件, 是否按照文件类型进行下载?");

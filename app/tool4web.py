@@ -38,11 +38,11 @@ def extract_title(url: str) -> str:
         title = parse_title(r)
         return title
     except HTTPError:
-        logger.exception("Tool4Web: unknown HttpError")
+        logger.exception(f"Tool4Web: Unknown HttpError for URL {url}")
         return url
     except Exception:
         # 如果出现其他解析错误 返回Host
-        logger.exception("Tool4Web: unknown Error")
+        logger.exception(f"Tool4Web: Unknown Exception for URL {url}")
         return url
 
 
