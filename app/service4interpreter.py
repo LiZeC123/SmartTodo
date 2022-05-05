@@ -43,7 +43,7 @@ class OpInterpreter:
         item = self.get_item_by_name(name, parent, owner)
         if item is not None:
             name = item.name
-        for subtask in subtasks:
+        for subtask in reversed(subtasks):
             sub_item = Item(name=f"{name}：{subtask}", item_type=ItemType.Single, owner=owner, parent=parent)
             self.manager.create(sub_item)
 
