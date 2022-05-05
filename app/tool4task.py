@@ -1,4 +1,3 @@
-from cmath import log
 from collections import namedtuple, defaultdict
 from datetime import timedelta
 from threading import Timer
@@ -44,9 +43,13 @@ class TaskManager:
             half = False
 
         idx = 2 * hour + half
+        logger.info(f"定时任务管理器:当前时刻索引为:{idx} 任务列表为:{self.tasks[idx]}")
         for t in self.tasks[idx]:
             logger.info(f"定时任务管理器: 执行任务: {t.name}")
-            t.task()
+            try:
+                t.task()
+            except Exception as e:
+                logger.exception(e)
 
         T = Timer(self.HALF_HOUR_SEC, self.__start0)
         T.daemon = True
@@ -54,7 +57,8 @@ class TaskManager:
 
     def __str__(self):
         ans = []
-        for _, tasks in self.tasks.items():
-            for task in tasks:
-                ans.append(f"<{task.name}@{task.hour}:{'30' if task.half else '00'}>")
+        for hour in range(24):
+            for half in [False, True]:
+                for task in self.tasks[2 * hour + half]:
+                    ans.append(f"<{task.name}@{task.hour}:{'30' if task.half else '00'}>")
         return "".join(ans)
