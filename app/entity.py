@@ -72,6 +72,18 @@ class TomatoTaskRecord(Base):
     owner = Column(String(15), nullable=False)
     name = Column(Text, nullable=False)
 
+    def to_dict(self) -> Dict:
+        d = {}
+        for c in self.__table__.columns:
+            v = getattr(self, c.name, None)
+            if type(v) == datetime:
+                d[c.name] = v.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                d[c.name] = v
+        return d
+
+    def __str__(self) -> str:
+        return str(self.to_dict())
 
 # 初始化所有的表
 Base.metadata.create_all(engine)

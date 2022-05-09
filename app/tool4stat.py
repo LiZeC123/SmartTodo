@@ -5,14 +5,14 @@ from typing import List
 import sqlalchemy as sal
 
 from entity import db_session, TomatoTaskRecord
-from tool4time import now
+from tool4time import last_month, now
 
 Record = namedtuple("Record", ["start", "finish", "title", "extend"])
 
 
-def load_data(owner: str) -> List[TomatoTaskRecord]:
-    stmt = sal.select(TomatoTaskRecord).where(TomatoTaskRecord.owner == owner) \
-        .order_by(TomatoTaskRecord.id.desc()).limit(200)
+def load_data(owner: str, limit: int=200) -> List[TomatoTaskRecord]:
+    stmt = sal.select(TomatoTaskRecord).where(TomatoTaskRecord.owner == owner, TomatoTaskRecord.finish_time > last_month()) \
+        .order_by(TomatoTaskRecord.id.desc()).limit(limit)
     return db_session.execute(stmt).scalars().all()
 
 

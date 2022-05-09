@@ -1,6 +1,5 @@
 import threading
 from collections import defaultdict, namedtuple
-from os.path import join
 
 from entity import Item, TomatoTaskRecord, db_session
 from tool4time import now, parse_timestamp
@@ -14,7 +13,6 @@ def make_task(tid=0, xid=0, name="当前无任务", start_time=0.0, finished=Tru
 
 class TomatoManager:
     DATABASE_FOLDER = "data/database"
-    DATA_FILE = join(DATABASE_FOLDER, "TomatoRecord.dat")
 
     def __init__(self):
         self.state = defaultdict(make_task)

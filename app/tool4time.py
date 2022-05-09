@@ -1,5 +1,4 @@
-import time
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import os
 
 from tool4log import logger
@@ -54,6 +53,9 @@ def get_day_from_str(t: str) -> date:
 def get_timestamp_from_str(t: str) -> float:
     return datetime.timestamp(get_datetime_from_str(t))
 
+def last_month() -> datetime:
+    return now() - timedelta(days=30)
+
 
 # ################################# API For Server ################################# #
 
@@ -93,4 +95,4 @@ if is_time_debug:
     logger.warning(f"Time API is in DEBUG mode and now is {now_str()}")
 
 if __name__ == '__main__':
-    print(parse_timestamp(0))
+    print(last_month())
