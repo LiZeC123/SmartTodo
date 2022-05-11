@@ -40,8 +40,9 @@ class Manager:
         self.__init_task()
 
     def __init_task(self):
-        self.task_manager.add_task("更新Item状态", self.__update_state, 1)
-        self.task_manager.add_task("垃圾回收", self.garbage_collection, 1, half=True)
+        self.task_manager.add_task("垃圾回收", self.garbage_collection, 1)
+        self.task_manager.add_task("重置可重复任务", self.__reset_daily_task, 1, half=True)
+        self.task_manager.add_task("重置未完成的今日任务", self.__reset_today_task, 1, half=True)
         self.task_manager.add_task("发送每日总结邮件", self.mail_report, 22, half=True)
         self.task_manager.start()
 
@@ -183,12 +184,21 @@ class Manager:
         return self.finish_tomato_task(tid, xid, owner) and self.clear_tomato_task(tid, xid, owner)
 
     @staticmethod
-    def __update_state():
+    def __reset_daily_task():
         stmt = sal.select(Item).where(Item.repeatable == True)
         items = db_session.execute(stmt).scalars().all()
         for item in items:
             item.used_tomato = 0
             logger.info(f"重置可重复任务: {item.name}")
+        db_session.commit()
+
+    @staticmethod
+    def __reset_today_task():
+        stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today)
+        items = db_session.execute(stmt).scalars().all()
+        for item in items:
+            item.tomato_type = TomatoType.Activate
+            logger.info(f"回退未完成的今日任务: {item.name}")
         db_session.commit()
 
     def exec_function(self, command: str, data: str, parent: int, owner: str):
