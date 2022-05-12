@@ -84,11 +84,15 @@ class Manager:
     def undo(self, xid: int, owner: str, parent: Optional[int] = None):
         stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
         item = db_session.scalar(stmt)
+        self._undo(item)
+        return self.activate_items(owner, parent=parent)
+    
+    @staticmethod
+    def _undo(item: Item):
         item.create_time = now()
         item.tomato_type = TomatoType.Activate
         logger.info(f"回退任务到活动任务列表: {item.name}")
         db_session.commit()
-        return self.activate_items(owner, parent=parent)
 
     @staticmethod
     def increase_expected_tomato(xid: int, owner: str):
@@ -192,13 +196,13 @@ class Manager:
             logger.info(f"重置可重复任务: {item.name}")
         db_session.commit()
 
-    @staticmethod
-    def __reset_today_task():
+    
+    def __reset_today_task(self):
         stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today, Item.repeatable == False)
         items = db_session.execute(stmt).scalars().all()
         for item in items:
-            item.tomato_type = TomatoType.Activate
-            logger.info(f"回退未完成的今日任务: {item.name}")
+            # 使用逻辑回退, 从而保证回退操作的逻辑是一致的
+            self._undo(item)
         db_session.commit()
 
     def exec_function(self, command: str, data: str, parent: int, owner: str):
