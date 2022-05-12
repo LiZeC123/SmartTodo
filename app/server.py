@@ -194,7 +194,7 @@ class Manager:
 
     @staticmethod
     def __reset_today_task():
-        stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today)
+        stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today, Item.repeatable == False)
         items = db_session.execute(stmt).scalars().all()
         for item in items:
             item.tomato_type = TomatoType.Activate
