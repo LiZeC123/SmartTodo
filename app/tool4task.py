@@ -23,7 +23,7 @@ class TaskManager:
         t1 = timedelta(hours=now_time.hour + 1)
         dt = t1 - t0
 
-        # logger.info(f"定时任务管理器:现在是{now_time}. 休眠{dt.seconds}秒后调度下一个整点时刻任务")
+        logger.info(f"定时任务管理器:现在是{now_time}. 休眠{dt.seconds}秒后调度下一个整点时刻任务")
         logger.info(f"当前已注册任务列表: {self}")
         # 等待到下一个整点时刻再开始执行任务
         T = Timer(dt.seconds, self.__start0)
@@ -43,7 +43,7 @@ class TaskManager:
             half = False
 
         idx = 2 * hour + half
-        logger.info(f"定时任务管理器:当前时刻索引为:{idx} 任务列表为:{self.tasks[idx]}")
+        # logger.info(f"定时任务管理器:当前时刻索引为:{idx} 任务列表为:{self.tasks[idx]}")
         for t in self.tasks[idx]:
             logger.info(f"定时任务管理器: 执行任务: {t.name}")
             try:
