@@ -77,9 +77,6 @@ def create_item():
     if "parent" in f:
         item.parent = int(f["parent"])
 
-    if "today" in f:
-        item.tomato_type = TomatoType.Today
-
     if "habit" in f:
         item.habit = True
 

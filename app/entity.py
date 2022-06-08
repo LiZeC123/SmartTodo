@@ -40,7 +40,7 @@ class Item(Base):
 
     # 番茄钟相关属性
     # 番茄钟类型，具体取值见 TomatoType 类
-    tomato_type = Column(String(10), nullable=False, default=TomatoType.Activate)
+    tomato_type = Column(String(10), nullable=False, default=TomatoType.Today)
     expected_tomato = Column(SmallInteger, nullable=False, default=1)
     used_tomato = Column(SmallInteger, nullable=False, default=0)
 
