@@ -85,6 +85,7 @@ class TomatoTaskRecord(Base):
     def __str__(self) -> str:
         return str(self.to_dict())
 
+
 # 初始化所有的表
 Base.metadata.create_all(engine)
 

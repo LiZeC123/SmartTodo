@@ -13,7 +13,7 @@ from service4interpreter import OpInterpreter
 from tool4key import activate_key, create_time_key
 from tool4log import logger
 from tool4mail import send_daily_report
-from tool4stat import report
+from tool4stat import report, done_task_stat, undone_task_stat
 from tool4task import TaskManager
 from tool4time import now, today
 from tool4tomato import TomatoManager
@@ -86,7 +86,7 @@ class Manager:
         item = db_session.scalar(stmt)
         self._undo(item)
         return self.activate_items(owner, parent=parent)
-    
+
     @staticmethod
     def _undo(item: Item):
         item.create_time = now()
@@ -196,7 +196,6 @@ class Manager:
             logger.info(f"重置可重复任务: {item.name}")
         db_session.commit()
 
-    
     def __reset_today_task(self):
         stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today, Item.repeatable == False)
         items = db_session.execute(stmt).scalars().all()
@@ -208,9 +207,21 @@ class Manager:
     def exec_function(self, command: str, data: str, parent: int, owner: str):
         self.op.exec_function(command, data, parent, owner)
 
-    def mail_report(self):
+    def get_mail_report_data(self, owner: str):
+        summary = report(owner)
+        habits = self.item_manager.select_habit(owner)
+        return {
+            "user": owner,
+            "today_stat": summary['today']['count'],
+            "total_stat": summary['today']['minute'],
+            "done_task": done_task_stat(owner),
+            "undone_task": undone_task_stat(owner),
+            "undone_habit": [habit for habit in habits if habit['expected_tomato'] != habit['used_tomato']],
+        }
+
+    def mail_report(self, dry_run=False):
         for user, email in config.get_mail_users():
-            send_daily_report(user, email, self.get_summary(user))
+            send_daily_report(email, self.get_mail_report_data(user), dry_run)
 
 
 class BaseManager:
@@ -387,4 +398,4 @@ class NoteItemManager(BaseManager):
 
 if __name__ == '__main__':
     manager = Manager()
-    manager.mail_report()
+    manager.mail_report(dry_run=True)

@@ -35,7 +35,7 @@ export default {
           count: 0,
           minute: 0,
         },
-        week: [0, 0, 0, 0, 0, 0, 0],
+        week: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       },
       habitSummary: []
     }
@@ -66,12 +66,12 @@ export default {
       })
     },
     draw: function () {
-      const labels = [0, 1, 2, 3, 4, 5, 6];
+      const labels = [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
 
       const data = {
         labels: labels,
         datasets: [{
-          label: '近七日专注时长统计',
+          label: '近期日专注时长统计',
           backgroundColor: 'rgb(27,141,227)',
           borderColor: 'rgb(27,141,227)',
           data: this.stats.week,

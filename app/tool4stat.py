@@ -4,14 +4,15 @@ from typing import List
 
 import sqlalchemy as sal
 
-from entity import db_session, TomatoTaskRecord
+from entity import db_session, TomatoTaskRecord, Item, ItemType, TomatoType
 from tool4time import last_month, now
 
 Record = namedtuple("Record", ["start", "finish", "title", "extend"])
 
 
-def load_data(owner: str, limit: int=200) -> List[TomatoTaskRecord]:
-    stmt = sal.select(TomatoTaskRecord).where(TomatoTaskRecord.owner == owner, TomatoTaskRecord.finish_time > last_month()) \
+def load_data(owner: str, limit: int = 200) -> List[TomatoTaskRecord]:
+    stmt = sal.select(TomatoTaskRecord).where(TomatoTaskRecord.owner == owner,
+                                              TomatoTaskRecord.finish_time > last_month()) \
         .order_by(TomatoTaskRecord.id.desc()).limit(limit)
     return db_session.execute(stmt).scalars().all()
 
@@ -54,7 +55,7 @@ def today_stat(data: List[TomatoTaskRecord]) -> dict:
 
 
 def week_stat(data: List[TomatoTaskRecord]) -> list:
-    WEEK_LENGTH = 7
+    WEEK_LENGTH = 15
     today = now().date()
     counts = [timedelta() for _ in range(WEEK_LENGTH)]
     for record in data:
@@ -65,6 +66,18 @@ def week_stat(data: List[TomatoTaskRecord]) -> list:
             counts[delta] += (finish - start)
 
     return list(map(lambda time: int(time.total_seconds() / 60), counts))
+
+
+def done_task_stat(owner: str) -> list:
+    stmt = sal.select(Item.name).where(Item.owner == owner, Item.expected_tomato == Item.used_tomato)
+    return db_session.execute(stmt).scalars().all()
+
+
+def undone_task_stat(owner: str) -> list:
+    stmt = sal.select(Item.name).where(Item.owner == owner, Item.tomato_type == TomatoType.Today,
+                                       Item.expected_tomato != Item.used_tomato,
+                                       Item.item_type != ItemType.Note)
+    return db_session.execute(stmt).scalars().all()
 
 
 def task_sort_key(task) -> float:
@@ -81,7 +94,9 @@ def report(owner: str) -> dict:
 
 def local_report(owner: str):
     d = load_data(owner)
-    print({"总体统计": total_stat(d), "今日数据": today_stat(d), "近7日数据": week_stat(d)})
+    print({"总体统计": total_stat(d), "今日数据": today_stat(d), "近15日数据": week_stat(d)})
+    print(f"已完成任务统计: {done_task_stat(owner)}")
+    print(f"未完成任务统计: {undone_task_stat(owner)}")
 
 
 if __name__ == '__main__':
