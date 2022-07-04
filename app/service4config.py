@@ -11,7 +11,7 @@ class ConfigManager:
         config_file = join(ConfigManager.__CONFIG_FOLDER, "config.json")
         if not exists(config_file):
             config_file = join(ConfigManager.__CONFIG_FOLDER, "default.json")
-            logger.warn("Load Default Config")
+            logger.warning("Load Default Config")
 
         with open(config_file) as f:
             self.config = json.load(f)

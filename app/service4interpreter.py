@@ -46,6 +46,8 @@ class OpInterpreter:
 
     def create_habit(self, data: str, parent: int, owner: str):
         name, count = parse_habit_data(data)
+        if name is None:
+            return
         item = Item(name=name, item_type=ItemType.Single, owner=owner, parent=parent)
         item.habit_expected = count
         item.repeatable = True
@@ -93,8 +95,10 @@ def parse_sn_data(data):
             return name, 3, "部分"
         else:
             logger.error("解析sn指令数据失败: 参数数量不匹配")
+            return "", 0, ""
     except ValueError:
         logger.error("解析sn指令数据失败: 数据解析失败")
+        return "", 0, ""
 
 
 def parse_sx_data(data):
@@ -106,6 +110,7 @@ def parse_sx_data(data):
         return name, subtasks
     else:
         logger.error("解析sx指令数据失败: 参数数量不匹配")
+        return "", []
 
 
 def parse_habit_data(data):
@@ -118,10 +123,6 @@ def parse_habit_data(data):
             count = int(elem[1])
 
         return name, count
-    except ValueError:
+    except (ValueError, IndexError):
         return None, -1
 
-
-if __name__ == '__main__':
-    ans = parse_habit_data("")
-    print(ans)

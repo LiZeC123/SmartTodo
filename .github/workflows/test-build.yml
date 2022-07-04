@@ -21,18 +21,20 @@ jobs:
 
     - name: Generate coverage report
       run: |
+        cp -r config app/config
+        cd app
         mkdir data
         mkdir data/database data/filebase data/log data/notebase
-        pip install -r ./app/requirements.txt
+        pip install -r requirements.txt
         pip install pytest
-        pip install pytest-cov
-        pytest --cov=./app --cov-report=xml  
+        pip install pytest-cov    
+        pytest --cov=./ --cov-report=xml  
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
+        file: ./app/coverage.xml
         flags: unittests
 
   build:
