@@ -1,7 +1,7 @@
 import threading
 from collections import defaultdict, namedtuple
 
-from entity import Item, TomatoTaskRecord, db_session
+from entity import Item, TomatoTaskRecord
 from tool4time import now, parse_timestamp
 
 Task = namedtuple("Task", ["tid", "id", "name", "start", "finished"])
@@ -14,7 +14,8 @@ def make_task(tid=0, xid=0, name="当前无任务", start_time=0.0, finished=Tru
 class TomatoManager:
     DATABASE_FOLDER = "data/database"
 
-    def __init__(self):
+    def __init__(self, db):
+        self.db = db
         self.state = defaultdict(make_task)
         self.taskName = ""
         self.startTime = 0
@@ -58,4 +59,5 @@ class TomatoManager:
         state = self.state[owner]
         record = TomatoTaskRecord(start_time=parse_timestamp(state.start), finish_time=now(),
                                   owner=owner, name=state.name)
-        db_session.add(record)
+        self.db.add(record)
+        self.db.commit()

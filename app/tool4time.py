@@ -53,6 +53,7 @@ def get_day_from_str(t: str) -> date:
 def get_timestamp_from_str(t: str) -> float:
     return datetime.timestamp(get_datetime_from_str(t))
 
+
 def last_month() -> datetime:
     return now() - timedelta(days=30)
 

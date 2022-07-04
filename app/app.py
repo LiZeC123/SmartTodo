@@ -3,8 +3,10 @@ import json
 from typing import Dict, Optional
 
 from flask import Flask, request, abort
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
 
-from entity import Item, TomatoType, db_session
+from entity import Item, Base
 from server import Manager
 from service4config import ConfigManager
 from tool4log import logger, Log_File
@@ -14,8 +16,13 @@ from tool4token import TokenManager
 
 app = Flask(__name__)
 
-manager = Manager()
-token = TokenManager()
+engine = create_engine('sqlite:///data/database/data.db', echo=True, future=True)
+db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+# 初始化所有的表
+Base.metadata.create_all(engine)
+
+manager = Manager(db_session)
+token_manager = TokenManager()
 config = ConfigManager()
 
 
@@ -31,7 +38,10 @@ def logged(func=None, role='ROLE_USER', wrap=True):
     def wrapper(*args, **kw):
         if not wrap:
             return func(*args, **kw)
-        elif token.check_token(request, role):
+
+        token = request.headers.get('token')
+        info = token_manager.query_info(token)
+        if info and role in info.get('role'):
             return make_result(func(*args, **kw))
         else:
             abort(401)
@@ -45,7 +55,7 @@ def login():
     username = data.get('username')
     password = data.get('password')
     if config.try_login(username, password):
-        return token.create_token({"username": username, "role": config.get_roles(username)})
+        return token_manager.create_token({"username": username, "role": config.get_roles(username)})
     else:
         real_ip = request.headers.get("X-Real-IP")
         logger.warning(f"已拒绝来自{real_ip}的请求, 此请求尝试以'{password}'为密码登录账号'{username}'")
@@ -55,7 +65,7 @@ def login():
 @app.route('/api/logout', methods=['POST'])
 @logged
 def logout():
-    token.remove_token(request.form.get('token'))
+    token_manager.remove_token(request.form.get('token'))
 
 
 # ####################### API For Item #######################
@@ -63,7 +73,7 @@ def logout():
 @logged
 def create_item():
     f: Dict = request.get_json()
-    item = Item(name=f['name'], item_type=f['itemType'], owner=token.get_username(request))
+    item = Item(name=f['name'], item_type=f['itemType'], owner=get_owner_from_request())
 
     if "deadline" in f:
         item.deadline = parse_deadline_timestamp(f["deadline"])
@@ -86,7 +96,7 @@ def create_item():
 @app.route('/api/item/getAll', methods=['POST'])
 @logged
 def get_all_item():
-    owner: str = token.get_username(request)
+    owner: str = get_owner_from_request()
     parent = try_get_parent_from_request()
     return manager.all_items(owner, parent=parent)
 
@@ -95,7 +105,7 @@ def get_all_item():
 @logged
 def get_activate_item():
     # Deprecated
-    owner: str = token.get_username(request)
+    owner: str = get_owner_from_request()
     parent = try_get_parent_from_request()
     return manager.activate_items(owner, parent=parent)
 
@@ -103,7 +113,7 @@ def get_activate_item():
 @app.route('/api/item/getSummary', methods=['POST'])
 @logged
 def get_summary():
-    owner: str = token.get_username(request)
+    owner: str = get_owner_from_request()
     return manager.get_summary(owner)
 
 
@@ -111,7 +121,7 @@ def get_summary():
 @logged
 def back_item() -> bool:
     xid = get_xid_from_request()
-    owner = token.get_username(request)
+    owner = get_owner_from_request()
     parent = try_get_parent_from_request()
     return manager.undo(xid=xid, owner=owner, parent=parent)
 
@@ -120,7 +130,7 @@ def back_item() -> bool:
 @logged
 def remove_item():
     iid = get_xid_from_request()
-    owner = token.get_username(request)
+    owner = get_owner_from_request()
     manager.remove(iid, owner)
 
 
@@ -128,7 +138,7 @@ def remove_item():
 @logged
 def increase_expected_tomato() -> bool:
     xid = get_xid_from_request()
-    owner = token.get_username(request)
+    owner = get_owner_from_request()
     return manager.increase_expected_tomato(xid=xid, owner=owner)
 
 
@@ -136,7 +146,7 @@ def increase_expected_tomato() -> bool:
 @logged
 def increase_used_tomato() -> bool:
     xid = get_xid_from_request()
-    owner = token.get_username(request)
+    owner = get_owner_from_request()
     return manager.increase_used_tomato(xid=xid, owner=owner)
 
 
@@ -144,7 +154,7 @@ def increase_used_tomato() -> bool:
 @logged
 def to_today_task() -> bool:
     xid = get_xid_from_request()
-    owner = token.get_username(request)
+    owner = get_owner_from_request()
     return manager.to_today_task(xid=xid, owner=owner)
 
 
@@ -152,7 +162,7 @@ def to_today_task() -> bool:
 @logged
 def get_title():
     iid = get_xid_from_request()
-    owner = token.get_username(request)
+    owner = get_owner_from_request()
     title = manager.get_title(iid, owner)
     return title
 
@@ -167,6 +177,12 @@ def get_tid_from_request() -> int:
     f: Dict = request.get_json()
     tid = int(f.get('tid'))
     return tid
+
+
+def get_owner_from_request() -> str:
+    token = request.headers.get('token')
+    info = token_manager.data.get(token, {})
+    return info.get('username')
 
 
 def try_get_parent_from_request() -> Optional[int]:
@@ -189,7 +205,7 @@ def file_do_upload():
     if parent == 0:
         parent = None
 
-    owner = token.get_username(request)
+    owner = get_owner_from_request()
     return manager.create_upload_file(file, parent, owner)
 
 
@@ -199,7 +215,7 @@ def file_do_upload():
 @logged
 def note_content():
     nid = get_xid_from_request()
-    return manager.get_note(nid, owner=token.get_username(request))
+    return manager.get_note(nid, owner=get_owner_from_request())
 
 
 @app.route('/api/note/update', methods=['POST'])
@@ -207,13 +223,13 @@ def note_content():
 def note_update():
     nid = get_xid_from_request()
     content = request.get_json().get("content")
-    manager.update_note(nid, owner=token.get_username(request), content=content)
+    manager.update_note(nid, owner=get_owner_from_request(), content=content)
 
 
 @app.route('/api/note/getAll', methods=['POST'])
 @logged
 def note_get_all_item():
-    owner: str = token.get_username(request)
+    owner: str = get_owner_from_request()
     nid = get_xid_from_request()
     return manager.all_items(owner, parent=nid)
 
@@ -221,7 +237,7 @@ def note_get_all_item():
 @app.route('/api/note/getTodo', methods=['POST'])
 @logged
 def note_get_todo_item():
-    owner: str = token.get_username(request)
+    owner: str = get_owner_from_request()
     nid = get_xid_from_request()
     return manager.activate_items(owner, parent=nid)
 
@@ -231,14 +247,14 @@ def note_get_todo_item():
 @logged
 def set_tomato_task():
     iid = get_xid_from_request()
-    owner = token.get_username(request)
+    owner = get_owner_from_request()
     return manager.set_tomato_task(iid, owner)
 
 
 @app.route('/api/tomato/getTask', methods=['GET'])
 @logged
 def get_tomato_task():
-    owner = token.get_username(request)
+    owner = get_owner_from_request()
     return manager.get_tomato_task(owner)
 
 
@@ -247,7 +263,7 @@ def get_tomato_task():
 def undo_tomato_task():
     tid = get_tid_from_request()
     iid = get_xid_from_request()
-    owner = token.get_username(request)
+    owner = get_owner_from_request()
     return manager.undo_tomato_task(tid, iid, owner)
 
 
@@ -256,7 +272,7 @@ def undo_tomato_task():
 def finish_tomato_task():
     tid = get_tid_from_request()
     iid = get_xid_from_request()
-    owner = token.get_username(request)
+    owner = get_owner_from_request()
     return manager.finish_tomato_task(tid, iid, owner)
 
 
@@ -265,7 +281,7 @@ def finish_tomato_task():
 def finish_tomato_task_manually():
     tid = get_tid_from_request()
     iid = get_xid_from_request()
-    owner = token.get_username(request)
+    owner = get_owner_from_request()
     return manager.finish_tomato_task_manually(tid, iid, owner)
 
 
@@ -274,7 +290,7 @@ def finish_tomato_task_manually():
 def clear_tomato_task():
     tid = get_tid_from_request()
     iid = get_xid_from_request()
-    owner = token.get_username(request)
+    owner = get_owner_from_request()
     return manager.clear_tomato_task(tid, iid, owner)
 
 
@@ -283,15 +299,15 @@ def clear_tomato_task():
 @app.route("/api/meta/isAdmin", methods=["GET"])
 @logged
 def is_admin():
-    username = token.get_username(request)
+    username = get_owner_from_request()
     return config.is_admin_user(username)
 
 
 @app.route("/api/log/tomato", methods=["GET"])
 @logged(role='ROLE_ADMIN')
 def get_tomato_log():
-    owner = token.get_username(request)
-    return "\n".join(map(str, load_data(owner=owner, limit=20)))
+    owner = get_owner_from_request()
+    return "\n".join(map(str, load_data(db_session, owner=owner, limit=20)))
 
 
 @app.route("/api/log/log", methods=["GET"])
@@ -315,7 +331,7 @@ def exec_function():
     f: Dict = request.get_json()
     command: str = f.get("cmd", "<undefined>")
     data: str = f.get("data", "")
-    owner = token.get_username(request)
+    owner = get_owner_from_request()
     parent = try_get_parent_from_request()
     manager.exec_function(command, data, parent, owner)
 

@@ -1,8 +1,6 @@
 from typing import Optional
 
-import sqlalchemy as sal
-
-from entity import Item, ItemType, db_session, TomatoType
+from entity import Item, ItemType, TomatoType
 from tool4log import logger
 from tool4time import now_str_fn
 
@@ -14,7 +12,8 @@ class OpInterpreter:
     def batch_create_item(self, data: str, parent: int, owner: str):
         names = [d.strip() for d in data.split("-") if not d.isspace()]
         for name in names:
-            item = Item(name=name, item_type=ItemType.Single, tomato_type=TomatoType.Activate, owner=owner, parent=parent)
+            item = Item(name=name, item_type=ItemType.Single, tomato_type=TomatoType.Activate, owner=owner,
+                        parent=parent)
             self.manager.create(item)
 
     def instance_backup(self, parent: int, owner: str):
@@ -24,11 +23,8 @@ class OpInterpreter:
         item = Item(name=f"{name}.zip", item_type=ItemType.File, owner=owner, parent=parent, url=f"/file/{name}.zip")
         self.manager.item_manager.create(item)
 
-    @staticmethod
-    def get_item_by_name(name: str, parent: int, owner: str) -> Optional[Item]:
-        pass
-        stmt = sal.select(Item).where(Item.name.like(f"%{name}%"), Item.parent == parent, Item.owner == owner)
-        items = db_session.execute(stmt).scalars().all()
+    def get_item_by_name(self, name: str, parent: int, owner: str) -> Optional[Item]:
+        items = self.manager.get_item_by_name(name, parent, owner)
 
         if len(items) != 1:
             logger.error(f"待办事项获取失败: 多个待办事项符合名称要求: {[p.name for p in items]}")
@@ -69,12 +65,6 @@ class OpInterpreter:
         elif command == "sx":
             name, subtasks = parse_sx_data(data)
             return self.split_item_with_subtask(name, subtasks, parent, owner)
-        elif command == "rename":
-            old, new_name = data.split()
-            item = self.get_item_by_name(old, parent, owner)
-            if item is not None:
-                item.name = new_name
-                db_session.commit()
         elif command == "habit":
             self.create_habit(data, parent, owner)
         else:

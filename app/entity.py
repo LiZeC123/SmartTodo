@@ -1,11 +1,10 @@
 from datetime import datetime
-from typing import Dict
-from tool4time import zero_time, now
-from sqlalchemy import create_engine, Column, DateTime, Integer, String, Text, SmallInteger, ForeignKey
-from sqlalchemy.orm import scoped_session, sessionmaker, declarative_base
 
-engine = create_engine('sqlite:///data/database/data.db', echo=True, future=True)
-db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+from sqlalchemy import Column, DateTime, Integer, String, Text, SmallInteger, ForeignKey
+from sqlalchemy.orm import declarative_base
+
+from tool4time import zero_time, now
+
 Base = declarative_base()
 
 
@@ -49,18 +48,9 @@ class Item(Base):
     habit_expected = Column(SmallInteger, nullable=False, default=0)
     last_check_time = Column(DateTime, nullable=False, default=zero_time)
 
-    def to_dict(self) -> Dict:
-        d = {}
-        for c in self.__table__.columns:
-            v = getattr(self, c.name, None)
-            if type(v) == datetime:
-                d[c.name] = v.strftime("%Y-%m-%d %H:%M:%S")
-            else:
-                d[c.name] = v
-        return d
-
     def __str__(self) -> str:
-        return str(self.to_dict())
+        # noinspection PyTypeChecker
+        return str(class2dict(self))
 
 
 class TomatoTaskRecord(Base):
@@ -72,39 +62,17 @@ class TomatoTaskRecord(Base):
     owner = Column(String(15), nullable=False)
     name = Column(Text, nullable=False)
 
-    def to_dict(self) -> Dict:
-        d = {}
-        for c in self.__table__.columns:
-            v = getattr(self, c.name, None)
-            if type(v) == datetime:
-                d[c.name] = v.strftime("%Y-%m-%d %H:%M:%S")
-            else:
-                d[c.name] = v
-        return d
-
     def __str__(self) -> str:
-        return str(self.to_dict())
+        # noinspection PyTypeChecker
+        return str(class2dict(self))
 
 
-# 初始化所有的表
-Base.metadata.create_all(engine)
-
-if __name__ == '__main__':
-    # 使用SQLite内存数据库测试对象构建是否正常
-    import sqlalchemy as sal
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import Session
-
-    engine = create_engine("sqlite://", echo=True, future=True)
-    Base.metadata.create_all(engine)
-    session = Session(engine)
-    with session.begin():
-        item = Item(name="A", item_type=ItemType.Single, owner="lizec")
-        session.add(item)
-        session.commit()
-
-    with session.begin():
-        stmt = sal.select(Item).where(Item.name == "A", Item.owner == "lizec")
-        item = session.scalar(stmt)
-        item.deadline = now()
-        print(item.to_dict())
+def class2dict(obj):
+    d = {}
+    for c in obj.__table__.columns:
+        v = getattr(obj, c.name, None)
+        if type(v) == datetime:
+            d[c.name] = v.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            d[c.name] = v
+    return d

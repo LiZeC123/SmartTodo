@@ -19,15 +19,6 @@ class TokenManager:
     def query_info(self, token: str) -> Optional[dict]:
         return self.data.get(token)
 
-    def check_token(self, request, role) -> bool:
-        token = request.headers.get('token')
-        return token in self.data and role in self.data[token].get('role')
-
-    def get_username(self, request) -> Optional[str]:
-        token = request.headers.get('token')
-        info = self.data.get(token, {})
-        return info.get('username')
-
     def remove_token(self, token: str) -> None:
         if token in self.data:
             del self.data[token]

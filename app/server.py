@@ -2,12 +2,12 @@ import os
 from collections import defaultdict
 from os import mkdir
 from os.path import join, exists
-from typing import Optional
+from typing import Optional, List
 
 import sqlalchemy as sal
 from werkzeug.exceptions import abort
 
-from entity import Item, TomatoType, ItemType, db_session
+from entity import Item, TomatoType, ItemType, class2dict
 from service4config import ConfigManager
 from service4interpreter import OpInterpreter
 from tool4key import activate_key, create_time_key
@@ -23,8 +23,9 @@ config = ConfigManager()
 
 
 class Manager:
-    def __init__(self):
-        self.item_manager = ItemManager()
+    def __init__(self, db):
+        self.db = db
+        self.item_manager = ItemManager(db)
         self.file_manager = FileItemManager(self.item_manager)
         self.note_manager = NoteItemManager(self.item_manager)
 
@@ -36,7 +37,7 @@ class Manager:
 
         self.op = OpInterpreter(self)
         self.task_manager = TaskManager()
-        self.tomato_manager = TomatoManager()
+        self.tomato_manager = TomatoManager(self.db)
         self.__init_task()
 
     def __init_task(self):
@@ -46,10 +47,9 @@ class Manager:
         self.task_manager.add_task("发送每日总结邮件", self.mail_report, 22, half=True)
         self.task_manager.start()
 
-    @staticmethod
-    def check_authority(xid: int, owner: str):
+    def check_authority(self, xid: int, owner: str):
         stmt = sal.select(Item.owner).where(Item.id == xid)
-        expected_owner = db_session.scalar(stmt)
+        expected_owner = self.db.scalar(stmt)
         if expected_owner != owner:
             logger.warning(f"{Manager.__name__}: User {owner} dose not have authority For xID {xid}")
             abort(401)
@@ -72,9 +72,13 @@ class Manager:
     def get_summary(self, owner: str):
         return {
             "items": self.item_manager.select_summary(owner),
-            "stats": report(owner),
+            "stats": report(self.db, owner),
             "habit": self.item_manager.select_habit(owner)
         }
+
+    def get_item_by_name(self, name: str, parent: int, owner: str) -> List[Item]:
+        stmt = sal.select(Item).where(Item.name.like(f"%{name}%"), Item.parent == parent, Item.owner == owner)
+        return self.db.execute(stmt).scalars().all()
 
     def remove(self, xid: int, owner: str):
         self.check_authority(xid, owner)
@@ -83,30 +87,27 @@ class Manager:
 
     def undo(self, xid: int, owner: str, parent: Optional[int] = None):
         stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
-        item = db_session.scalar(stmt)
+        item = self.db.scalar(stmt)
         self._undo(item)
         return self.activate_items(owner, parent=parent)
 
-    @staticmethod
-    def _undo(item: Item):
+    def _undo(self, item: Item):
         item.create_time = now()
         item.tomato_type = TomatoType.Activate
         logger.info(f"回退任务到活动任务列表: {item.name}")
-        db_session.commit()
+        self.db.commit()
 
-    @staticmethod
-    def increase_expected_tomato(xid: int, owner: str):
+    def increase_expected_tomato(self, xid: int, owner: str):
         stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
-        item = db_session.scalar(stmt)
+        item = self.db.scalar(stmt)
         if item:
             item.expected_tomato += 1
-        db_session.commit()
+        self.db.commit()
         return item is not None
 
-    @staticmethod
-    def increase_used_tomato(xid: int, owner: str):
+    def increase_used_tomato(self, xid: int, owner: str):
         stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
-        item = db_session.scalar(stmt)
+        item = self.db.scalar(stmt)
         if item:
             if item.habit_expected != 0 and item.last_check_time.date() != today():
                 item.habit_done += 1
@@ -114,24 +115,22 @@ class Manager:
             if item.used_tomato < item.expected_tomato:
                 item.used_tomato += 1
                 logger.info(f"手动完成任务: {item.name}")
-        db_session.commit()
+        self.db.commit()
         return item is not None
 
-    @staticmethod
-    def to_today_task(xid: int, owner: str):
+    def to_today_task(self, xid: int, owner: str):
         stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
-        item = db_session.scalar(stmt)
+        item = self.db.scalar(stmt)
         if item:
             item.create_time = now()
             item.tomato_type = TomatoType.Today
             logger.info(f"添加任务到今日任务列表: {item.name}")
-        db_session.commit()
+        self.db.commit()
         return item is not None
 
-    @staticmethod
-    def get_title(xid: int, owner: str) -> str:
+    def get_title(self, xid: int, owner: str) -> str:
         stmt = sal.select(Item.name).where(Item.id == xid, Item.owner == owner)
-        return db_session.scalar(stmt)
+        return self.db.scalar(stmt)
 
     def get_note(self, nid: int, owner: str) -> str:
         self.check_authority(nid, owner)
@@ -146,20 +145,20 @@ class Manager:
         # 2. 处于完成状态
         stmt = sal.select(Item).where(Item.repeatable == False, Item.specific == 0,
                                       Item.used_tomato == Item.expected_tomato)
-        items = db_session.execute(stmt).scalars().all()
+        items = self.db.execute(stmt).scalars().all()
         for item in items:
             self.manager[item.item_type].remove(item)
             logger.info(f"Garbage Collection(Expired): {item.name}")
 
         stmt = sal.select(Item.id)
-        ids = db_session.execute(stmt).scalars().all()
+        ids = self.db.execute(stmt).scalars().all()
         stmt = sal.select(Item).where(Item.parent.not_in(ids))
-        unreferenced = db_session.execute(stmt).scalars().all()
+        unreferenced = self.db.execute(stmt).scalars().all()
         for item in unreferenced:
             self.manager[item.item_type].remove(item)
             logger.info(f"Garbage Collection(Unreferenced): {item.name}")
 
-        db_session.commit()
+        self.db.commit()
 
     def set_tomato_task(self, xid: int, owner: str):
         item = self.item_manager.select(xid)
@@ -187,35 +186,34 @@ class Manager:
     def finish_tomato_task_manually(self, tid: int, xid: int, owner: str):
         return self.finish_tomato_task(tid, xid, owner) and self.clear_tomato_task(tid, xid, owner)
 
-    @staticmethod
-    def __reset_daily_task():
+    def __reset_daily_task(self):
         stmt = sal.select(Item).where(Item.repeatable == True)
-        items = db_session.execute(stmt).scalars().all()
+        items = self.db.execute(stmt).scalars().all()
         for item in items:
             item.used_tomato = 0
             logger.info(f"重置可重复任务: {item.name}")
-        db_session.commit()
+        self.db.commit()
 
     def __reset_today_task(self):
         stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today, Item.repeatable == False)
-        items = db_session.execute(stmt).scalars().all()
+        items = self.db.execute(stmt).scalars().all()
         for item in items:
             # 使用逻辑回退, 从而保证回退操作的逻辑是一致的
             self._undo(item)
-        db_session.commit()
+        self.db.commit()
 
     def exec_function(self, command: str, data: str, parent: int, owner: str):
         self.op.exec_function(command, data, parent, owner)
 
     def get_mail_report_data(self, owner: str):
-        summary = report(owner)
+        summary = report(self.db, owner)
         habits = self.item_manager.select_habit(owner)
         return {
             "user": owner,
             "today_stat": summary['today']['count'],
             "total_stat": summary['today']['minute'],
-            "done_task": done_task_stat(owner),
-            "undone_task": undone_task_stat(owner),
+            "done_task": done_task_stat(self.db, owner),
+            "undone_task": undone_task_stat(self.db, owner),
             "undone_habit": [habit for habit in habits if habit['expected_tomato'] != habit['used_tomato']],
         }
 
@@ -233,43 +231,44 @@ class BaseManager:
 
 
 class ItemManager(BaseManager):
+    def __init__(self, db):
+        self.db = db
 
     def create(self, item: Item) -> Item:
         if item.name.startswith("http"):
             title = extract_title(item.name)
             item.url = item.name
             item.name = title
-        db_session.add(item)
-        db_session.commit()
+        self.db.add(item)
+        self.db.commit()
         return item
 
-    @staticmethod
-    def select(iid: int) -> Item:
-        return db_session.scalar(sal.select(Item).where(Item.id == iid))
+    def select(self, iid: int) -> Item:
+        return self.db.scalar(sal.select(Item).where(Item.id == iid))
 
     def select_all(self, owner: str, parent: int):
         stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
                                       Item.tomato_type == TomatoType.Today)
-        todays = db_session.execute(stmt).scalars().all()
+        todays = self.db.execute(stmt).scalars().all()
 
         stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
                                       Item.tomato_type == TomatoType.Activate)
-        activates = db_session.execute(stmt).scalars().all()
+        activates = self.db.execute(stmt).scalars().all()
 
         return {
-            "todayTask": list(map(self.to_dict, sorted(todays, key=create_time_key))),
-            "activeTask": list(map(self.to_dict, sorted(activates, key=activate_key, reverse=True)))
+            "todayTask": list(map(class2dict, sorted(todays, key=create_time_key))),
+            "activeTask": list(map(class2dict, sorted(activates, key=activate_key, reverse=True)))
         }
 
     def select_activate(self, owner: str, parent: int):
         stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
                                       Item.tomato_type == TomatoType.Activate)
-        activates = db_session.execute(stmt).scalars().all()
-        return list(map(self.to_dict, sorted(activates, key=activate_key, reverse=True)))
+        activates = self.db.execute(stmt).scalars().all()
+        return list(map(class2dict, sorted(activates, key=activate_key, reverse=True)))
 
     def select_summary(self, owner: str):
         stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today)
-        items = db_session.execute(stmt).scalars().all()
+        items = self.db.execute(stmt).scalars().all()
         res = defaultdict(list)
         for item in items:
             res[item.parent].append(item)
@@ -280,27 +279,22 @@ class ItemManager(BaseManager):
                 # 汇总页面上仅显示各个Note之中的任务
                 continue
             lists.insert(0, self.select(parent))
-            ans[parent] = list(map(self.to_dict, lists))
+            ans[parent] = list(map(class2dict, lists))
         return ans
 
     def select_habit(self, owner: str):
         stmt = sal.select(Item).where(Item.owner == owner, Item.habit_expected != 0)
-        habits = db_session.execute(stmt).scalars().all()
-        return list(map(self.to_dict, habits))
+        habits = self.db.execute(stmt).scalars().all()
+        return list(map(class2dict, habits))
 
-    @staticmethod
-    def update_note_url(item: Item, url: str) -> Item:
+    def update_note_url(self, item: Item, url: str) -> Item:
         item.url = url
-        db_session.commit()
+        self.db.commit()
         return item
 
     def remove(self, item: Item):
-        db_session.delete(item)
-        db_session.commit()
-
-    @staticmethod
-    def to_dict(item: Item) -> dict:
-        return item.to_dict()
+        self.db.delete(item)
+        self.db.commit()
 
 
 class FileItemManager(BaseManager):
@@ -394,8 +388,3 @@ class NoteItemManager(BaseManager):
                       f"<div>====================</div>" \
                       f"<div><br></div><div><br></div><div><br></div><div><br></div>"
             f.write(content)
-
-
-if __name__ == '__main__':
-    manager = Manager()
-    manager.mail_report(dry_run=True)
