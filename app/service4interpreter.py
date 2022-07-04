@@ -14,7 +14,7 @@ class OpInterpreter:
     def batch_create_item(self, data: str, parent: int, owner: str):
         names = [d.strip() for d in data.split("-") if not d.isspace()]
         for name in names:
-            item = Item(name=name, item_type=ItemType.Single, tomato_type=TomatoType.Today, owner=owner, parent=parent)
+            item = Item(name=name, item_type=ItemType.Single, tomato_type=TomatoType.Activate, owner=owner, parent=parent)
             self.manager.create(item)
 
     def instance_backup(self, parent: int, owner: str):
@@ -44,7 +44,7 @@ class OpInterpreter:
         if item is not None:
             name = item.name
         for subtask in reversed(subtasks):
-            sub_item = Item(name=f"{name}：{subtask}", item_type=ItemType.Single, tomato_type=TomatoType.Today,
+            sub_item = Item(name=f"{name}：{subtask}", item_type=ItemType.Single, tomato_type=TomatoType.Activate,
                             owner=owner, parent=parent)
             self.manager.create(sub_item)
 
