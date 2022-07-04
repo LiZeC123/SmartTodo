@@ -1,7 +1,6 @@
 Smart-Todo 待办管理器
 ========================
-
-![](https://github.com/LiZeC123/SmartTodo/actions/workflows/docker-image.yml/badge.svg)
+![](https://github.com/LiZeC123/SmartTodo/actions/workflows/test-build.yml/badge.svg)
 ![](https://img.shields.io/codecov/c/gh/LiZeC123/SmartTodo)
 ![](https://img.shields.io/github/license/LiZeC123/SmartTodo)
 ![](https://img.shields.io/github/issues/LiZeC123/SmartTodo)
