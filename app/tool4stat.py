@@ -25,10 +25,12 @@ def total_stat(data: List[TomatoTaskRecord]) -> dict:
         finish = record.finish_time
         time += (finish - start)
 
-    first_time = data[-1].start_time
-    last_time = data[0].finish_time
+    elapsed_day = 1
+    if count > 1:
+        first_time = data[-1].start_time
+        last_time = data[0].finish_time
+        elapsed_day = (last_time - first_time).days + 1
 
-    elapsed_day = (last_time - first_time).days + 1
     average_time = time.total_seconds() / elapsed_day
 
     return {

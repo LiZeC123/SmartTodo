@@ -24,7 +24,7 @@ jobs:
         cp -r config app/config
         cd app
         mkdir data
-        mkdir data/database data/filebase data/log data/notebase
+        mkdir data/database
         pip install -r requirements.txt
         pip install pytest
         pip install pytest-cov    

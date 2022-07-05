@@ -76,7 +76,7 @@ class Manager:
             "habit": self.item_manager.select_habit(owner)
         }
 
-    def get_item_by_name(self, name: str, parent: int, owner: str) -> List[Item]:
+    def get_item_by_name(self, name: str, parent: Optional[int], owner: str) -> List[Item]:
         stmt = sal.select(Item).where(Item.name.like(f"%{name}%"), Item.parent == parent, Item.owner == owner)
         return self.db.execute(stmt).scalars().all()
 
@@ -160,7 +160,7 @@ class Manager:
 
         self.db.commit()
 
-    def set_tomato_task(self, xid: int, owner: str):
+    def set_tomato_task(self, xid: int, owner: str) -> int:
         item = self.item_manager.select(xid)
 
         if item.used_tomato == item.expected_tomato:
@@ -298,7 +298,6 @@ class ItemManager(BaseManager):
 
 
 class FileItemManager(BaseManager):
-    _USER_FOLDER = "data/database"
     _FILE_FOLDER = "data/filebase"
 
     def __init__(self, m: ItemManager):
@@ -343,13 +342,8 @@ class NoteItemManager(BaseManager):
 
     def __init__(self, m: ItemManager):
         self.manager = m
-        self.__init_folder()
         if not exists(NoteItemManager._NOTE_FOLDER):
             mkdir(NoteItemManager._NOTE_FOLDER)
-
-    def __init_folder(self):
-        if not exists(self._NOTE_FOLDER):
-            mkdir(self._NOTE_FOLDER)
 
     def create(self, item: Item) -> Item:
         item = self.manager.create(item)

@@ -1,16 +1,14 @@
 import logging
 from logging import handlers
-from os import mkdir
+from os import getcwd, mkdir
 from os.path import exists, join
 
 _LOG_BASE = join("data", "log")
 Log_File = join(_LOG_BASE, "log.txt")
 
 if not exists(_LOG_BASE):
-    import os
-    print(f"当前路径{os.getcwd()}")
+    print(f"当前路径{getcwd()}")
     mkdir(_LOG_BASE)
-
 
 logger = logging.getLogger("app")
 logger.setLevel(logging.INFO)

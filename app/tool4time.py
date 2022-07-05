@@ -95,5 +95,3 @@ if is_time_debug:
     # 对是否开启时间的DEBUG模式进行检测, 并给出警告
     logger.warning(f"Time API is in DEBUG mode and now is {now_str()}")
 
-if __name__ == '__main__':
-    print(last_month())
