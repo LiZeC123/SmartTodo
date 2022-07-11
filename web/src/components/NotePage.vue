@@ -8,7 +8,7 @@
     <note-editor :init-content="initContent" @save="save" @changed="updateContent"></note-editor>
 
     <!-- 弹出的提示框, 指示是否保存成功 -->
-    <div id="alert" class="alert-none">保存成功</div>
+    <alert :text="'保存成功'" :show="showAlert"></alert>
 
   </div>
 
@@ -18,10 +18,11 @@
 <script>
 import NoteEditor from "@/components/m/NoteEditor"
 import TodoPage from "@/components/TodoPage";
+import Alert from "@/components/m/Alert";
 
 export default {
   name: "NotePage",
-  components: {TodoPage, NoteEditor},
+  components: {Alert, TodoPage, NoteEditor},
   props: {
     updateTodo: Number,
     createPlaceHold: Number
@@ -30,7 +31,8 @@ export default {
     return {
       initContent: "",
       contentUpdated: false,  // 指示前端是否修改了content内容
-      lastUpdateDate: new Date().getDate()
+      lastUpdateDate: new Date().getDate(),
+      showAlert: false,
     }
   },
   created() {
@@ -53,8 +55,6 @@ export default {
     }
   },
   mounted() {
-    // // 获得焦点后自动更新一次
-    // window.onfocus = this.checkUpdateStatus
     // 关闭页面时如果未保存则执行保存操作
     window.onbeforeunload = this.checkUnsaved;
 
@@ -76,8 +76,8 @@ export default {
         "content": document.getElementById("editor").innerHTML
       }).then(() => {
         this.contentUpdated = false
-        showAlert();
-        setTimeout(hideAlert, 500);
+        this.showAlert = true
+        setTimeout(() => this.showAlert = false, 500);
       });
     },
     autoSave: function () {
@@ -99,14 +99,6 @@ export default {
   },
 }
 
-function showAlert() {
-  document.getElementById("alert").className = 'alert-show';
-}
-
-function hideAlert() {
-  document.getElementById("alert").className = 'alert-none';
-}
-
 
 </script>
 
@@ -122,19 +114,4 @@ function hideAlert() {
 }
 
 
-.alert-none {
-  display: none;
-}
-
-.alert-show {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  margin-left: -57px;
-  padding: 8px 24px 8px 24px;
-  color: #3c763d;
-  background-color: #dff0d8;
-  border: 1px solid transparent;
-  border-radius: 4px;
-}
 </style>

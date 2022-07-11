@@ -1,28 +1,37 @@
 <template>
-  <div v-if="data.length > 0">
-    <h2>{{ title }}<span id="todoCount"> {{ tomatoCount }}</span></h2>
-    <ol id="todoList" class="demo-box">
-      <li v-for="(item, idxItem) in data" :key="item.id" id="li-active"
-          :class="[doneItem(item) ? 'done' : '', mapTypeToClass(item), mapSubTask(item)]"
-      >
-        <label><input type='checkbox' @change='change(idxItem, item.id)' :checked="this.doneItem(item)"
-                      :disabled="this.doneItem(item)"/></label>
-        <p @click='jumpTo(item.url)'>{{ mapName(item) }}</p>
+  <div>
+    <!-- 弹出的提示框, 指示是否保存成功 -->
+    <alert :text="'标题已复制'" :show="showAlert"></alert>
 
-        <a v-for="(btn, idxBtn) in btnConfig" :key="btn.name" :class="['function', 'function-'+idxBtn]"
-           @click="btn['function'](idxItem, item.id)" :title="btn.desc">
-          <font-awesome-icon :icon="['fas', btn.name]"/>
-        </a>
-      </li>
-    </ol>
+    <div v-if="data.length > 0">
+      <h2>{{ title }}<span id="todoCount"> {{ tomatoCount }}</span></h2>
+      <ol id="todoList" class="demo-box" @contextmenu.prevent>
+        <li v-for="(item, idxItem) in data" :key="item.id" id="li-active"
+            :class="[doneItem(item) ? 'done' : '', mapTypeToClass(item), mapSubTask(item)]"
+        >
+          <label><input type='checkbox' @change='change(idxItem, item.id)' :checked="this.doneItem(item)"
+                        :disabled="this.doneItem(item)"/></label>
+          <p @mousedown='jumpTo($event, item.url, item.name)'>{{ mapName(item) }}</p>
+
+          <a v-for="(btn, idxBtn) in btnConfig" :key="btn.name" :class="['function', 'function-'+idxBtn]"
+             @click="btn['function'](idxItem, item.id)" :title="btn.desc">
+            <font-awesome-icon :icon="['fas', btn.name]"/>
+          </a>
+        </li>
+      </ol>
+    </div>
   </div>
+
 
 </template>
 
 <script>
 
+import Alert from "@/components/m/Alert";
+
 export default {
   name: "ItemList",
+  components: {Alert},
   props: {
     title: String,
     btnConfig: Array,
@@ -30,7 +39,8 @@ export default {
   },
   data: function () {
     return {
-      done: false
+      done: false,
+      showAlert: false,
     }
   },
   computed: {
@@ -59,9 +69,18 @@ export default {
         return false
       }
     },
-    jumpTo: function (url) {
-      if (url !== null) {
+    jumpTo: function (event, url, name) {
+      if (event.button === 0 && url !== null) {
         window.open(url);
+      } else if (event.button === 2) {
+        let content = name
+        if (url) {
+          content = '[' + content + '](' + url + ')'
+        }
+        navigator.clipboard.writeText(content).then(() => {
+          this.showAlert = true
+          setTimeout(() => this.showAlert = false, 500);
+        })
       }
     },
     click: function (index) {
