@@ -249,7 +249,7 @@ Note页面内可以继续创建Item, 此页面内创建的Item只在此页面可
 
 感谢以下的开源项目和免费组件:
 
-- [网站ico图标来源](https://www.iconfont.cn/search/index?q=todolist&page=1&fromCollection=1)
+- [网站ico图标来源](https://icon-library.com/icon/todo-list-icon-13.html)
 - [svg转ico工具](https://www.aconvert.com/cn/icon/svg-to-ico/)
 
 
