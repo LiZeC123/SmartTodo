@@ -195,7 +195,8 @@ class Manager:
         self.db.commit()
 
     def __reset_today_task(self):
-        stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today, Item.repeatable == False)
+        stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today, Item.repeatable == False,
+                                      Item.item_type != ItemType.Note)
         items = self.db.execute(stmt).scalars().all()
         for item in items:
             # 使用逻辑回退, 从而保证回退操作的逻辑是一致的
