@@ -3,3 +3,4 @@ requests==2.25.1
 wget==3.2
 yagmail==0.15.277
 SQLAlchemy==1.4.35
+schedule==1.1.0
