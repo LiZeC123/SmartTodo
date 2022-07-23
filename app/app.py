@@ -46,7 +46,7 @@ def logged(func=None, role='ROLE_USER', wrap=True):
             abort(401)
 
         try:
-            make_result(func(*args, **kw))
+            return make_result(func(*args, **kw))
         except UnauthorizedException:
             abort(401)
 
