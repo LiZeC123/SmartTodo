@@ -1,11 +1,10 @@
 import html
-from urllib.parse import urlparse
 import re
+from urllib.parse import urlparse
 
 import requests
-from requests import HTTPError
-from requests import Response
 import wget
+from requests import HTTPError
 
 from tool4log import logger
 
@@ -34,8 +33,14 @@ def extract_title(url: str) -> str:
     try:
         r = requests.get(url, timeout=timeout, headers=headers)
         r.raise_for_status()  # 判断状态
-        r.encoding = parse_encoding(r)
-        title = parse_title(r)
+
+        encoding = parse_encoding(r.text)
+        if encoding:
+            r.encoding = encoding
+        else:
+            r.encoding = r.apparent_encoding
+
+        title = parse_title(r.text)
         return title
     except HTTPError:
         logger.exception(f"Tool4Web: Unknown HttpError for URL {url}")
@@ -46,18 +51,17 @@ def extract_title(url: str) -> str:
         return url
 
 
-def parse_encoding(r: Response) -> str:
-    match = encoding_pattern.search(r.text)
+def parse_encoding(text: str) -> str:
+    match = encoding_pattern.search(text)
+    encoding = None
     if match:
         encoding = match.group(1)
         encoding = encoding.replace('"', "").replace("'", "").strip()
-    else:
-        encoding = r.apparent_encoding
     return encoding
 
 
-def parse_title(r: Response) -> str:
-    match = title_pattern.search(r.text)
+def parse_title(text: str) -> str:
+    match = title_pattern.search(text)
     if match:
         title = match.group(1)
         return html.unescape(title)  # 解析#&格式编码的字符
@@ -67,7 +71,3 @@ def parse_title(r: Response) -> str:
 
 def download(url: str, base_dir: str):
     return wget.download(url=url, out=base_dir)
-
-
-if __name__ == '__main__':
-    pass

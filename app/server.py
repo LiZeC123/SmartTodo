@@ -5,9 +5,9 @@ from os.path import join, exists
 from typing import Optional, List
 
 import sqlalchemy as sal
-from werkzeug.exceptions import abort
 
 from entity import Item, TomatoType, ItemType, class2dict
+from exception import UnauthorizedException
 from service4config import ConfigManager
 from service4interpreter import OpInterpreter
 from tool4key import activate_key, create_time_key
@@ -42,8 +42,8 @@ class Manager:
 
     def __init_task(self):
         self.task_manager.add_task("垃圾回收", self.garbage_collection, "01:00")
-        self.task_manager.add_task("重置可重复任务", self.__reset_daily_task, "01:30")
-        self.task_manager.add_task("重置未完成的今日任务", self.__reset_today_task, "01:35")
+        self.task_manager.add_task("重置可重复任务", self.reset_daily_task, "01:30")
+        self.task_manager.add_task("重置未完成的今日任务", self.reset_today_task, "01:35")
         self.task_manager.add_task("发送每日总结邮件", self.mail_report, "22:30")
         self.task_manager.start()
 
@@ -51,16 +51,17 @@ class Manager:
         stmt = sal.select(Item.owner).where(Item.id == xid)
         expected_owner = self.db.scalar(stmt)
         if expected_owner != owner:
-            logger.warning(f"{Manager.__name__}: User {owner} dose not have authority For xID {xid}")
-            abort(401)
+            msg = f"{Manager.__name__}: User {owner} dose not have authority For xID {xid}"
+            logger.warning(msg)
+            raise UnauthorizedException(msg)
 
-    def create(self, item: Item):
-        self.manager[item.item_type].create(item)
+    def create(self, item: Item) -> Item:
+        return self.manager[item.item_type].create(item)
 
-    def create_upload_file(self, f, parent: int, owner: str):
+    def create_upload_file(self, f, parent: Optional[int], owner: str) -> Item:
         name, url = self.file_manager.create_upload_file(f)
         item = Item(name=name, item_type=ItemType.File, owner=owner, parent=parent, url=url)
-        self.item_manager.create(item)
+        return self.item_manager.create(item)
 
     def all_items(self, owner: str, /, parent: Optional[int] = None):
         # 可以考虑在前端请求的时候, 返回一个是否需要刷新的标记, 如果检测到变化, 则要求前端刷新, 否则不变
@@ -186,7 +187,7 @@ class Manager:
     def finish_tomato_task_manually(self, tid: int, xid: int, owner: str):
         return self.finish_tomato_task(tid, xid, owner) and self.clear_tomato_task(tid, xid, owner)
 
-    def __reset_daily_task(self):
+    def reset_daily_task(self):
         stmt = sal.select(Item).where(Item.repeatable == True)
         items = self.db.execute(stmt).scalars().all()
         for item in items:
@@ -194,7 +195,7 @@ class Manager:
             logger.info(f"重置可重复任务: {item.name}")
         self.db.commit()
 
-    def __reset_today_task(self):
+    def reset_today_task(self):
         stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today, Item.repeatable == False,
                                       Item.item_type != ItemType.Note)
         items = self.db.execute(stmt).scalars().all()
@@ -203,7 +204,7 @@ class Manager:
             self._undo(item)
         self.db.commit()
 
-    def exec_function(self, command: str, data: str, parent: int, owner: str):
+    def exec_function(self, command: str, data: str, parent: Optional[int], owner: str):
         self.op.exec_function(command, data, parent, owner)
 
     def get_mail_report_data(self, owner: str):
@@ -236,7 +237,7 @@ class ItemManager(BaseManager):
         self.db = db
 
     def create(self, item: Item) -> Item:
-        if item.name.startswith("http"):
+        if item.name.startswith("http") and item.item_type == ItemType.Single:
             title = extract_title(item.name)
             item.url = item.name
             item.name = title
@@ -247,7 +248,7 @@ class ItemManager(BaseManager):
     def select(self, iid: int) -> Item:
         return self.db.scalar(sal.select(Item).where(Item.id == iid))
 
-    def select_all(self, owner: str, parent: int):
+    def select_all(self, owner: str, parent: Optional[int]):
         stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
                                       Item.tomato_type == TomatoType.Today)
         todays = self.db.execute(stmt).scalars().all()
@@ -261,7 +262,7 @@ class ItemManager(BaseManager):
             "activeTask": list(map(class2dict, sorted(activates, key=activate_key, reverse=True)))
         }
 
-    def select_activate(self, owner: str, parent: int):
+    def select_activate(self, owner: str, parent: Optional[int]):
         stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
                                       Item.tomato_type == TomatoType.Activate)
         activates = self.db.execute(stmt).scalars().all()

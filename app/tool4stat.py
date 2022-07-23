@@ -3,6 +3,7 @@ from datetime import timedelta
 from typing import List
 
 import sqlalchemy as sal
+from sqlalchemy import func
 
 from entity import TomatoTaskRecord, Item, ItemType, TomatoType
 from tool4time import last_month, now
@@ -18,15 +19,13 @@ def load_data(db, owner: str, limit: int = 200) -> List[TomatoTaskRecord]:
 
 
 def total_stat(data: List[TomatoTaskRecord]) -> dict:
-    count = len(data)
     time = timedelta()
     for record in data:
-        start = record.start_time
-        finish = record.finish_time
-        time += (finish - start)
+        time += (record.finish_time - record.start_time)
 
     elapsed_day = 1
-    if count > 1:
+    count = len(data)
+    if count >= 2:
         first_time = data[-1].start_time
         last_time = data[0].finish_time
         elapsed_day = (last_time - first_time).days + 1
@@ -76,8 +75,9 @@ def report(db, owner: str) -> dict:
 
 
 def done_task_stat(db, owner: str) -> list:
-    stmt = sal.select(Item.name).where(Item.owner == owner, Item.expected_tomato == Item.used_tomato)
-    return db.execute(stmt).scalars().all()
+    stmt = sal.select(Item.name, func.count()).where(Item.owner == owner,
+                                                     Item.expected_tomato == Item.used_tomato).group_by(Item.name)
+    return db.execute(stmt).all()
 
 
 def undone_task_stat(db, owner: str) -> list:

@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from entity import Item, Base
+from exception import UnauthorizedException
 from server import Manager
 from service4config import ConfigManager
 from tool4log import logger, Log_File
@@ -41,9 +42,12 @@ def logged(func=None, role='ROLE_USER', wrap=True):
 
         token = request.headers.get('token')
         info = token_manager.query_info(token)
-        if info and role in info.get('role'):
-            return make_result(func(*args, **kw))
-        else:
+        if info is None or role not in info.get('role'):
+            abort(401)
+
+        try:
+            make_result(func(*args, **kw))
+        except UnauthorizedException:
             abort(401)
 
     return wrapper

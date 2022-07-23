@@ -1,4 +1,8 @@
+import pytest
+
 from tool4web import *
+from os.path import exists
+from os import remove
 
 
 def test_extract_host():
@@ -6,4 +10,35 @@ def test_extract_host():
 
 
 def test_extract_title():
+    # 正常情况
     assert extract_title("https://lizec.top/") == "LiZeC的博客"
+
+    # 常见的HTTP Error
+    assert extract_title("https://lizec.top/404") == "https://lizec.top/404"
+
+    # 其他Error
+    assert extract_title("not URL") == "not URL"
+
+
+def test_parse_encoding():
+    assert parse_encoding("<meta charset=\"utf-8\">") == 'utf-8'
+    assert parse_encoding("<meta name=\"viewport\" content=\"width=device-width\">") is None
+    assert parse_encoding("") is None
+
+
+def test_parse_title():
+    assert parse_title("<title>LiZeC的博客</title>") == "LiZeC的博客"
+
+    with pytest.raises(Exception):
+        assert parse_title("not a title")
+
+    with pytest.raises(Exception):
+        assert parse_title("")
+
+
+def test_download():
+    file = "data/logo.png"
+    if exists(file):
+        remove(file)
+
+    assert download("https://lizec.top/images/logo.png", "data") == file
