@@ -35,5 +35,6 @@ class TaskManager(threading.Thread):
         super().start()
 
     def run(self):
-        schedule.run_pending()
-        time.sleep(60)
+        while True:
+            schedule.run_pending()
+            time.sleep(60)
