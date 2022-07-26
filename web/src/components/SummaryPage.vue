@@ -66,7 +66,7 @@ export default {
       })
     },
     draw: function () {
-      const labels = [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+      const labels = getDateArray();
 
       const data = {
         labels: labels,
@@ -115,6 +115,26 @@ export default {
     },
   }
 }
+
+function getDateArray() {
+  let array = []
+  for (let i = 0; i < 15; i++) {
+    array.push(getDay(-i));
+  }
+
+  return array
+}
+
+function getDay(change) {
+  let today = new Date()
+  const target = today.getTime() + 1000 * 60 * 60 * 24 * change;
+
+  today.setTime(target)
+
+  return (today.getMonth() + 1) + "." + (today.getDate())
+}
+
+
 </script>
 
 <style scoped>
