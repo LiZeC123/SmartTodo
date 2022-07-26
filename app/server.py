@@ -13,7 +13,7 @@ from service4interpreter import OpInterpreter
 from tool4key import activate_key, create_time_key
 from tool4log import logger
 from tool4mail import send_daily_report
-from tool4stat import report, done_task_stat, undone_task_stat
+from tool4stat import report, done_task_stat, undone_task_stat, tomato_stat
 from tool4task import TaskManager
 from tool4time import now, today
 from tool4tomato import TomatoManager
@@ -217,6 +217,7 @@ class Manager:
             "done_task": done_task_stat(self.db, owner),
             "undone_task": undone_task_stat(self.db, owner),
             "undone_habit": [habit for habit in habits if habit['expected_tomato'] != habit['used_tomato']],
+            "tomato_task": tomato_stat(self.db, owner)
         }
 
     def mail_report(self, dry_run=False):

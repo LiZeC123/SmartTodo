@@ -38,6 +38,12 @@ def today() -> date:
     return now().date()
 
 
+def today_begin() -> datetime:
+    now_time = now()
+    return now_time - timedelta(hours=now_time.hour, minutes=now_time.minute, seconds=now_time.second,
+                                microseconds=now_time.microsecond)
+
+
 def this_year_str() -> str:
     return now().strftime("%Y")
 
@@ -94,4 +100,3 @@ def zero_time() -> datetime:
 if is_time_debug:
     # 对是否开启时间的DEBUG模式进行检测, 并给出警告
     logger.warning(f"Time API is in DEBUG mode and now is {now_str()}")
-

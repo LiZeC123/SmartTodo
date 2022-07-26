@@ -1,6 +1,6 @@
-from datetime import datetime, date, timedelta
+from datetime import timedelta
+
 import pytest
-import sqlalchemy as sal
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
@@ -225,13 +225,16 @@ def test_note():
 
 
 def test_tomato():
-    item = make_base_item("Tomato-A")
-    manager.create(item)
+    init_database()
+
+    item = manager.get_item_by_name("base_item", None, owner)[0]
+    # manager.create(item)
 
     # 设置和查询
     tid = manager.set_tomato_task(item.id, owner)
     query = manager.get_tomato_task(owner)
     assert query['name'] == item.name
+    assert manager.finish_tomato_task(tid - 1, item.id, owner) == False
     assert manager.finish_tomato_task(tid, item.id, owner)
 
     # 如果预计的已经消耗的番茄钟数量相等, 则自动增加预计的番茄钟
@@ -240,28 +243,32 @@ def test_tomato():
     assert query['name'] == item.name
     assert manager.finish_tomato_task(tid, item.id, owner)
 
+    item = manager.get_item_by_name("base_item", None, owner)[0]
+    assert item.expected_tomato == 2
+
     # 尝试取消任务
     tid = manager.set_tomato_task(item.id, owner)
     manager.undo_tomato_task(tid, item.id, owner)
     query = manager.get_tomato_task(owner)
     assert query['id'] == 0
+    item = manager.get_item_by_name("base_item", None, owner)[0]
+    # set操作自动增加expected_tomato
+    assert item.expected_tomato == 3
 
-    manager.increase_expected_tomato(item.id, owner)
+    # 执行手动完成操作
     tid = manager.set_tomato_task(item.id, owner)
     query = manager.get_tomato_task(owner)
     assert query['name'] == item.name
-
     manager.finish_tomato_task_manually(tid, item.id, owner)
     query = manager.get_tomato_task(owner)
     assert query['id'] == 0
 
+    # 利用上述数据测试报告生成功能
+    manager.mail_report(dry_run=True)
+
 
 def test_exec_function():
     manager.exec_function("gc", "now", None, owner)
-
-
-def test_mail():
-    manager.mail_report(dry_run=True)
 
 
 def test_base_manager():

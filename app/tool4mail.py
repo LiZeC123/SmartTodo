@@ -36,6 +36,12 @@ def send_daily_report(email, summary, dry_run=False):
             msg += f"<li>{task}</li>"
         msg += "</ul>"
 
+    if len(summary['tomato_task']) != 0:
+        msg += "<hr/><h4>番茄钟消耗统计</h4><ul>"
+        for task in summary['tomato_task']:
+            msg += f"<li>{task[0]}(消耗{task[1]}个番茄钟)</li>"
+        msg += "</ul>"
+
     msg += "<hr/><h4>其他事项</h4>"
     msg += "<p>请在规定的时间内完成今日的工作与思考总结, 并整理为文字资料.</p>"
 

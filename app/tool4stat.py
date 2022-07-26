@@ -6,7 +6,7 @@ import sqlalchemy as sal
 from sqlalchemy import func
 
 from entity import TomatoTaskRecord, Item, ItemType, TomatoType
-from tool4time import last_month, now
+from tool4time import last_month, now, today_begin
 
 Record = namedtuple("Record", ["start", "finish", "title", "extend"])
 
@@ -75,9 +75,8 @@ def report(db, owner: str) -> dict:
 
 
 def done_task_stat(db, owner: str) -> list:
-    stmt = sal.select(Item.name, func.count()).where(Item.owner == owner,
-                                                     Item.expected_tomato == Item.used_tomato).group_by(Item.name)
-    return db.execute(stmt).all()
+    stmt = sal.select(Item.name).where(Item.owner == owner, Item.expected_tomato == Item.used_tomato)
+    return db.execute(stmt).scalars().all()
 
 
 def undone_task_stat(db, owner: str) -> list:
@@ -87,8 +86,18 @@ def undone_task_stat(db, owner: str) -> list:
     return db.execute(stmt).scalars().all()
 
 
+def tomato_stat(db, owner: str) -> list:
+    stmt = sal.select(TomatoTaskRecord.name, func.count()) \
+        .where(TomatoTaskRecord.owner == owner, TomatoTaskRecord.start_time > today_begin()) \
+        .group_by(TomatoTaskRecord.name)
+
+    items = db.execute(stmt).all()
+    return list(sorted(items, key=lambda x: x[1], reverse=True))
+
+
 def local_report(db, owner: str):
     d = report(db, owner)
     print({"总体统计": d['total'], "今日数据": d['today'], "近15日数据": d['week']})
     print(f"已完成任务统计: {done_task_stat(db, owner)}")
     print(f"未完成任务统计: {undone_task_stat(db, owner)}")
+    print(f"番茄钟消耗统计: {tomato_stat(db, owner)}")
