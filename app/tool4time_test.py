@@ -4,8 +4,7 @@ import tool4time
 
 from tool4time import *
 
-tool4time.is_time_debug = True
-tool4time.debug_time = get_datetime_from_str("2022-7-5 15:00:00")
+tool4time.now = lambda: get_datetime_from_str("2022-7-5 15:00:00")
 
 
 def test_base():

@@ -1,25 +1,8 @@
 from datetime import datetime, date, timedelta
-import os
-
-from tool4log import logger
-
-is_time_debug = os.path.exists("data/database/time.debug")
-
-
-def get_debug_time() -> datetime:
-    if is_time_debug:
-        with open("data/database/time.debug") as f:
-            return datetime.strptime(f.readline(), "%Y-%m-%d %H:%M:%S")
-
-
-debug_time = get_debug_time()
 
 
 def now() -> datetime:
-    if is_time_debug:
-        return debug_time
-    else:
-        return datetime.now()
+    return datetime.now()
 
 
 def now_str() -> str:
@@ -95,8 +78,3 @@ def is_work_time():
 
 def zero_time() -> datetime:
     return datetime(2022, 2, 2, 2, 2)
-
-
-if is_time_debug:
-    # 对是否开启时间的DEBUG模式进行检测, 并给出警告
-    logger.warning(f"Time API is in DEBUG mode and now is {now_str()}")
