@@ -13,7 +13,7 @@ db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind
 Base.metadata.create_all(engine)
 manager = Manager(db_session)
 
-owner = "lizec"
+owner = "user"
 
 
 def make_base_item(name):
