@@ -103,15 +103,7 @@ export default {
 </script>
 
 <style scoped>
-#editor {
-  resize: vertical;
-  overflow: auto;
-  border: 1px solid silver;
-  border-radius: 5px;
-  min-height: 100px;
-  box-shadow: inset 0 0 10px silver;
-  padding: 1em;
-}
+
 
 
 </style>

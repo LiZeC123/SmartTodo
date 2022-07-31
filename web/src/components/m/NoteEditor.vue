@@ -66,7 +66,7 @@ export default {
     line: function (event) {
       this.insertHTML(event, '<hr />')
     },
-    note:function (event){
+    note: function (event) {
       this.insertHTML(event, '<blockquote class="quote"><b>Note</b>:</blockquote>')
     },
     insertHTML: function (event, content) {
@@ -105,6 +105,17 @@ export default {
 </script>
 
 <style>
+
+
+#editor {
+  resize: vertical;
+  overflow: auto;
+  border: 1px solid silver;
+  border-radius: 5px;
+  min-height: 100px;
+  box-shadow: inset 0 0 10px silver;
+  padding: 1em;
+}
 
 blockquote {
   position: relative;
