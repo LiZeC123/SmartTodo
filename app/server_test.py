@@ -177,7 +177,18 @@ def test_get_summary():
 
 
 def test_local_report():
+    init_database()
     local_report(db_session, owner)
+
+    items = manager.all_items(owner)['todayTask']
+    count = 0
+    for item in items:
+        if count % 2 == 0:
+            manager.increase_used_tomato(item['id'], owner)
+        count += 1
+
+    daily_report = gen_daily_report(db_session, owner)
+    print(daily_report)
 
 
 class MockFile:

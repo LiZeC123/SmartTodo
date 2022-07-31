@@ -13,7 +13,7 @@ from service4interpreter import OpInterpreter
 from tool4key import activate_key, create_time_key
 from tool4log import logger
 from tool4mail import send_daily_report
-from tool4stat import report, done_task_stat, undone_task_stat, tomato_stat
+from tool4stat import report, done_task_stat, undone_task_stat, tomato_stat, gen_daily_report
 from tool4task import TaskManager
 from tool4time import now, today
 from tool4tomato import TomatoManager
@@ -223,6 +223,9 @@ class Manager:
     def mail_report(self, dry_run=False):
         for user, email in config.get_mail_users():
             send_daily_report(email, self.get_mail_report_data(user), dry_run)
+
+    def get_daily_report(self, owner):
+        return gen_daily_report(self.db, owner)
 
 
 class BaseManager:

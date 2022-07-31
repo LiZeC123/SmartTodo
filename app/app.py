@@ -121,6 +121,13 @@ def get_summary():
     return manager.get_summary(owner)
 
 
+@app.route('/api/item/dailyReport', methods=['GET'])
+@logged
+def get_daily_report():
+    owner: str = get_owner_from_request()
+    return manager.get_daily_report(owner)
+
+
 @app.route('/api/item/back', methods=['POST'])
 @logged
 def back_item() -> bool:

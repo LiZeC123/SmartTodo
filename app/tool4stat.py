@@ -95,6 +95,23 @@ def tomato_stat(db, owner: str) -> list:
     return list(sorted(items, key=lambda x: x[1], reverse=True))
 
 
+def gen_daily_report(db, owner):
+    msg = f"{now().strftime('%Y/%m/%d')} 日报\n"
+    msg += "--------------------------\n"
+    msg += "\n"
+    msg += "### 今日主要工作\n"
+    for item in done_task_stat(db, owner):
+        msg += f"- {item}\n"
+
+    msg += "\n"
+    msg += "### 明日规划\n"
+    for item in undone_task_stat(db, owner):
+        msg += f"- {item}\n"
+    msg += "\n"
+
+    return msg
+
+
 def local_report(db, owner: str):
     d = report(db, owner)
     print({"总体统计": d['total'], "今日数据": d['today'], "近15日数据": d['week']})

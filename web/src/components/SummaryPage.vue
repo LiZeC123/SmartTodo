@@ -10,15 +10,19 @@
 
     <item-list title="打卡统计" :btn-config="[]" :data="habitSummary"></item-list>
 
+    <h2>日报框架</h2>
+    <MessageBox :message="dailyReport"> </MessageBox>
+
   </div>
 </template>
 
 <script>
 import ItemList from "@/components/m/ItemList";
+import MessageBox from "@/components/m/MessageBox";
 
 export default {
   name: "SummaryPage",
-  components: {ItemList},
+  components: {MessageBox, ItemList},
   props: {
     updateTodo: Number,
   },
@@ -37,7 +41,8 @@ export default {
         },
         week: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       },
-      habitSummary: []
+      habitSummary: [],
+      dailyReport: "",
     }
   },
   mounted() {
@@ -63,6 +68,11 @@ export default {
         this.habitSummary = res.data.habit
 
         this.draw()
+      })
+
+      this.axios.get("/item/dailyReport").then(res => {
+        console.log(res)
+        this.dailyReport = res.data
       })
     },
     draw: function () {
