@@ -127,6 +127,14 @@ export default {
       if (item.deadline) {
         // 截止日期只展示日期部分
         showName = "【" + item.deadline.split(" ")[0] + "】" + showName
+        const dd = (new Date(item.deadline)) - (new Date());
+        const hour = (dd / (1000 * 60 * 60)).toFixed(1)
+
+        // 非常接近的任务则显示具体的剩余时间
+        if (hour < 100) {
+          showName = "【剩余" + hour + "小时】" + showName
+        }
+
       }
 
       if (item.habit_expected && item.habit_expected !== 0) {
