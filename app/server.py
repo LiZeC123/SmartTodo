@@ -192,6 +192,7 @@ class Manager:
         items = self.db.execute(stmt).scalars().all()
         for item in items:
             item.used_tomato = 0
+            item.tomato_type = TomatoType.Today
             logger.info(f"重置可重复任务: {item.name}")
         self.db.commit()
 
