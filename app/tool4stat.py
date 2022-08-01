@@ -97,11 +97,11 @@ def tomato_stat(db, owner: str) -> list:
 
 def gen_daily_report(db, owner):
     msg = f"{now().strftime('%Y/%m/%d')} 日报\n"
-    msg += "--------------------------\n"
+    msg += "------------------\n"
     msg += "\n"
     msg += "### 今日主要工作\n"
-    for item in done_task_stat(db, owner):
-        msg += f"- {item}\n"
+    for item in tomato_stat(db, owner):
+        msg += f"- {item[0]}\n"
 
     msg += "\n"
     msg += "### 明日规划\n"
