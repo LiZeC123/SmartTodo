@@ -100,7 +100,10 @@ export default {
         let delta = new Date(item.deadline) - new Date()
         const dayMs = 24 * 60 * 60 * 1000
         let urgent = Math.ceil(delta / dayMs)
-        if (urgent > 0 && urgent <= 4) {
+
+        if (urgent <= 1) {
+          return "specific-1"
+        } else if (urgent <= 4) {
           return "specific-" + urgent
         }
       }
