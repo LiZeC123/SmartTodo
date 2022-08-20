@@ -279,7 +279,8 @@ def test_tomato():
 
     # 利用上述数据测试报告生成功能
     manager.report_manager.send_mail = mock_send_mail
-    manager.mail_report()
+    manager.send_daily_report()
+    manager.send_weekly_report()
 
 
 def test_exec_function():

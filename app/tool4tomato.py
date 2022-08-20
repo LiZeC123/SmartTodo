@@ -7,7 +7,7 @@ import sqlalchemy as sal
 from sqlalchemy import func
 
 from entity import Item, TomatoTaskRecord
-from tool4time import now, parse_timestamp, last_month, today_begin
+from tool4time import now, parse_timestamp, last_month, today_begin, this_week_begin
 
 Task = namedtuple("Task", ["tid", "id", "name", "start", "finished"])
 
@@ -68,7 +68,7 @@ class TomatoManager:
     def get_task_tid(self, owner: str) -> int:
         return self.state[owner].tid
 
-    def get_task_xid(self,  owner: str) -> int:
+    def get_task_xid(self, owner: str) -> int:
         return self.state[owner].id
 
     def match(self, tid: int, xid: int, owner: str):
@@ -91,11 +91,21 @@ class TomatoRecordManager:
 
     def get_tomato_stat(self, owner):
         d = self.__load_data(self.db, owner)
-        return {"total": self.__total_stat(d), "today": self.__today_stat(d), "week": self.__week_stat(d)}
+        return {"total": self.__total_stat(d), "today": self.__today_stat(d), "week": self.__week_chat_stat(d)}
+
+    def get_daily_stat(self, owner):
+        d = self.__load_data(self.db, owner)
+        return self.__today_stat(d)
 
     def select_today_tomato(self, owner: str) -> list:
+        return self.__select_tomato_before(owner, today_begin())
+
+    def select_week_tomato(self, owner: str) -> list:
+        return self.__select_tomato_before(owner, this_week_begin())
+
+    def __select_tomato_before(self, owner: str, time):
         stmt = sal.select(TomatoTaskRecord.name, func.count()) \
-            .where(TomatoTaskRecord.owner == owner, TomatoTaskRecord.start_time > today_begin()) \
+            .where(TomatoTaskRecord.owner == owner, TomatoTaskRecord.start_time > time) \
             .group_by(TomatoTaskRecord.name)
 
         items = self.db.execute(stmt).all()
@@ -146,7 +156,7 @@ class TomatoRecordManager:
         }
 
     @staticmethod
-    def __week_stat(data: List[TomatoTaskRecord]) -> list:
+    def __week_chat_stat(data: List[TomatoTaskRecord]) -> list:
         WEEK_LENGTH = 15
         today = now().date()
         counts = [timedelta() for _ in range(WEEK_LENGTH)]

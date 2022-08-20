@@ -37,10 +37,11 @@ class Manager:
         self.__init_task()
 
     def __init_task(self):
-        self.task_manager.add_task("垃圾回收", self.garbage_collection, "01:00")
-        self.task_manager.add_task("重置可重复任务", self.reset_daily_task, "01:30")
-        self.task_manager.add_task("重置未完成的今日任务", self.reset_today_task, "01:35")
-        self.task_manager.add_task("发送每日总结邮件", self.mail_report, "22:30")
+        self.task_manager.add_daily_task("垃圾回收", self.garbage_collection, "01:00")
+        self.task_manager.add_daily_task("重置可重复任务", self.reset_daily_task, "01:30")
+        self.task_manager.add_daily_task("重置未完成的今日任务", self.reset_today_task, "01:35")
+        self.task_manager.add_daily_task("发送每日总结邮件", self.send_daily_report, "22:30")
+        self.task_manager.add_sunday_task("发送每周总结邮件", self.send_weekly_report, "11:00")
         self.task_manager.start()
 
     def check_authority(self, xid: int, owner: str):
@@ -205,9 +206,13 @@ class Manager:
     def exec_function(self, command: str, data: str, parent: Optional[int], owner: str):
         self.op.exec_function(command, data, parent, owner)
 
-    def mail_report(self):
+    def send_daily_report(self):
         for owner, email in config.get_mail_users():
             self.report_manager.send_daily_report(owner, email)
+
+    def send_weekly_report(self):
+        for owner, email in config.get_mail_users():
+            self.report_manager.send_weekly_report(owner, email)
 
     def get_daily_report(self, owner):
         return self.report_manager.get_daily_report(owner)

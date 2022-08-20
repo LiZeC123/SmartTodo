@@ -27,6 +27,12 @@ def today_begin() -> datetime:
                                 microseconds=now_time.microsecond)
 
 
+def this_week_begin() -> datetime:
+    now_time = now()
+    return now_time - timedelta(days=now_time.weekday(), hours=now_time.hour, minutes=now_time.minute,
+                                seconds=now_time.second, microseconds=now_time.microsecond)
+
+
 def this_year_str() -> str:
     return now().strftime("%Y")
 

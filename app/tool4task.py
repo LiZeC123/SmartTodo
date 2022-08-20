@@ -27,8 +27,12 @@ class TaskManager(threading.Thread):
         self.HALF_HOUR_SEC = 30 * 60
 
     @staticmethod
-    def add_task(name, task, hour: str):
+    def add_daily_task(name, task, hour: str):
         schedule.every().day.at(hour).do(make_task(name, task))
+
+    @staticmethod
+    def add_sunday_task(name, task, hour: str):
+        schedule.every().sunday.at(hour).do(make_task(name, task))
 
     def start(self) -> None:
         self.daemon = True

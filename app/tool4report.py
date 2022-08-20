@@ -30,7 +30,7 @@ class ReportSummary:
         self.tomato_task = tomato_task
 
 
-def render_mail_message(summary: ReportSummary) -> str:
+def render_daily_mail_message(summary: ReportSummary) -> str:
     msg = f"<p>亲爱的{summary.username}，以下是您的{summary.title}：</p>"
     msg += "<h4>总体情况统计</h4>"
     msg += f"<ul><li>今日完成番茄钟数量: {summary.today_tomato_count}个</li>"
@@ -63,6 +63,21 @@ def render_mail_message(summary: ReportSummary) -> str:
 
     msg += "<hr/><h4>其他事项</h4>"
     msg += "<p>请在规定的时间内完成今日的工作与思考总结, 并整理为文字资料.</p>"
+
+    return msg
+
+
+def render_weekly_mail_report(summary: ReportSummary) -> str:
+    msg = f"<p>亲爱的{summary.username}，以下是您的{summary.title}：</p>"
+
+    if len(summary.tomato_task) != 0:
+        msg += "<hr/><h4>本周番茄钟消耗统计</h4><ul>"
+        for task in summary.tomato_task:
+            msg += f"<li>{task[0]}(消耗{task[1]}个番茄钟)</li>"
+        msg += "</ul>"
+
+    msg += "<hr/><h4>其他事项</h4>"
+    msg += "<p>请在规定的时间内完成本周的工作与思考总结, 并整理为文字资料.</p>"
 
     return msg
 
@@ -108,12 +123,19 @@ class ReportManager:
         }
 
     def send_daily_report(self, owner: str, email_address: str):
-        stat = self.tomato_record_manager.get_tomato_stat(owner)
+        stat = self.tomato_record_manager.get_daily_stat(owner)
         summary = ReportSummary(owner, "SmartTodo日报")
-        summary.set_tomato_stat(stat['today']['count'], stat['today']['minute'])
+        summary.set_tomato_stat(stat['count'], stat['minute'])
         summary.set_task(self.item_manager.select_undone_item(owner), self.item_manager.select_done_item(owner))
         summary.set_habit(self.item_manager.select_habit(owner))
         summary.set_tomato_task(self.tomato_record_manager.select_today_tomato(owner))
 
-        message = render_mail_message(summary)
+        message = render_daily_mail_message(summary)
+        self.send_mail(summary.title, message, email_address)
+
+    def send_weekly_report(self, owner: str, email_address: str):
+        summary = ReportSummary(owner, "SmartTodo周报")
+        summary.set_tomato_task(self.tomato_record_manager.select_week_tomato(owner))
+
+        message = render_weekly_mail_report(summary)
         self.send_mail(summary.title, message, email_address)
