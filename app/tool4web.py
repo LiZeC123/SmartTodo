@@ -33,13 +33,7 @@ def extract_title(url: str) -> str:
     try:
         r = requests.get(url, timeout=timeout, headers=headers)
         r.raise_for_status()  # 判断状态
-
-        encoding = parse_encoding(r.text)
-        if encoding:
-            r.encoding = encoding
-        else:
-            r.encoding = r.apparent_encoding
-
+        r.encoding = parse_encoding(r.text, r.apparent_encoding)
         title = parse_title(r.text)
         return title
     except HTTPError:
@@ -51,9 +45,9 @@ def extract_title(url: str) -> str:
         return url
 
 
-def parse_encoding(text: str) -> str:
+def parse_encoding(text: str, apparent_encoding: str) -> str:
     match = encoding_pattern.search(text)
-    encoding = None
+    encoding = apparent_encoding
     if match:
         encoding = match.group(1)
         encoding = encoding.replace('"', "").replace("'", "").strip()

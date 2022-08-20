@@ -21,9 +21,9 @@ def test_extract_title():
 
 
 def test_parse_encoding():
-    assert parse_encoding("<meta charset=\"utf-8\">") == 'utf-8'
-    assert parse_encoding("<meta name=\"viewport\" content=\"width=device-width\">") is None
-    assert parse_encoding("") is None
+    assert parse_encoding("<meta charset=\"utf-8\">", 'gbk') == 'utf-8'
+    assert parse_encoding("<meta name=\"viewport\" content=\"width=device-width\">", 'utf-8') == 'utf-8'
+    assert parse_encoding("", 'gbk') == 'gbk'
 
 
 def test_parse_title():
