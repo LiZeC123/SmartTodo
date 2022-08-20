@@ -16,26 +16,6 @@ mock = DaoMock()
 owner = "user"
 
 
-def try_inc(m: TomatoManager, lst: list):
-    time.sleep(0.01 * random.random())
-    lst.append(m.inc())
-
-
-def test_inc():
-    m = TomatoManager(mock)
-    lst = []
-
-    threads = [threading.Thread(target=try_inc, args=(m, lst)) for _ in range(15)]
-    for thread in threads:
-        thread.start()
-
-    for thread in threads:
-        thread.join()
-
-    for i in range(15):
-        assert (i + 1) in lst
-
-
 def test_start_and_query():
     m = TomatoManager(mock)
     items = [Item(id=i, name=f"Test-{i}") for i in range(2)]
@@ -44,6 +24,17 @@ def test_start_and_query():
     assert query['id'] == 0
     assert query['tid'] == 0
 
+    tid = m.start_task(items[0], owner)
+    query = m.get_task("user")
+    assert query['id'] == items[0].id
+    assert query['tid'] == tid
+
+    tid = m.start_task(items[1], owner)
+    query = m.get_task("user")
+    assert query['id'] == items[1].id
+    assert query['tid'] == tid
+
+    m.finish_task(tid, items[1].id, owner)
     tid = m.start_task(items[0], owner)
     query = m.get_task("user")
     assert query['id'] == items[0].id

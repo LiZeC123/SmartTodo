@@ -20,38 +20,51 @@ class TomatoManager:
         self.tid = 0
         self.lock = threading.Lock()
 
-    def inc(self):
-        with self.lock:
-            self.tid += 1
-            return self.tid
-
     def start_task(self, item: Item, owner: str):
-        tid = self.inc()
-        self.state[owner] = make_task(tid=tid, xid=item.id, name=item.name, start_time=now().timestamp(),
-                                      finished=False)
-        return tid
+        with self.lock:
+            tid = self.__inc()
+            current_task = self.state[owner]
+            if current_task.tid != 0:
+                if not current_task.finished:
+                    self.__finish_task(current_task.tid, current_task.id, owner)
+                else:
+                    self.__clean_task(current_task.tid, current_task.id, owner)
+
+            self.state[owner] = make_task(tid=tid, xid=item.id, name=item.name, start_time=now().timestamp(),
+                                          finished=False)
+            return tid
+
+    def __inc(self):
+        self.tid += 1
+        return self.tid
 
     def finish_task(self, tid: int, xid: int, owner: str) -> bool:
         with self.lock:
-            if self.match(tid, xid, owner):
-                if not self.state[owner].finished:
-                    self.__insert_record(owner)
-                    self.state[owner] = self.state[owner]._replace(finished=True)
-                    return True
-            return False
+            return self.__finish_task(tid, xid, owner)
+
+    def __finish_task(self, tid: int, xid: int, owner: str) -> bool:
+        if self.match(tid, xid, owner):
+            if not self.state[owner].finished:
+                self.__insert_record(owner)
+                self.state[owner] = self.state[owner]._replace(finished=True)
+                return True
+        return False
 
     def clear_task(self, tid: int, xid: int, owner: str) -> bool:
         with self.lock:
-            if self.match(tid, xid, owner):
-                self.state.pop(owner)
-                return True
-            return False
+            return self.__clean_task(tid, xid, owner)
+
+    def __clean_task(self, tid: int, xid: int, owner: str) -> bool:
+        if self.match(tid, xid, owner):
+            self.state.pop(owner)
+            return True
+        return False
 
     def get_task(self, owner: str):
         return self.state[owner]._asdict()
 
     def match(self, tid: int, xid: int, owner: str):
-        return owner in self.state and self.state[owner].id == xid and self.state[owner].tid == tid
+        return self.state[owner].id == xid and self.state[owner].tid == tid
 
     def __insert_record(self, owner: str):
         state = self.state[owner]
