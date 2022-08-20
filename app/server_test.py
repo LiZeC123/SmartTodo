@@ -6,7 +6,6 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 
 from entity import Base
 from server import *
-from tool4stat import local_report
 
 engine = create_engine('sqlite://', echo=True, future=True)
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
@@ -178,16 +177,16 @@ def test_get_summary():
 
 def test_local_report():
     init_database()
-    local_report(db_session, owner)
 
     items = manager.all_items(owner)['todayTask']
+
     count = 0
     for item in items:
         if count % 2 == 0:
-            manager.increase_used_tomato(item['id'], owner)
+            manager.set_tomato_task(item['id'], owner)
         count += 1
 
-    daily_report = gen_daily_report(db_session, owner)
+    daily_report = manager.get_daily_report(owner)
     print(daily_report)
 
 
@@ -235,6 +234,10 @@ def test_note():
     manager.note_manager.remove(note)
 
 
+def mock_send_mail(title, msg, res):
+    print(f"To {res} With {title}\n{msg}")
+
+
 def test_tomato():
     init_database()
 
@@ -275,18 +278,9 @@ def test_tomato():
     assert query['id'] == 0
 
     # 利用上述数据测试报告生成功能
-    manager.mail_report(dry_run=True)
+    manager.report_manager.send_mail = mock_send_mail
+    manager.mail_report()
 
 
 def test_exec_function():
     manager.exec_function("gc", "now", None, owner)
-
-
-def test_base_manager():
-    m = BaseManager()
-
-    with pytest.raises(NotImplementedError):
-        m.create(Item())
-
-    with pytest.raises(NotImplementedError):
-        m.remove(Item())

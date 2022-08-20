@@ -11,7 +11,6 @@ from exception import UnauthorizedException
 from server import Manager
 from service4config import ConfigManager
 from tool4log import logger, Log_File
-from tool4stat import load_data
 from tool4time import parse_deadline_timestamp
 from tool4token import TokenManager
 
@@ -314,11 +313,11 @@ def is_admin():
     return config.is_admin_user(username)
 
 
-@app.route("/api/log/tomato", methods=["GET"])
-@logged(role='ROLE_ADMIN')
-def get_tomato_log():
-    owner = get_owner_from_request()
-    return "\n".join(map(str, load_data(db_session, owner=owner, limit=20)))
+# @app.route("/api/log/tomato", methods=["GET"])
+# @logged(role='ROLE_ADMIN')
+# def get_tomato_log():
+#     owner = get_owner_from_request()
+#     return "\n".join(map(str, load_data(db_session, owner=owner, limit=20)))
 
 
 @app.route("/api/log/log", methods=["GET"])

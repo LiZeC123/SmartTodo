@@ -1,8 +1,13 @@
 import threading
 from collections import defaultdict, namedtuple
+from datetime import timedelta
+from typing import List
+
+import sqlalchemy as sal
+from sqlalchemy import func
 
 from entity import Item, TomatoTaskRecord
-from tool4time import now, parse_timestamp
+from tool4time import now, parse_timestamp, last_month, today_begin
 
 Task = namedtuple("Task", ["tid", "id", "name", "start", "finished"])
 
@@ -72,3 +77,81 @@ class TomatoManager:
                                   owner=owner, name=state.name)
         self.db.add(record)
         self.db.commit()
+
+
+Record = namedtuple("Record", ["start", "finish", "title", "extend"])
+
+
+class TomatoRecordManager:
+    def __init__(self, db):
+        self.db = db
+
+    def get_tomato_stat(self, owner):
+        d = self.__load_data(self.db, owner)
+        return {"total": self.__total_stat(d), "today": self.__today_stat(d), "week": self.__week_stat(d)}
+
+    def select_today_tomato(self, owner: str) -> list:
+        stmt = sal.select(TomatoTaskRecord.name, func.count()) \
+            .where(TomatoTaskRecord.owner == owner, TomatoTaskRecord.start_time > today_begin()) \
+            .group_by(TomatoTaskRecord.name)
+
+        items = self.db.execute(stmt).all()
+        return list(sorted(items, key=lambda x: x[1], reverse=True))
+
+    @staticmethod
+    def __load_data(db, owner: str, limit: int = 200) -> List[TomatoTaskRecord]:
+        stmt = sal.select(TomatoTaskRecord).where(TomatoTaskRecord.owner == owner,
+                                                  TomatoTaskRecord.finish_time > last_month()) \
+            .order_by(TomatoTaskRecord.id.desc()).limit(limit)
+        return db.execute(stmt).scalars().all()
+
+    @staticmethod
+    def __total_stat(data: List[TomatoTaskRecord]) -> dict:
+        time = timedelta()
+        for record in data:
+            time += (record.finish_time - record.start_time)
+
+        elapsed_day = 1
+        count = len(data)
+        if count >= 2:
+            first_time = data[-1].start_time
+            last_time = data[0].finish_time
+            elapsed_day = (last_time - first_time).days + 1
+
+        average_time = time.total_seconds() / elapsed_day
+
+        return {
+            "count": count,
+            "hour": int(time.total_seconds() / 60 / 60),
+            "average": int(average_time / 60)
+        }
+
+    @staticmethod
+    def __today_stat(data: List[TomatoTaskRecord]) -> dict:
+        today = now().date()
+        count = 0
+        time = timedelta()
+        for record in data:
+            start = record.start_time
+            finish = record.finish_time
+            if start.date() == today:
+                count += 1
+                time += (finish - start)
+        return {
+            "count": count,
+            "minute": int(time.total_seconds() / 60)
+        }
+
+    @staticmethod
+    def __week_stat(data: List[TomatoTaskRecord]) -> list:
+        WEEK_LENGTH = 15
+        today = now().date()
+        counts = [timedelta() for _ in range(WEEK_LENGTH)]
+        for record in data:
+            start = record.start_time
+            finish = record.finish_time
+            delta = (today - start.date()).days
+            if delta < WEEK_LENGTH:
+                counts[delta] += (finish - start)
+
+        return list(map(lambda time: int(time.total_seconds() / 60), counts))
