@@ -12,8 +12,6 @@ def make_task(tid=0, xid=0, name="当前无任务", start_time=0.0, finished=Tru
 
 
 class TomatoManager:
-    DATABASE_FOLDER = "data/database"
-
     def __init__(self, db):
         self.db = db
         self.state = defaultdict(make_task)

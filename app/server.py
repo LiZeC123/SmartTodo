@@ -1,7 +1,6 @@
 import os
 from collections import defaultdict
-from os import mkdir
-from os.path import join, exists
+from os.path import join
 from typing import Optional, List
 
 import sqlalchemy as sal
@@ -309,11 +308,6 @@ class FileItemManager(BaseManager):
 
     def __init__(self, m: ItemManager):
         self.manager = m
-        self.__init_folder()
-
-    def __init_folder(self):
-        if not exists(self._FILE_FOLDER):
-            mkdir(self._FILE_FOLDER)
 
     def create(self, item: Item) -> Item:
         """从指定的URL下载文件到服务器"""
@@ -339,9 +333,6 @@ class FileItemManager(BaseManager):
             # 对于文件没有找到这种情况, 可以删除记录
             logger.warning(f"{FileItemManager.__name__}: File Not Found: {filename}")
             self.manager.remove(item)
-        except OSError:
-            # 其他的异常情况下, 则保留记录
-            logger.exception(f"{FileItemManager.__name__}: Fail To Remove the File: {filename}")
 
 
 class NoteItemManager(BaseManager):
@@ -349,8 +340,6 @@ class NoteItemManager(BaseManager):
 
     def __init__(self, m: ItemManager):
         self.manager = m
-        if not exists(NoteItemManager._NOTE_FOLDER):
-            mkdir(NoteItemManager._NOTE_FOLDER)
 
     def create(self, item: Item) -> Item:
         item = self.manager.create(item)
@@ -367,8 +356,6 @@ class NoteItemManager(BaseManager):
         except FileNotFoundError:
             logger.warning(f"{NoteItemManager.__name__}: Note Not Found: {nid}")
             self.manager.remove(item)
-        except OSError:
-            logger.exception(f"{NoteItemManager.__name__}: Fail To Remove Note: {nid}")
 
     @staticmethod
     def get(nid: int) -> str:
