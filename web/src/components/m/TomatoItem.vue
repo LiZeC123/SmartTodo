@@ -16,11 +16,9 @@
 
 <script>
 
-const resetTime = 5 * 60
-const tomatoTime = 25 * 60
-
-const resetTimeMS = 1000 * resetTime
-const tomatoTomeMS = 1000 * tomatoTime
+const OneMinuteMS = 60 * 1000
+const resetTimeMS = 5 * OneMinuteMS
+const tomatoTimeMS = 25 * OneMinuteMS
 
 export default {
   name: "TomatoPage",
@@ -95,9 +93,8 @@ export default {
       }
     },
     updateTomato: function () {
-      const tsStart = this.startTime
       let tsNow = new Date().getTime()
-      let delta = tsNow - tsStart
+      let elapsedMs = tsNow - this.startTime
 
       // 没有任务的情况
       if (this.taskId === 0) {
@@ -107,9 +104,9 @@ export default {
       }
 
       // 不超过一个番茄钟时间, 直接设置状态并返回
-      if (delta < tomatoTomeMS) {
+      if (elapsedMs < tomatoTimeMS) {
         this.stage = "FOCUS"
-        this.timeSeconds = Math.floor((tomatoTomeMS - delta) / 1000)
+        this.timeSeconds = Math.floor((tomatoTimeMS - elapsedMs) / 1000)
         return;
       }
 
@@ -119,9 +116,9 @@ export default {
       }
 
       // 不超过休息时间, 则正常设置休息状态并返回
-      if (delta < tomatoTomeMS + resetTimeMS) {
+      if (elapsedMs < tomatoTimeMS + resetTimeMS) {
         this.stage = "REST"
-        this.timeSeconds = Math.floor((tomatoTomeMS + resetTimeMS - delta) / 1000)
+        this.timeSeconds = Math.floor((tomatoTimeMS + resetTimeMS - elapsedMs) / 1000)
         return;
       }
 
