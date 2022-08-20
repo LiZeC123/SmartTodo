@@ -1,8 +1,9 @@
+import logging
 from typing import Optional
 
 from entity import Item, ItemType, TomatoType
 from tool4log import logger
-from tool4time import now_str_fn
+from tool4time import now_str_fn, the_day_after
 
 
 class OpInterpreter:
@@ -19,7 +20,7 @@ class OpInterpreter:
     def instance_backup(self, parent: int, owner: str):
         import shutil
         name = f"SmartTodo_Database({now_str_fn()})"
-        shutil.make_archive(f"data/filebase/{name}", 'zip', "data/database")
+        n = shutil.make_archive(f"data/filebase/{name}", 'zip', "data/database")
         item = Item(name=f"{name}.zip", item_type=ItemType.File, owner=owner, parent=parent, url=f"/file/{name}.zip")
         self.manager.item_manager.create(item)
 
@@ -53,7 +54,23 @@ class OpInterpreter:
         item.repeatable = True
         self.manager.create(item)
 
-    def exec_function(self, command: str, data: str, parent: int, owner: str):
+    def renew(self, name: str, renew_day: int, parent: int, owner: str):
+        if name is None:
+            logging.error("Renew指令的name不可为空")
+            return
+
+        item = self.get_item_by_name(name, parent, owner)
+        if item is None:
+            return
+
+        if item.deadline is None:
+            logging.error("需要renew的Item必须已经指定截止日期")
+            return
+
+        item.deadline = the_day_after(item.deadline, renew_day)
+        self.manager.db.commit()
+
+    def exec_function(self, command: str, data: str, parent: Optional[int], owner: str):
         logger.info(f"执行指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
         if command == "m":
             return self.batch_create_item(data, parent, owner)
@@ -69,6 +86,9 @@ class OpInterpreter:
             return self.split_item_with_subtask(name, subtasks, parent, owner)
         elif command == "habit":
             self.create_habit(data, parent, owner)
+        elif command == "renew":
+            name, renew_day = parse_renew_data(data)
+            self.renew(name, renew_day, parent, owner)
         else:
             logger.error(f"未知的指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
 
@@ -126,3 +146,12 @@ def parse_habit_data(data):
     except (ValueError, IndexError):
         return None, -1
 
+
+def parse_renew_data(data):
+    try:
+        elem = list(filter(not_empty, data.split(" ")))
+        name = elem[0]
+        renew_day = int(elem[1])
+        return name, renew_day
+    except (ValueError, IndexError):
+        return None, 0

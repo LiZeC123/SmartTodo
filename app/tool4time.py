@@ -47,6 +47,10 @@ def last_month() -> datetime:
     return now() - timedelta(days=30)
 
 
+def the_day_after(day: datetime, after_day: int):
+    return day + timedelta(days=after_day)
+
+
 # ################################# API For Server ################################# #
 
 def parse_timestamp(timestamp: float) -> datetime:
