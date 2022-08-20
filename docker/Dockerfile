@@ -30,10 +30,9 @@ COPY --from=build-stage /app/dist /web
 COPY docker/nginx.conf /etc/nginx/
 
 # 复制项目代码到容器的app目录
-RUN mkdir -p data/database data/log data/notebase data/filebase
 COPY app .
 
-VOLUME [ "/app/config", "/app/data"]
+VOLUME [ "/app/config", "/app/data/database", "/app/data/notebase", "/app/data/filebase", "/app/data/log"]
 
 EXPOSE 80
 
