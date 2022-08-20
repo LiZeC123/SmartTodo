@@ -28,13 +28,6 @@ class TomatoManager:
     def start_task(self, item: Item, owner: str):
         with self.lock:
             tid = self.__inc()
-            current_task = self.state[owner]
-            if current_task.tid != 0:
-                if not current_task.finished:
-                    self.__finish_task(current_task.tid, current_task.id, owner)
-                else:
-                    self.__clean_task(current_task.tid, current_task.id, owner)
-
             self.state[owner] = make_task(tid=tid, xid=item.id, name=item.name, start_time=now().timestamp(),
                                           finished=False)
             return tid
@@ -67,6 +60,16 @@ class TomatoManager:
 
     def get_task(self, owner: str):
         return self.state[owner]._asdict()
+
+    def has_task(self, owner) -> bool:
+        current_task = self.state[owner]
+        return current_task.tid != 0
+
+    def get_task_tid(self, owner: str) -> int:
+        return self.state[owner].tid
+
+    def get_task_xid(self,  owner: str) -> int:
+        return self.state[owner].id
 
     def match(self, tid: int, xid: int, owner: str):
         return self.state[owner].id == xid and self.state[owner].tid == tid

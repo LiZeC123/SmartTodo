@@ -159,6 +159,11 @@ class Manager:
         if item.used_tomato == item.expected_tomato:
             self.increase_expected_tomato(xid, owner)
 
+        if self.tomato_manager.has_task(owner):
+            tid = self.tomato_manager.get_task_tid(owner)
+            xid = self.tomato_manager.get_task_xid(owner)
+            self.finish_tomato_task_manually(tid, xid, owner)
+
         return self.tomato_manager.start_task(item, owner)
 
     def get_tomato_task(self, owner: str):
