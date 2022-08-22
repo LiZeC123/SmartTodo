@@ -90,7 +90,7 @@ class TomatoRecordManager:
         self.db = db
 
     def get_tomato_stat(self, owner):
-        d = self.__load_data(self.db, owner)
+        d = self.__load_data(owner)
         return {"total": self.__total_stat(d), "today": self.__today_stat(d), "week": self.__week_chat_stat(d)}
 
     def get_daily_stat(self, owner):

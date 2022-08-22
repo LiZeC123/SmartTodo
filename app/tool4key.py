@@ -6,10 +6,10 @@ def activate_key(item: Item):
     value = item.create_time.timestamp()
     day_second = 60 * 60 * 24
 
-    if item.specific != 0:
-        # 由于特定任务只能在某一天完成, 因此具有最高优先级
-        value = now_stamp()
-        value += 100 * day_second
+    # if item.specific != 0:
+    #     # 由于特定任务只能在某一天完成, 因此具有最高优先级
+    #     value = now_stamp()
+    #     value += 100 * day_second
     if item.deadline is not None:
         # deadline属性的任务比较剩余时间
         # 首先消除创建时间的分值, 统一使用当前时间

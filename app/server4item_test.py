@@ -190,6 +190,7 @@ def test_all_items():
     base_note_item = make_note_item("test_all_items_base")
     today_item = make_base_item("test_all_items_today")
     base_note_item.tomato_type = TomatoType.Activate
+    base_note_item.deadline = now()
     manager.create(base_note_item)
     manager.create(today_item)
 

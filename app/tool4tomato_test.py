@@ -20,23 +20,23 @@ def test_start_and_query():
     m = TomatoManager(mock)
     items = [Item(id=i, name=f"Test-{i}") for i in range(2)]
 
-    query = m.get_task("user")
+    query = m.get_task(owner)
     assert query['id'] == 0
     assert query['tid'] == 0
 
     tid = m.start_task(items[0], owner)
-    query = m.get_task("user")
-    assert query['id'] == items[0].id
-    assert query['tid'] == tid
+    assert m.has_task(owner)
+    assert m.get_task_tid(owner) == tid
+    assert m.get_task_xid(owner) == items[0].id
 
     tid = m.start_task(items[1], owner)
-    query = m.get_task("user")
+    query = m.get_task(owner)
     assert query['id'] == items[1].id
     assert query['tid'] == tid
 
     m.finish_task(tid, items[1].id, owner)
     tid = m.start_task(items[0], owner)
-    query = m.get_task("user")
+    query = m.get_task(owner)
     assert query['id'] == items[0].id
     assert query['tid'] == tid
 
