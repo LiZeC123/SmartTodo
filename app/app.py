@@ -9,10 +9,8 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from entity import Item, Base
 from exception import UnauthorizedException
 from server import Manager
-from service4config import ConfigManager
-from tool4log import logger, Log_File
+from tool4log import logger
 from tool4time import parse_deadline_timestamp
-from tool4token import TokenManager
 
 app = Flask(__name__)
 
@@ -22,8 +20,6 @@ db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind
 Base.metadata.create_all(engine)
 
 manager = Manager(db_session)
-token_manager = TokenManager()
-config = ConfigManager()
 
 
 def make_result(data) -> str:
@@ -40,13 +36,13 @@ def logged(func=None, role='ROLE_USER', wrap=True):
             return func(*args, **kw)
 
         token = request.headers.get('token')
-        info = token_manager.query_info(token)
-        if info is None or role not in info.get('role'):
+        if not manager.valid_token(token, role):
             abort(401)
 
         try:
             return make_result(func(*args, **kw))
-        except UnauthorizedException:
+        except UnauthorizedException as e:
+            logger.warning(e)
             abort(401)
 
     return wrapper
@@ -57,18 +53,19 @@ def login():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
-    if config.try_login(username, password):
-        return token_manager.create_token({"username": username, "role": config.get_roles(username)})
-    else:
+    token = manager.try_login(username, password)
+    if token is None:
         real_ip = request.headers.get("X-Real-IP")
         logger.warning(f"已拒绝来自{real_ip}的请求, 此请求尝试以'{password}'为密码登录账号'{username}'")
         return ""
+    return token
 
 
 @app.route('/api/logout', methods=['POST'])
 @logged
 def logout():
-    token_manager.remove_token(request.form.get('token'))
+    token = request.form.get('token')
+    manager.logout(token)
 
 
 # ####################### API For Item #######################
@@ -191,8 +188,7 @@ def get_tid_from_request() -> int:
 
 def get_owner_from_request() -> str:
     token = request.headers.get('token')
-    info = token_manager.data.get(token, {})
-    return info.get('username')
+    return manager.get_username_by_token(token)
 
 
 def try_get_parent_from_request() -> Optional[int]:
@@ -310,22 +306,20 @@ def clear_tomato_task():
 @logged
 def is_admin():
     username = get_owner_from_request()
-    return config.is_admin_user(username)
+    return manager.is_admin_user(username)
 
 
-# @app.route("/api/log/tomato", methods=["GET"])
-# @logged(role='ROLE_ADMIN')
-# def get_tomato_log():
-#     owner = get_owner_from_request()
-#     return "\n".join(map(str, load_data(db_session, owner=owner, limit=20)))
+@app.route("/api/log/tomato", methods=["GET"])
+@logged(role='ROLE_ADMIN')
+def get_tomato_log():
+    owner = get_owner_from_request()
+    return manager.get_tomato_log(owner)
 
 
 @app.route("/api/log/log", methods=["GET"])
 @logged(role='ROLE_ADMIN')
 def get_log():
-    # 文本中可能包含中文字符, 因此需要指定合适的编码
-    with open(Log_File, encoding='utf-8') as f:
-        return "".join(f.readlines())
+    return manager.get_log()
 
 
 @app.route("/api/admin/gc", methods=["POST"])

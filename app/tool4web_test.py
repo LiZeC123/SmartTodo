@@ -9,15 +9,15 @@ def test_extract_host():
     assert extract_host("https://github.com/ABCD") == "github.com"
 
 
-def test_extract_title():
-    # 正常情况
-    assert extract_title("https://lizec.top/") == "LiZeC的博客"
-
-    # 常见的HTTP Error
-    assert extract_title("https://lizec.top/404") == "https://lizec.top/404"
-
-    # 其他Error
-    assert extract_title("not URL") == "not URL"
+# def test_extract_title():
+#     # 正常情况
+#     assert extract_title("https://lizec.top/") == "LiZeC的博客"
+#
+#     # 常见的HTTP Error
+#     assert extract_title("https://lizec.top/404") == "https://lizec.top/404"
+#
+#     # 其他Error
+#     assert extract_title("not URL") == "not URL"
 
 
 def test_parse_encoding():
@@ -36,9 +36,9 @@ def test_parse_title():
         assert parse_title("")
 
 
-def test_download():
-    file = "data/logo.png"
-    if exists(file):
-        remove(file)
-
-    assert download("https://lizec.top/images/logo.png", "data") == file
+# def test_download():
+#     file = "data/logo.png"
+#     if exists(file):
+#         remove(file)
+#
+#     assert download("https://lizec.top/images/logo.png", "data") == file

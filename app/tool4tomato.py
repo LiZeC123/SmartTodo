@@ -94,7 +94,7 @@ class TomatoRecordManager:
         return {"total": self.__total_stat(d), "today": self.__today_stat(d), "week": self.__week_chat_stat(d)}
 
     def get_daily_stat(self, owner):
-        d = self.__load_data(self.db, owner)
+        d = self.__load_data(owner)
         return self.__today_stat(d)
 
     def select_today_tomato(self, owner: str) -> list:
@@ -102,6 +102,9 @@ class TomatoRecordManager:
 
     def select_week_tomato(self, owner: str) -> list:
         return self.__select_tomato_before(owner, this_week_begin())
+
+    def get_tomato_log(self, owner: str) -> str:
+        return "\n".join(map(str, self.__load_data(owner=owner, limit=20)))
 
     def __select_tomato_before(self, owner: str, time):
         stmt = sal.select(TomatoTaskRecord.name, func.count()) \
@@ -111,12 +114,11 @@ class TomatoRecordManager:
         items = self.db.execute(stmt).all()
         return list(sorted(items, key=lambda x: x[1], reverse=True))
 
-    @staticmethod
-    def __load_data(db, owner: str, limit: int = 200) -> List[TomatoTaskRecord]:
+    def __load_data(self, owner: str, limit: int = 200) -> List[TomatoTaskRecord]:
         stmt = sal.select(TomatoTaskRecord).where(TomatoTaskRecord.owner == owner,
                                                   TomatoTaskRecord.finish_time > last_month()) \
             .order_by(TomatoTaskRecord.id.desc()).limit(limit)
-        return db.execute(stmt).scalars().all()
+        return self.db.execute(stmt).scalars().all()
 
     @staticmethod
     def __total_stat(data: List[TomatoTaskRecord]) -> dict:

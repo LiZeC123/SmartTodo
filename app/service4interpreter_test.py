@@ -2,8 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from entity import Base
-from server import Manager
-from server_test import make_base_item
+from server4item_test import make_base_item
 from service4interpreter import *
 from tool4time import now
 
@@ -12,7 +11,7 @@ db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind
 Base.metadata.create_all(engine)
 
 owner = "user"
-manager = Manager(db_session)
+manager = ItemManager(db_session)
 op = OpInterpreter(manager)
 
 

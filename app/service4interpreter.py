@@ -2,12 +2,13 @@ import logging
 from typing import Optional
 
 from entity import Item, ItemType, TomatoType
+from server4item import ItemManager
 from tool4log import logger
 from tool4time import now_str_fn, the_day_after
 
 
 class OpInterpreter:
-    def __init__(self, manager):
+    def __init__(self, manager: ItemManager):
         self.manager = manager
 
     def batch_create_item(self, data: str, parent: int, owner: str):
@@ -22,7 +23,7 @@ class OpInterpreter:
         name = f"SmartTodo_Database({now_str_fn()})"
         n = shutil.make_archive(f"data/filebase/{name}", 'zip', "data/database")
         item = Item(name=f"{name}.zip", item_type=ItemType.File, owner=owner, parent=parent, url=f"/file/{name}.zip")
-        self.manager.item_manager.create(item)
+        self.manager.base_manager.create(item)
 
     def get_item_by_name(self, name: str, parent: int, owner: str) -> Optional[Item]:
         items = self.manager.get_item_by_name(name, parent, owner)
@@ -68,7 +69,7 @@ class OpInterpreter:
             return
 
         item.deadline = the_day_after(item.deadline, renew_day)
-        self.manager.db.commit()
+        self.manager.update(item)
 
     def exec_function(self, command: str, data: str, parent: Optional[int], owner: str):
         logger.info(f"执行指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
