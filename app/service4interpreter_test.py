@@ -13,8 +13,9 @@ db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind
 Base.metadata.create_all(engine)
 
 owner = "user"
-manager = ItemManager(db_session)
-op = OpInterpreter(manager)
+item_manager = ItemManager(db_session)
+tomato_manager = TomatoManager(db_session)
+op = OpInterpreter(item_manager, tomato_manager)
 
 
 def test():
@@ -26,7 +27,7 @@ def test():
 
 def test_split():
     base_item = make_base_item("split_item")
-    manager.create(base_item)
+    item_manager.create(base_item)
     op.exec_function(command="sn", data="split 6 章节", parent=None, owner=owner)
     op.exec_function(command="sx", data="Item -Ta", parent=None, owner=owner)
     op.exec_function(command="sx", data="XX -Ta", parent=None, owner=owner)
@@ -37,13 +38,20 @@ def test_habit():
     op.exec_function(command="habit", data="habit 3", parent=None, owner=owner)
 
 
+def test_make_tomato():
+    op.exec_function(command="mkt", data="Meeting 10:15 11:45", parent=None, owner=owner)
+
+    with pytest.raises(IllegalArgumentException):
+        op.exec_function_with_exception(command="mkt", data="Meeting 10:125 11:45", parent=None, owner=owner)
+
+
 def test_renew():
     base_item = make_base_item("base_item")
     deadline_item = make_base_item("deadline_item")
     deadline_item.deadline = the_day_after(now(), 3)
 
-    manager.create(base_item)
-    manager.create(deadline_item)
+    item_manager.create(base_item)
+    item_manager.create(deadline_item)
 
     op.exec_function_with_exception(command="renew", data="deadline_item 5", parent=None, owner=owner)
 

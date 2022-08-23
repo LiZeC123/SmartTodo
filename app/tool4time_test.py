@@ -25,3 +25,7 @@ def test_parse_deadline_str():
     assert parse_deadline_str("7.14:12") == "2022-07-14 12:00:00"
     assert parse_deadline_str("6.15:12") == "2023-06-15 12:00:00"
     tool4time.now = _now
+
+
+def test_parse_time_str():
+    parse_time("10:15")

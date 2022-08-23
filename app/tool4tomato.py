@@ -74,12 +74,15 @@ class TomatoManager:
     def match(self, tid: int, xid: int, owner: str):
         return self.state[owner].id == xid and self.state[owner].tid == tid
 
+    def create_record(self, record:TomatoTaskRecord):
+        self.db.add(record)
+        self.db.commit()
+
     def __insert_record(self, owner: str):
         state = self.state[owner]
         record = TomatoTaskRecord(start_time=parse_timestamp(state.start), finish_time=now(),
                                   owner=owner, name=state.name)
-        self.db.add(record)
-        self.db.commit()
+        self.create_record(record)
 
 
 Record = namedtuple("Record", ["start", "finish", "title", "extend"])

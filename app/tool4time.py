@@ -81,6 +81,12 @@ def parse_deadline_str(date_str: str) -> str:
         return next_year.strftime("%Y-%m-%d %H:%M:%S")
 
 
+def parse_time(time_str: str) -> datetime:
+    t = today()
+    pt = datetime.strptime(time_str, "%H:%M")
+    return datetime(t.year, t.month, t.day, pt.hour, pt.minute, 0)
+
+
 def is_work_time():
     # weekday返回的范围是0~6, 且周一返回0
     return 9 <= now().hour < 18 and 0 <= now().weekday() <= 4

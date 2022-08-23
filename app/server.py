@@ -19,13 +19,12 @@ class Manager:
 
         self.item_manager = ItemManager(db)
 
-        self.op = OpInterpreter(self.item_manager)
-
         self.task_manager = TaskManager()
 
         self.tomato_manager = TomatoManager(db)
         self.tomato_record_manager = TomatoRecordManager(db)
 
+        self.op = OpInterpreter(self.item_manager, self.tomato_manager)
         self.report_manager = ReportManager(self.item_manager, self.tomato_record_manager)
 
         self.__init_task()
