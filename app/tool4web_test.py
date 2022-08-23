@@ -11,9 +11,6 @@ def test_extract_title():
     # 正常情况
     assert extract_title("https://www.cnblogs.com/leoo2sk") == "T2噬菌体 - 博客园"
 
-    # 常见的HTTP Error
-    assert extract_title("https://lizec.top/404") == "https://lizec.top/404"
-
     # 其他Error
     assert extract_title("not URL") == "not URL"
 

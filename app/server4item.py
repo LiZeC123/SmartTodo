@@ -6,7 +6,7 @@ from typing import Optional, Dict, List
 import sqlalchemy as sal
 
 from entity import Item, TomatoType, ItemType, class2dict
-from exception import UnauthorizedException
+from exception import UnauthorizedException, NotUniqueItemException
 from tool4key import activate_key, create_time_key
 from tool4log import logger
 from tool4time import now, today
@@ -75,6 +75,24 @@ class ItemManager(BaseManager):
     def get_item_by_name(self, name: str, parent: Optional[int], owner: str) -> List[Item]:
         stmt = sal.select(Item).where(Item.name.like(f"%{name}%"), Item.parent == parent, Item.owner == owner)
         return self.db.execute(stmt).scalars().all()
+
+    def get_unique_item_by_name(self, name: str, parent: Optional[int], owner: str) -> Item:
+        items = self.get_item_by_name(name, parent, owner)
+        if len(items) == 1:
+            return items[0]
+
+        item_str = ' '.join(map(str, items))
+        raise NotUniqueItemException(f"[{item_str}]均查询条件(name={name}, parent={parent}, owner={owner})")
+
+    def get_unique_or_null_item_by_name(self, name: str, parent: Optional[int], owner: str) -> Optional[Item]:
+        items = self.get_item_by_name(name, parent, owner)
+        if len(items) == 0:
+            return None
+        elif len(items) == 1:
+            return items[0]
+
+        item_str = ' '.join(map(str, items))
+        raise NotUniqueItemException(f"[{item_str}]均查询条件(name={name}, parent={parent}, owner={owner})")
 
     def select_summary(self, owner: str):
         stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today)

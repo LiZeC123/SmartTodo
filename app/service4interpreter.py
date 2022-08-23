@@ -1,7 +1,7 @@
-import logging
 from typing import Optional
 
 from entity import Item, ItemType, TomatoType
+from exception import IllegalArgumentException, BaseSmartTodoException
 from server4item import ItemManager
 from tool4log import logger
 from tool4time import now_str_fn, the_day_after
@@ -25,20 +25,12 @@ class OpInterpreter:
         item = Item(name=f"{name}.zip", item_type=ItemType.File, owner=owner, parent=parent, url=f"/file/{name}.zip")
         self.manager.base_manager.create(item)
 
-    def get_item_by_name(self, name: str, parent: int, owner: str) -> Optional[Item]:
-        items = self.manager.get_item_by_name(name, parent, owner)
-
-        if len(items) != 1:
-            logger.error(f"待办事项获取失败: 多个待办事项符合名称要求: {[p.name for p in items]}")
-            return None
-        return items[0]
-
     def split_item_with_number(self, name: str, num: int, suffix: str, parent: int, owner: str):
         subtasks = [f"第{i + 1}{suffix}" for i in range(num)]
         return self.split_item_with_subtask(name, subtasks, parent, owner)
 
     def split_item_with_subtask(self, name, subtasks: list, parent: int, owner: str):
-        item = self.get_item_by_name(name, parent, owner)
+        item = self.manager.get_unique_or_null_item_by_name(name, parent, owner)
         if item is not None:
             name = item.name
         for subtask in reversed(subtasks):
@@ -48,31 +40,28 @@ class OpInterpreter:
 
     def create_habit(self, data: str, parent: int, owner: str):
         name, count = parse_habit_data(data)
-        if name is None:
-            return
         item = Item(name=name, item_type=ItemType.Single, owner=owner, parent=parent)
         item.habit_expected = count
         item.repeatable = True
         self.manager.create(item)
 
     def renew(self, name: str, renew_day: int, parent: int, owner: str):
-        if name is None:
-            logging.error("Renew指令的name不可为空")
-            return
-
-        item = self.get_item_by_name(name, parent, owner)
-        if item is None:
-            return
+        item = self.manager.get_unique_item_by_name(name, parent, owner)
 
         if item.deadline is None:
-            logging.error("需要renew的Item必须已经指定截止日期")
-            return
+            raise IllegalArgumentException("需要renew的Item必须已经指定截止日期")
 
         item.deadline = the_day_after(item.deadline, renew_day)
         self.manager.update(item)
 
     def exec_function(self, command: str, data: str, parent: Optional[int], owner: str):
         logger.info(f"执行指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
+        try:
+            self.exec_function_with_exception(command, data, parent, owner)
+        except BaseSmartTodoException as e:
+            logger.exception(e)
+
+    def exec_function_with_exception(self, command: str, data: str, parent: Optional[int], owner: str):
         if command == "m":
             return self.batch_create_item(data, parent, owner)
         elif command == "backup":
@@ -91,7 +80,7 @@ class OpInterpreter:
             name, renew_day = parse_renew_data(data)
             self.renew(name, renew_day, parent, owner)
         else:
-            logger.error(f"未知的指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
+            raise IllegalArgumentException(f"未知的指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
 
 
 def not_empty(s):
@@ -115,11 +104,9 @@ def parse_sn_data(data):
             name = elem[0]
             return name, 3, "部分"
         else:
-            logger.error("解析sn指令数据失败: 参数数量不匹配")
-            return "", 0, ""
+            raise IllegalArgumentException("解析sn指令数据失败: 参数数量不匹配")
     except ValueError:
-        logger.error("解析sn指令数据失败: 数据解析失败")
-        return "", 0, ""
+        raise IllegalArgumentException("解析sn指令数据失败: 数据解析失败")
 
 
 def parse_sx_data(data):
@@ -130,8 +117,7 @@ def parse_sx_data(data):
         subtasks = [e.strip() for e in elem[1:] if not e.isspace()]
         return name, subtasks
     else:
-        logger.error("解析sx指令数据失败: 参数数量不匹配")
-        return "", []
+        raise IllegalArgumentException("解析sx指令数据失败: 参数数量不匹配")
 
 
 def parse_habit_data(data):
@@ -145,7 +131,7 @@ def parse_habit_data(data):
 
         return name, count
     except (ValueError, IndexError):
-        return None, -1
+        raise IllegalArgumentException("解析habit指令数据失败: 参数数量不匹配")
 
 
 def parse_renew_data(data):
@@ -155,4 +141,4 @@ def parse_renew_data(data):
         renew_day = int(elem[1])
         return name, renew_day
     except (ValueError, IndexError):
-        return None, 0
+        raise IllegalArgumentException("解析renew指令数据失败: 数据解析失败")

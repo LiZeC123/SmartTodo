@@ -1,6 +1,18 @@
-class UnauthorizedException(Exception):
-    def __init__(self, msg):
+class BaseSmartTodoException(Exception):
+    def __init__(self, msg: str):
         self.msg = msg
 
     def __str__(self):
-        return f"UnauthorizedException: {self.msg}"
+        return self.msg
+
+
+class UnauthorizedException(BaseSmartTodoException):
+    ...
+
+
+class NotUniqueItemException(BaseSmartTodoException):
+    ...
+
+
+class IllegalArgumentException(BaseSmartTodoException):
+    ...

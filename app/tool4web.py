@@ -4,7 +4,6 @@ from urllib.parse import urlparse
 
 import requests
 import wget
-from requests import HTTPError
 
 from tool4log import logger
 
@@ -36,12 +35,9 @@ def extract_title(url: str) -> str:
         r.encoding = parse_encoding(r.text, r.apparent_encoding)
         title = parse_title(r.text)
         return title
-    except HTTPError:
-        logger.exception(f"Tool4Web: Unknown HttpError for URL {url}")
-        return url
-    except Exception:
+    except Exception as e:
         # 如果出现其他解析错误 返回Host
-        logger.exception(f"Tool4Web: Unknown Exception for URL {url}")
+        logger.exception(e)
         return url
 
 
