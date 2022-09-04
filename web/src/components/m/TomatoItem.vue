@@ -6,7 +6,7 @@
         <a class="function function-1" title="取消任务" @click="cancelTask">
           <font-awesome-icon :icon="['fas', 'undo']"/>
         </a>
-        <a class="function function-0" title="提前完成任务" @click="forceFinishTask">
+        <a class="function function-0" title="完成任务" @click="finishTask">
           <font-awesome-icon :icon="['fas', 'check']"/>
         </a>
       </li>
@@ -17,8 +17,6 @@
 <script>
 
 const OneMinuteMS = 60 * 1000
-const resetTimeMS = 5 * OneMinuteMS
-const tomatoTimeMS = 25 * OneMinuteMS
 
 export default {
   name: "TomatoPage",
@@ -103,6 +101,7 @@ export default {
         return;
       }
 
+      const tomatoTimeMS = this.$store.state.tomatoTime * OneMinuteMS
       // 不超过一个番茄钟时间, 直接设置状态并返回
       if (elapsedMs < tomatoTimeMS) {
         this.stage = "FOCUS"
@@ -110,20 +109,12 @@ export default {
         return;
       }
 
-      // 否则无论当前具体处于哪个状态, 都要先判定是否发送过消息
+      // 此函数周期性调用, 但只需要发送一次完成任务请求
       if (this.hasShowFocusMessage === false) {
         this.finishTask()
       }
 
-      // 不超过休息时间, 则正常设置休息状态并返回
-      if (elapsedMs < tomatoTimeMS + resetTimeMS) {
-        this.stage = "REST"
-        this.timeSeconds = Math.floor((tomatoTimeMS + resetTimeMS - elapsedMs) / 1000)
-        return;
-      }
-
       // 超过休息时间, 清除任务
-      this.clearTask()
       this.stage = "DONE"
       this.timeSeconds = 0
     },
@@ -146,33 +137,14 @@ export default {
         this.reload()
       })
     },
-    forceFinishTask: function () {
-      if (this.stage === "FOCUS") {
-        this.axios.post("/tomato/finishTaskManually", this.param()).then(() => {
-          this.$emit('done-task', "done", this.taskId)
-          this.reload()
-        })
-      } else {
-        this.cancelTask()
-      }
-    },
     finishTask: function () {
-      this.axios.post("/tomato/finishTask", this.param()).then(res => {
+      this.axios.post("/tomato/finishTaskManually", this.param()).then(res => {
         let isSuccess = res.data
         if (isSuccess) {
           new Notification("完成一个番茄钟了, 休息一下吧~", {body: this.bodyMessage()})
         }
 
         this.$emit('done-task', "done", this.taskId)
-        this.reload()
-      })
-    },
-    clearTask: function () {
-      this.axios.post("/tomato/clearTask", this.param()).then(res => {
-        const isSuccess = res.data
-        if (isSuccess) {
-          new Notification("休息结束, 继续加油学习吧~", {body: this.bodyMessage()})
-        }
         this.reload()
       })
     },
@@ -196,17 +168,6 @@ ol, ul {
 
 .FOCUS {
   border-left: 5px solid #EE0000;
-  line-height: 32px;
-  background: #fff;
-  position: relative;
-  margin-bottom: 10px;
-  padding: 0 88px 0 8px;
-  border-radius: 3px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.07);
-}
-
-.REST {
-  border-left: 5px solid #08bf02;
   line-height: 32px;
   background: #fff;
   position: relative;

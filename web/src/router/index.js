@@ -5,6 +5,7 @@ import NotePage from "@/components/NotePage";
 import TodoPage from "@/components/TodoPage";
 import LogTypeComponent from "@/components/LogTypePage";
 import SummaryPage from "@/components/SummaryPage";
+import Config from "@/components/Config";
 
 const routes = [
     {path: '/', redirect: '/home/todo'},
@@ -15,7 +16,8 @@ const routes = [
             {path: 'todo', component: TodoPage},
             {path: 'note/:id', component: NotePage},
             {path: 'log/:type', component: LogTypeComponent},
-            {path: 'summary', component: SummaryPage}
+            {path: 'summary', component: SummaryPage},
+            {path: 'config', component: Config}
         ]
     },
 ]

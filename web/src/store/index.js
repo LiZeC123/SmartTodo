@@ -2,7 +2,8 @@ import { createStore } from 'vuex'
 
 export default createStore({
   state: {
-    token: ''
+    token: '',
+    tomatoTime: 25,
   },
   mutations: {
     set_token(state, token) {
@@ -12,6 +13,10 @@ export default createStore({
     del_token(state) {
         state.token = ''
         localStorage.removeItem('token')
+    },
+    set_tomato_time(state, tomatoTime) {
+      state.tomatoTime = tomatoTime
+      localStorage.tomatoTime = tomatoTime
     }
   },
   actions: {

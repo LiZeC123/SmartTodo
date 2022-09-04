@@ -35,9 +35,12 @@ axios.interceptors.response.use(res => {
     }
 });
 
-// 页面刷新时，重新赋值token
+// 页面刷新时，重新赋值存储的变量
 if (localStorage.getItem('token')) {
     store.commit('set_token', localStorage.getItem('token'))
+}
+if (localStorage.getItem('tomatoTime')) {
+    store.commit('set_tomato_time', localStorage.getItem('tomatoTime'))
 }
 
 router.beforeEach((to, from, next) => {
@@ -59,7 +62,7 @@ router.beforeEach((to, from, next) => {
 });
 
 // 请求发送通知权限, 用于番茄钟提醒
-Notification.requestPermission().then(() => {})
+Notification.requestPermission().then(doNone)
 
 createApp(App).use(store).use(router).use(VueAxios, axios).component('font-awesome-icon', FontAwesomeIcon)
     .mount('#app')
