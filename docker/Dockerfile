@@ -16,15 +16,16 @@ ENV TZ Asia/Shanghai
 
 WORKDIR /app
 
+# 先执行依赖安装操作，后续如果依赖不变可以复用这一层
+COPY app/requirements.txt /app/requirements.txt
+
 # 必须安装了这个软件配置才会生效
 RUN apk update && \
     apk add --no-cache build-base && \
+    pip3 install -r requirements.txt && \
     apk add --no-cache tzdata && \
-    apk add --no-cache nginx
-
-# 先执行依赖安装操作，后续如果依赖不变可以复用这一层
-COPY app/requirements.txt /app/requirements.txt
-RUN pip3 install -r requirements.txt
+    apk add --no-cache nginx && \
+    apk del build-base
 
 # 复制前端编译文件到nginx默认路径
 COPY --from=build-stage /app/dist /web
