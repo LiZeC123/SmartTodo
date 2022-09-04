@@ -3,7 +3,7 @@
     <!-- 弹出的提示框, 指示是否保存成功 -->
     <alert :text="'文本已复制'" :show="showAlert"></alert>
     <!--pre标签能够使文本中的换行符号正确的渲染-->
-    <pre class="messageBox" @contextmenu.prevent @mousedown="click($event)"> {{ message }}</pre>
+    <pre class="messageBox" @contextmenu.prevent @mousedown="click($event)">{{ message }}</pre>
   </div>
 </template>
 
