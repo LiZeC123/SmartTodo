@@ -63,8 +63,9 @@ class TomatoTaskRecord(Base):
     name = Column(Text, nullable=False)
 
     def __str__(self) -> str:
-        # noinspection PyTypeChecker
-        return str(class2dict(self))
+        start_time = self.start_time.strftime("%Y-%m-%d %H:%M:%S")
+        finish_time = self.finish_time.strftime("%Y-%m-%d %H:%M:%S")
+        return f"{start_time} <---> {finish_time} : {self.name}"
 
 
 def class2dict(obj):
