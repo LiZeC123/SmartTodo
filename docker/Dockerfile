@@ -18,6 +18,7 @@ WORKDIR /app
 
 # 必须安装了这个软件配置才会生效
 RUN apk update && \
+    apk add --no-cache build-base && \
     apk add --no-cache tzdata && \
     apk add --no-cache nginx
 
