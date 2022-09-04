@@ -2,5 +2,5 @@ flask==2.0.2
 requests==2.25.1
 wget==3.2
 yagmail==0.15.277
-SQLAlchemy==1.4.35
+SQLAlchemy==1.4.39
 schedule==1.1.0
