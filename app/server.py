@@ -34,7 +34,7 @@ class Manager:
         self.task_manager.add_daily_task("重置可重复任务", self.reset_daily_task, "01:30")
         self.task_manager.add_daily_task("重置未完成的今日任务", self.reset_today_task, "01:35")
         self.task_manager.add_daily_task("发送每日总结邮件", self.send_daily_report, "22:30")
-        self.task_manager.add_sunday_task("发送每周总结邮件", self.send_weekly_report, "11:00")
+        self.task_manager.add_monday_task("发送每周总结邮件", self.send_weekly_report, "10:10")
         self.task_manager.start()
 
     def valid_token(self, token: str, role: str):
