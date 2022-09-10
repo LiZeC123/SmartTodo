@@ -94,7 +94,7 @@ class TomatoRecordManager:
 
     def get_tomato_stat(self, owner):
         d = self.__load_data(owner)
-        return {"total": self.__total_stat(d), "today": self.__today_stat(d), "week": self.__week_chat_stat(d)}
+        return {"total": self.__total_stat(d), "today": self.__today_stat(d), "week": self.__week_chart_stat(d)}
 
     def get_daily_stat(self, owner):
         d = self.__load_data(owner)
@@ -161,7 +161,7 @@ class TomatoRecordManager:
         }
 
     @staticmethod
-    def __week_chat_stat(data: List[TomatoTaskRecord]) -> list:
+    def __week_chart_stat(data: List[TomatoTaskRecord]) -> list:
         WEEK_LENGTH = 15
         today = now().date()
         counts = [timedelta() for _ in range(WEEK_LENGTH)]

@@ -29,8 +29,8 @@ def today_begin() -> datetime:
 
 def this_week_begin() -> datetime:
     now_time = now()
-    return now_time - timedelta(days=now_time.weekday(), hours=now_time.hour, minutes=now_time.minute,
-                                seconds=now_time.second, microseconds=now_time.microsecond)
+    # 按照周统计的指标粒度可以粗一点， 大致对应7天之前即可
+    return now_time - timedelta(days=7)
 
 
 def this_year_str() -> str:
