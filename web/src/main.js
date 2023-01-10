@@ -7,6 +7,7 @@ import VueAxios from 'vue-axios'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faTrashAlt, faClock, faCheck, faUndo, faAngleDoubleDown, faListOl, faCalculator } from '@fortawesome/free-solid-svg-icons'
 import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
+import VueContextMenu from "vue-contextmenu/src/main";
 
 library.add(faTrashAlt, faClock, faCheck, faUndo, faAngleDoubleDown, faListOl, faCalculator)
 
@@ -65,4 +66,4 @@ router.beforeEach((to, from, next) => {
 Notification.requestPermission().then(doNone)
 
 createApp(App).use(store).use(router).use(VueAxios, axios).component('font-awesome-icon', FontAwesomeIcon)
-    .mount('#app')
+    .use(VueContextMenu).mount('#app')

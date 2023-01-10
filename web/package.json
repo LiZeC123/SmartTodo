@@ -17,6 +17,7 @@
     "font-awesome": "^4.7.0",
     "vue": "^3.0.0",
     "vue-axios": "^3.2.4",
+    "vue-contextmenu": "^1.5.11",
     "vue-router": "^4.0.0-0",
     "vue-store": "^0.3.1-moved",
     "vuex": "^4.0.0-0"

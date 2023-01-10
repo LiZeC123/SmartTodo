@@ -2,6 +2,7 @@
   <div>
     <h2 v-show="show">当前任务</h2>
     <ol v-show="show">
+      <audio id="notificationAudio" src="../OceanWaves.mp3"></audio>
       <li :class="stage" :title="desc">【{{ timeWithMin }}】{{ taskName }}
         <a class="function function-1" title="取消任务" @click="cancelTask">
           <font-awesome-icon :icon="['fas', 'undo']"/>
@@ -142,12 +143,19 @@ export default {
         let isSuccess = res.data
         if (isSuccess) {
           new Notification("完成一个番茄钟了, 休息一下吧~", {body: this.bodyMessage()})
+          this.playNotifacationAudio()
         }
 
         this.$emit('done-task', "done", this.taskId)
         this.reload()
       })
     },
+    playNotifacationAudio() {
+      let audio = document.getElementById("notificationAudio")
+      audio.loop = true
+      audio.play()
+      setTimeout(()=> audio.pause(), OneMinuteMS)
+    }
   },
   watch: {
     "reloadCount": function () {
