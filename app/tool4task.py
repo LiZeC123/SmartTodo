@@ -34,6 +34,10 @@ class TaskManager(threading.Thread):
     def add_monday_task(name, task, hour: str):
         schedule.every().monday.at(hour).do(make_task(name, task))
 
+    @staticmethod
+    def add_friday_task(name, task, hour: str):
+        schedule.every().friday.at(hour).do(make_task(name, task))
+
     def start(self) -> None:
         self.daemon = True
         super().start()
