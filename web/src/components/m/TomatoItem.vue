@@ -2,7 +2,7 @@
   <div>
     <h2 v-show="show">当前任务</h2>
     <ol v-show="show">
-      <audio id="notificationAudio" src="../OceanWaves.mp3"></audio>
+      <audio id="notificationAudio" :src="auditSrc"></audio>
       <li :class="stage" :title="desc">【{{ timeWithMin }}】{{ taskName }}
         <a class="function function-1" title="取消任务" @click="cancelTask">
           <font-awesome-icon :icon="['fas', 'undo']"/>
@@ -17,6 +17,7 @@
 
 <script>
 
+import OceanWaves from "@/assets/OceanWaves.mp3";
 const OneMinuteMS = 60 * 1000
 
 export default {
@@ -35,6 +36,7 @@ export default {
       stage: "DONE",
       habit: false,
       hasShowFocusMessage: false,
+      auditSrc: OceanWaves,
     }
   },
   mounted() {
