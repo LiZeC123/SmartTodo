@@ -9,6 +9,9 @@ class BaseSmartTodoException(Exception):
 class UnauthorizedException(BaseSmartTodoException):
     ...
 
+class UnmatchedException(BaseException):
+    ...
+
 
 class NotUniqueItemException(BaseSmartTodoException):
     ...

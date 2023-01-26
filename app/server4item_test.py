@@ -340,6 +340,9 @@ def test_remove_by_id():
     manager.remove_by_id(item.id, owner)
     assert len(manager.select_all(owner, None)['todayTask']) == 0
 
+    # 删除不存在的项目时返回False，不抛出异常
+    assert manager.remove_by_id(item.id, owner) == False
+
 
 def test_garbage_collection():
     note_item = make_note_item("test_garbage_collection")

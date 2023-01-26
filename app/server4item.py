@@ -6,7 +6,7 @@ from typing import Optional, Dict, List
 import sqlalchemy as sal
 
 from entity import Item, TomatoType, ItemType, class2dict
-from exception import UnauthorizedException, NotUniqueItemException
+from exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
 from tool4key import activate_key, create_time_key
 from tool4log import logger
 from tool4time import now, today
@@ -40,6 +40,8 @@ class ItemManager(BaseManager):
     def check_authority(self, xid: int, owner: str):
         stmt = sal.select(Item.owner).where(Item.id == xid)
         expected_owner = self.db.scalar(stmt)
+        if expected_owner is None:
+            raise UnmatchedException(f"No Item matched xId {xid}")
         if expected_owner != owner:
             raise UnauthorizedException(f"User {owner} dose not have authority For xID {xid}")
 
@@ -193,10 +195,15 @@ class ItemManager(BaseManager):
     def remove(self, item: Item):
         return self.manager[item.item_type].remove(item)
 
-    def remove_by_id(self, xid: int, owner: str):
-        self.check_authority(xid, owner)
+    def remove_by_id(self, xid: int, owner: str) -> bool:
+        try:
+            self.check_authority(xid, owner)
+        except UnmatchedException:
+            return False
+        
         item = self.select(xid)
         self.manager[item.item_type].remove(item)
+        return True
 
     def garbage_collection(self):
         # 1. 不是不可回收的特殊类型
