@@ -15,11 +15,11 @@ tomato_record_manager = TomatoRecordManager(db_session)
 tomato_manager = TomatoManager(db_session)
 
 
-def mock_send_mail(title, msg, res):
-    print(f"MockSendMail: title: {title} msg: {msg} res: {res}")
+def mock_send_mail(title, msg, email_address, qw_hook):
+    print(f"MockSendMail: title: {title} msg: {msg} email_address: {email_address} qw_hook: {qw_hook}")
 
 
-manager = ReportManager(item_manager, tomato_record_manager, send_mail_func=mock_send_mail)
+manager = ReportManager(item_manager, tomato_record_manager, send_message_func=mock_send_mail)
 owner = "user"
 
 
@@ -58,7 +58,8 @@ def test_report_manager():
 
     manager.get_daily_report(owner)
     manager.get_summary(owner)
-    manager.send_daily_report(owner, "")
-    manager.send_weekly_report(owner, "")
+    user_info = (owner, "example@test.com", "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx-xxxx")
+    manager.send_daily_report(user_info)
+    manager.send_weekly_report(user_info)
 
     tomato_record_manager.get_tomato_log(owner)

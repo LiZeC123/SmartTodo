@@ -34,10 +34,10 @@ class ConfigManager:
         info = self.config['MAIL_INFO']
         return info["SENDER"], info["PASSWORD"]
 
-    def get_mail_users(self):
+    def get_users_msg_info(self):
         ans = []
         for username, user_config in self.config["USER_INFO"].items():
-            email = user_config["email"]
-            if len(email) != 0:
-                ans.append((username, email))
+            email = user_config.get("email")
+            qw_hook = user_config.get("qw_hook")
+            ans.append((username, email, qw_hook))
         return ans

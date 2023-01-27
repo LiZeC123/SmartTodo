@@ -16,6 +16,7 @@ Smart-Todo是一个简单智能的待办事项管理程序. Smart-Todo提供了�
 - [Smart-Todo 待办管理器](#smart-todo-待办管理器)
   - [项目部署](#项目部署)
   - [基本配置](#基本配置)
+    - [配置日报推送](#配置日报推送)
   - [基础特性介绍](#基础特性介绍)
     - [截止日期](#截止日期)
     - [每日任务](#每日任务)
@@ -77,6 +78,23 @@ docker-compose up -d
 如果将项目部署在公网, 建议在config文件夹中创建`config.json`文件来覆盖原有配置. 
 当`config.json`与`default.json`同时存在时, 优先加载`config.json`.
 
+
+### 配置日报推送
+
+一个完整的用户配置如下所示：
+
+```json
+    "user": {
+      "password": "123456",
+      "email": "user@example.com",
+      "role": ["ROLE_USER"],
+      "qw_hook": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx-xxxx"
+    }
+```
+
+其中`email`字段和`qw_hook`字段可选填, 当`email`字段字段非空时, 用户的日报和周报会推送到该邮箱. 当`qw_hook`字段非空时, 用户的日报和周报会推送到该企业微信机器人.
+
+关于企微微信机器人的配置, 可参考[官方文档](https://developer.work.weixin.qq.com/document/path/91770)
 
 
 

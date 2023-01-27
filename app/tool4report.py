@@ -1,5 +1,5 @@
 from server4item import ItemManager
-from tool4mail import send_mail
+from tool4mail import send_message
 from tool4time import now
 from tool4tomato import TomatoRecordManager
 
@@ -100,14 +100,14 @@ def render_daily_report(summary: ReportSummary) -> str:
 
 
 class ReportManager:
-    def __init__(self, item_manager: ItemManager, tomato_record_manager: TomatoRecordManager, send_mail_func=None):
+    def __init__(self, item_manager: ItemManager, tomato_record_manager: TomatoRecordManager, send_message_func=None):
         self.item_manager = item_manager
         self.tomato_record_manager = tomato_record_manager
 
-        if send_mail_func is None:
-            self.send_mail = send_mail
+        if send_message_func is None:
+            self.send_message = send_message
         else:
-            self.send_mail = send_mail_func
+            self.send_message = send_message_func
 
     def get_daily_report(self, owner: str):
         summary = ReportSummary(owner, "")
@@ -122,7 +122,8 @@ class ReportManager:
             "habit": self.item_manager.select_habit(owner)
         }
 
-    def send_daily_report(self, owner: str, email_address: str):
+    def send_daily_report(self, user):
+        owner, email_address, qw_hook = user
         stat = self.tomato_record_manager.get_daily_stat(owner)
         summary = ReportSummary(owner, "SmartTodo日报")
         summary.set_tomato_stat(stat['count'], stat['minute'])
@@ -131,11 +132,12 @@ class ReportManager:
         summary.set_tomato_task(self.tomato_record_manager.select_today_tomato(owner))
 
         message = render_daily_mail_message(summary)
-        self.send_mail(summary.title, message, email_address)
+        self.send_message(summary.title, message, email_address, qw_hook)
 
-    def send_weekly_report(self, owner: str, email_address: str):
+    def send_weekly_report(self, user):
+        owner, email_address, qw_hook = user
         summary = ReportSummary(owner, "SmartTodo周报")
         summary.set_tomato_task(self.tomato_record_manager.select_week_tomato(owner))
 
         message = render_weekly_mail_report(summary)
-        self.send_mail(summary.title, message, email_address)
+        self.send_message(summary.title, message, email_address, qw_hook)

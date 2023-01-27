@@ -141,12 +141,12 @@ class Manager:
         self.op.exec_function(command, data, parent, owner)
 
     def send_daily_report(self):
-        for owner, email in self.config.get_mail_users():
-            self.report_manager.send_daily_report(owner, email)
+        for user in self.config.get_users_msg_info():
+            self.report_manager.send_daily_report(user)
 
     def send_weekly_report(self):
-        for owner, email in self.config.get_mail_users():
-            self.report_manager.send_weekly_report(owner, email)
+        for user in self.config.get_users_msg_info():
+            self.report_manager.send_weekly_report(user)
 
     def get_daily_report(self, owner):
         return self.report_manager.get_daily_report(owner)
