@@ -1,3 +1,5 @@
+from typing import List, Callable
+
 from server4item import ItemManager
 from tool4mail import send_message
 from tool4time import now
@@ -30,73 +32,41 @@ class ReportSummary:
         self.tomato_task = tomato_task
 
 
-def render_daily_mail_message(summary: ReportSummary) -> str:
-    msg = f"<p>亲爱的{summary.username}，以下是您的{summary.title}：</p>"
-    msg += "<h4>总体情况统计</h4>"
-    msg += f"<ul><li>今日完成番茄钟数量: {summary.today_tomato_count}个</li>"
-    msg += f"<li>今日累计学习时间: {summary.today_cost_time}分钟</li>"
-    msg += "</ul>"
-
-    if len(summary.undone_habit) != 0:
-        msg += "<hr/><h4>尚未打卡的记录</h4><ul>"
-        for habit in summary.undone_habit:
-            msg += f"<li>{habit['name']}</li>"
-        msg += "</ul>"
-
-    if len(summary.undone_task) != 0:
-        msg += "<hr/><h4>尚未完成的代办事项</h4><ul>"
-        for task in summary.undone_task:
-            msg += f"<li>{task}</li>"
-        msg += "</ul>"
-
-    if len(summary.done_task) != 0:
-        msg += "<hr/><h4>今日完成的代办事项</h4><ul>"
-        for task in summary.done_task:
-            msg += f"<li>{task}</li>"
-        msg += "</ul>"
-
-    if len(summary.tomato_task) != 0:
-        msg += "<hr/><h4>番茄钟消耗统计</h4><ul>"
-        for task in summary.tomato_task:
-            msg += f"<li>{task[0]}(消耗{task[1]}个番茄钟)</li>"
-        msg += "</ul>"
-
-    msg += "<hr/><h4>其他事项</h4>"
-    msg += "<p>请在规定的时间内完成今日的工作与思考总结, 并整理为文字资料.</p>"
-
-    return msg
-
-
-def render_weekly_mail_report(summary: ReportSummary) -> str:
-    msg = f"<p>亲爱的{summary.username}，以下是您的{summary.title}：</p>"
-
-    if len(summary.tomato_task) != 0:
-        msg += "<hr/><h4>本周番茄钟消耗统计</h4><ul>"
-        for task in summary.tomato_task:
-            msg += f"<li>{task[0]}(消耗{task[1]}个番茄钟)</li>"
-        msg += "</ul>"
-
-    msg += "<hr/><h4>其他事项</h4>"
-    msg += "<p>请在规定的时间内完成本周的工作与思考总结, 并整理为文字资料.</p>"
-
-    return msg
-
-
 def render_daily_report(summary: ReportSummary) -> str:
-    msg = f"{now().strftime('%Y/%m/%d')} 日报\n"
-    msg += "------------------\n"
-    msg += "\n"
-    msg += "### 今日主要工作\n"
-    for item in summary.tomato_task:
-        msg += f"- {item[0]}\n"
+    msg = list()
+    msg.append(f"亲爱的{summary.username}，以下是您的{summary.title}日报")
+    msg.append("总体情况统计")
+    msg.append("--------------------")
+    msg.append(f"今日完成番茄钟数量: {summary.today_tomato_count}个")
+    msg.append(f"今日累计学习时间: {summary.today_cost_time}分钟")
+    msg.append("")
 
-    msg += "\n"
-    msg += "### 明日规划\n"
-    for item in summary.undone_task:
-        msg += f"- {item}\n"
-    msg += "\n"
+    render_list(msg, "尚未打卡的记录", summary.undone_habit, lambda habit: habit['name'])
+    render_list(msg, "尚未完成的代办事项", summary.undone_task, lambda x: x)
+    render_list(msg, "番茄钟消耗统计", summary.tomato_task, lambda task: f"{task[0]}(消耗{task[1]}个番茄钟)")
+    render_list(msg, "今日完成的代办事项", summary.done_task, lambda x: x)
 
-    return msg
+    msg.append("请在规定的时间内完成今日的工作与思考总结, 并整理为文字资料.")
+
+    return "\n".join(msg)
+
+
+def render_weekly_report(summary: ReportSummary) -> str:
+    msg = [f"亲爱的{summary.username}，以下是您的{summary.title}周报"]
+    render_list(msg, "本周番茄钟消耗统计", summary.tomato_task, lambda task: f"{task[0]}(消耗{task[1]}个番茄钟)")
+
+    msg.append("请在规定的时间内完成今日的工作与思考总结, 并整理为文字资料.")
+
+    return "\n".join(msg)
+
+
+def render_list(msg: List[str], title: str, data: List, fn_get: Callable[[List], str]):
+    if data and len(data) > 0:
+        msg.append(title)
+        msg.append("--------------------")
+        for item in data:
+            msg.append(f"- {fn_get(item)}")
+        msg.append("")
 
 
 class ReportManager:
@@ -110,7 +80,7 @@ class ReportManager:
             self.send_message = send_message_func
 
     def get_daily_report(self, owner: str):
-        summary = ReportSummary(owner, "")
+        summary = ReportSummary(owner, "实时")
         summary.set_tomato_task(self.tomato_record_manager.select_today_tomato(owner))
         summary.set_task(self.item_manager.select_undone_item(owner), None)
         return render_daily_report(summary)
@@ -125,19 +95,19 @@ class ReportManager:
     def send_daily_report(self, user):
         owner, email_address, qw_hook = user
         stat = self.tomato_record_manager.get_daily_stat(owner)
-        summary = ReportSummary(owner, "SmartTodo日报")
+        summary = ReportSummary(owner, "SmartTodo")
         summary.set_tomato_stat(stat['count'], stat['minute'])
         summary.set_task(self.item_manager.select_undone_item(owner), self.item_manager.select_done_item(owner))
         summary.set_habit(self.item_manager.select_habit(owner))
         summary.set_tomato_task(self.tomato_record_manager.select_today_tomato(owner))
 
-        message = render_daily_mail_message(summary)
+        message = render_daily_report(summary)
         self.send_message(summary.title, message, email_address, qw_hook)
 
     def send_weekly_report(self, user):
         owner, email_address, qw_hook = user
-        summary = ReportSummary(owner, "SmartTodo周报")
+        summary = ReportSummary(owner, "SmartTodo")
         summary.set_tomato_task(self.tomato_record_manager.select_week_tomato(owner))
 
-        message = render_weekly_mail_report(summary)
+        message = render_weekly_report(summary)
         self.send_message(summary.title, message, email_address, qw_hook)
