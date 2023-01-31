@@ -39,7 +39,7 @@ def render_daily_report(summary: ReportSummary) -> str:
     msg.append("--------------------")
     msg.append(f"今日完成番茄钟数量: {summary.today_tomato_count}个")
     msg.append(f"今日累计学习时间: {summary.today_cost_time}分钟")
-    msg.append("")
+    msg.append("\n")
 
     render_list(msg, "尚未打卡的记录", summary.undone_habit, lambda habit: habit['name'])
     render_list(msg, "尚未完成的代办事项", summary.undone_task, lambda x: x)
@@ -66,7 +66,7 @@ def render_list(msg: List[str], title: str, data: List, fn_get: Callable[[List],
         msg.append("--------------------")
         for item in data:
             msg.append(f"- {fn_get(item)}")
-        msg.append("")
+        msg.append("\n")
 
 
 class ReportManager:
