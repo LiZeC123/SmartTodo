@@ -10,7 +10,7 @@ RUN npm run build
 
 # =====================
 
-FROM python:3.8-alpine
+FROM python:3.11-alpine
 
 ENV TZ Asia/Shanghai
 
