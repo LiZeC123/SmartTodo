@@ -24,51 +24,49 @@
       </ul>
     </div>
   </div>
-
-
 </template>
 
-<script>
-export default {
-  name: "Login.vue",
-  data: function () {
-    return {
-      username: "",
-      password: "",
-    }
-  },
-  methods: {
-    submit: function () {
-      this.username = this.username.trim();
-      this.password = this.password.trim();
-      if(this.username === "" || this.password === "") {
-        alert("用户名或密码不可为空");
-        return;
-      }
 
-      this.axios({
-        method: "post",
-        url: "/login",
-        data: {
-          "username": this.username,
-          "password": this.password
-        }
-      }).then(response => {
-        if (response.data !== "") {
-          const token = response.data;
-          this.$store.commit('set_token', token);
-          this.$router.push('/home/todo');
-        } else {
-          alert("用户名或密码错误, 请检查后重新输入");
-        }
-      });
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import axios from 'axios'
+import router  from "@/router/index";
+
+let username = ref("");
+let password = ref("");
+
+
+async function submit() {
+  const user = username.value.trim();
+  const pass = password.value.trim();
+  if (user === "" || pass === "") {
+    alert("用户名或密码不可为空");
+    return;
+  }
+
+
+  const response = await axios({
+    method: "post",
+    url: "/login",
+    data: {
+      "username": user,
+      "password": pass
     }
+  })
+
+  if (response.data !== "") {
+    const token = response.data;
+    localStorage.token = token
+    router.push('/home/todo');
+  } else {
+    alert("用户名或密码错误, 请检查后重新输入");
   }
 }
+
 </script>
 
 <style scoped>
-
 * {
   box-sizing: border-box;
   margin: 0;
@@ -314,6 +312,7 @@ form button:hover {
     -webkit-transform: translateY(0);
     transform: translateY(0);
   }
+
   100% {
     -webkit-transform: translateY(-700px) rotate(600deg);
     transform: translateY(-700px) rotate(600deg);
@@ -325,6 +324,7 @@ form button:hover {
     -webkit-transform: translateY(0);
     transform: translateY(0);
   }
+
   100% {
     -webkit-transform: translateY(-700px) rotate(600deg);
     transform: translateY(-700px) rotate(600deg);

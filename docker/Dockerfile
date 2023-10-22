@@ -1,4 +1,4 @@
-FROM node:14.17-alpine as build-stage
+FROM node:18.18.0-alpine as build-stage
 LABEL stage=builder
 
 WORKDIR /app

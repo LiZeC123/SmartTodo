@@ -87,9 +87,6 @@ def create_item():
     if "parent" in f:
         item.parent = int(f["parent"])
 
-    if "habit" in f:
-        item.habit = True
-
     manager.create(item)
 
 
@@ -141,7 +138,7 @@ def remove_item():
     manager.remove(iid, owner)
 
 
-@app.route('/api/item/increaseExpectedTomatoTime', methods=['POST'])
+@app.route('/api/item/incExpTime', methods=['POST'])
 @logged
 def increase_expected_tomato() -> bool:
     xid = get_xid_from_request()
@@ -149,7 +146,7 @@ def increase_expected_tomato() -> bool:
     return manager.increase_expected_tomato(xid=xid, owner=owner)
 
 
-@app.route('/api/item/increaseUsedTomatoTime', methods=['POST'])
+@app.route('/api/item/incUsedTime', methods=['POST'])
 @logged
 def increase_used_tomato() -> bool:
     xid = get_xid_from_request()
@@ -170,8 +167,13 @@ def to_today_task() -> bool:
 def get_title():
     iid = get_xid_from_request()
     owner = get_owner_from_request()
-    title = manager.get_title(iid, owner)
-    return title
+    return manager.get_title(iid, owner)
+
+@app.route("/api/item/getTomato", methods=["POST"])
+@logged
+def get_tomato_item():
+    owner = get_owner_from_request()
+    return manager.get_tomato_item(owner)
 
 
 def get_xid_from_request() -> int:
@@ -182,7 +184,7 @@ def get_xid_from_request() -> int:
 
 def get_tid_from_request() -> int:
     f: Dict = request.get_json()
-    tid = int(f.get('tid'))
+    tid = int(f.get('taskId'))
     return tid
 
 
@@ -309,11 +311,11 @@ def is_admin():
     return manager.is_admin_user(username)
 
 
-@app.route("/api/log/tomato", methods=["GET"])
-@logged(role='ROLE_ADMIN')
-def get_tomato_log():
-    owner = get_owner_from_request()
-    return manager.get_tomato_log(owner)
+# @app.route("/api/log/tomato", methods=["GET"])
+# @logged(role='ROLE_ADMIN')
+# def get_tomato_log():
+#     owner = get_owner_from_request()
+#     return manager.get_tomato_log(owner)
 
 
 @app.route("/api/log/log", methods=["GET"])
@@ -321,12 +323,6 @@ def get_tomato_log():
 def get_log():
     return manager.get_log()
 
-
-@app.route("/api/admin/gc", methods=["POST"])
-@logged(role='ROLE_ADMIN')
-def gc():
-    """手动触发垃圾回收操作"""
-    manager.garbage_collection()
 
 
 @app.route("/api/admin/func", methods=["POST"])

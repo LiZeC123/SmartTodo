@@ -21,8 +21,7 @@ def test_start_and_query():
     items = [Item(id=i, name=f"Test-{i}") for i in range(2)]
 
     query = m.get_task(owner)
-    assert query['id'] == 0
-    assert query['tid'] == 0
+    assert query is None
 
     tid = m.start_task(items[0], owner)
     assert m.has_task(owner)
@@ -31,14 +30,14 @@ def test_start_and_query():
 
     tid = m.start_task(items[1], owner)
     query = m.get_task(owner)
-    assert query['id'] == items[1].id
-    assert query['tid'] == tid
+    assert query['itemId'] == items[1].id
+    assert query['taskId'] == tid
 
     m.finish_task(tid, items[1].id, owner)
     tid = m.start_task(items[0], owner)
     query = m.get_task(owner)
-    assert query['id'] == items[0].id
-    assert query['tid'] == tid
+    assert query['itemId'] == items[0].id
+    assert query['taskId'] == tid
 
 
 def test_finish():
