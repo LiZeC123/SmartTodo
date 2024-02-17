@@ -22,6 +22,7 @@ let tomatoItem: Ref<TomatoItem | undefined> = ref()
 onMounted(()=> {
   loadTomato()
   loadTomatoItems()
+  document.title = '番茄任务'
 })
 
 async function loadTomato() {
