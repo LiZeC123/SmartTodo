@@ -170,6 +170,11 @@ class ItemManager(BaseManager):
             logger.info(f"添加任务到今日任务列表: {item.name}")
         self.db.commit()
         return item is not None
+    
+    def get_tomato_item(self, owner: str)-> List[Item]:
+        stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today)
+        items = self.db.execute(stmt).scalars().all()
+        return list(map(class2dict, sorted(items, key=create_time_key)))
 
     def get_title(self, xid: int, owner: str) -> str:
         stmt = sal.select(Item.name).where(Item.id == xid, Item.owner == owner)

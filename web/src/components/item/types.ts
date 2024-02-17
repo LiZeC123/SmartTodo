@@ -1,0 +1,17 @@
+export interface ButtonConfig {
+  name: string
+  desc: string
+  f: (idx: number, id: string) => void
+}
+
+export interface Item {
+  id: string
+  name: string
+  item_type: string
+  repeatable: boolean
+  specific: number
+  deadline?: string
+  url?: string
+  expected_tomato: number
+  used_tomato: number
+}

@@ -87,6 +87,9 @@ class Manager:
 
     def to_today_task(self, xid: int, owner: str):
         return self.item_manager.to_today_task(xid, owner)
+    
+    def get_tomato_item(self, owner:str):
+        return self.item_manager.get_tomato_item(owner)
 
     def get_title(self, xid: int, owner: str) -> str:
         return self.item_manager.get_title(xid, owner)
@@ -97,16 +100,14 @@ class Manager:
     def update_note(self, nid: int, owner: str, content: str):
         return self.item_manager.update_note(nid, owner, content)
 
-    def set_tomato_task(self, xid: int, owner: str) -> int:
+    def set_tomato_task(self, xid: int, owner: str) -> str:
         item = self.item_manager.select(xid)
 
         if item.used_tomato == item.expected_tomato:
-            self.increase_expected_tomato(xid, owner)
+            return '启动失败: 当前任务已完成全部番茄钟'
 
         if self.tomato_manager.has_task(owner):
-            tid = self.tomato_manager.get_task_tid(owner)
-            xid = self.tomato_manager.get_task_xid(owner)
-            self.finish_tomato_task_manually(tid, xid, owner)
+            return '启动失败: 当前存在正在执行的番茄钟'
 
         return self.tomato_manager.start_task(item, owner)
 
@@ -126,7 +127,7 @@ class Manager:
         return self.tomato_manager.clear_task(tid, xid, owner)
 
     def finish_tomato_task_manually(self, tid: int, xid: int, owner: str):
-        return self.finish_tomato_task(tid, xid, owner) and self.clear_tomato_task(tid, xid, owner)
+        return self.finish_tomato_task(tid, xid, owner)
 
     def garbage_collection(self):
         return self.item_manager.garbage_collection()

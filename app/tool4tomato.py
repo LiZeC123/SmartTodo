@@ -1,7 +1,7 @@
 import threading
 from collections import defaultdict, namedtuple
 from datetime import timedelta
-from typing import List
+from typing import Dict, List
 
 import sqlalchemy as sal
 from sqlalchemy import func
@@ -9,27 +9,20 @@ from sqlalchemy import func
 from entity import Item, TomatoTaskRecord
 from tool4time import now, parse_timestamp, last_month, today_begin, this_week_begin
 
-Task = namedtuple("Task", ["tid", "id", "name", "start", "finished"])
-
-
-def make_task(tid=0, xid=0, name="当前无任务", start_time=0.0, finished=True):
-    return Task(tid, xid, name, start_time, finished)
+Task = namedtuple("Task", ["taskId", "itemId", "taskName", "startTime"])
 
 
 class TomatoManager:
     def __init__(self, db):
         self.db = db
-        self.state = defaultdict(make_task)
-        self.taskName = ""
-        self.startTime = 0
-        self.tid = 0
+        self.state: Dict[str, Task] = {}
+        self.tid = 1025
         self.lock = threading.Lock()
 
     def start_task(self, item: Item, owner: str):
         with self.lock:
             tid = self.__inc()
-            self.state[owner] = make_task(tid=tid, xid=item.id, name=item.name, start_time=now().timestamp(),
-                                          finished=False)
+            self.state[owner] = Task(tid, item.id, item.name, now().timestamp()*1000)
             return tid
 
     def __inc(self):
@@ -38,50 +31,42 @@ class TomatoManager:
 
     def finish_task(self, tid: int, xid: int, owner: str) -> bool:
         with self.lock:
-            return self.__finish_task(tid, xid, owner)
-
-    def __finish_task(self, tid: int, xid: int, owner: str) -> bool:
-        if self.match(tid, xid, owner):
-            if not self.state[owner].finished:
+            if self.match(tid, xid, owner):
                 self.__insert_record(owner)
-                self.state[owner] = self.state[owner]._replace(finished=True)
+                self.state.pop(owner)
                 return True
-        return False
+            return False
 
     def clear_task(self, tid: int, xid: int, owner: str) -> bool:
         with self.lock:
-            return self.__clean_task(tid, xid, owner)
+            if self.match(tid, xid, owner):
+                self.state.pop(owner)
+                return True
+            return False
 
-    def __clean_task(self, tid: int, xid: int, owner: str) -> bool:
-        if self.match(tid, xid, owner):
-            self.state.pop(owner)
-            return True
-        return False
+    def get_task(self, owner: str)-> Dict | None:
+        t = self.state.get(owner)
+        if t:
+            return t._asdict()
 
-    def get_task(self, owner: str):
-        return self.state[owner]._asdict()
 
     def has_task(self, owner) -> bool:
-        current_task = self.state[owner]
-        return current_task.tid != 0
-
-    def get_task_tid(self, owner: str) -> int:
-        return self.state[owner].tid
-
-    def get_task_xid(self, owner: str) -> int:
-        return self.state[owner].id
+        return self.state.get(owner) is not None
 
     def match(self, tid: int, xid: int, owner: str):
-        return self.state[owner].id == xid and self.state[owner].tid == tid
+        t = self.state.get(owner)
+        if t:
+            return t.itemId == xid and t.taskId == tid        
+        return False
 
     def create_record(self, record:TomatoTaskRecord):
         self.db.add(record)
         self.db.commit()
 
     def __insert_record(self, owner: str):
-        state = self.state[owner]
-        record = TomatoTaskRecord(start_time=parse_timestamp(state.start), finish_time=now(),
-                                  owner=owner, name=state.name)
+        task = self.state[owner]
+        record = TomatoTaskRecord(start_time=parse_timestamp(task.startTime / 1000), finish_time=now(),
+                                  owner=owner, name=task.taskName)
         self.create_record(record)
 
 

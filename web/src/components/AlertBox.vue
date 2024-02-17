@@ -1,19 +1,12 @@
 <template>
-  <!-- 弹出的提示框, 指示是否保存成功 -->
   <div id="alert" class="alert-show" v-show="show">{{ text }}</div>
 </template>
 
-<script>
-export default {
-  name: "Alert",
-  props: {
-    text: String,
-    show: Boolean,
-  },
-  data: function () {
-    return {}
-  }
-}
+<script setup lang="ts">
+defineProps<{
+  text: string
+  show: boolean
+}>()
 </script>
 
 <style scoped>
