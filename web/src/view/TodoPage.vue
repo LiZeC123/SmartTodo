@@ -3,8 +3,8 @@
 
   <div class="container">
     <!-- 代办事项模块 -->
-    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="incTime(tTask)"></ItemList>
-    <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="incTime(aTask)"></ItemList>
+    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="(idx, id) => incTime(tTask)(idx, id)"></ItemList>
+    <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="(idx, id) => incTime(aTask)(idx, id)"></ItemList>
 
     <!-- Note编辑器, 仅对Note类型页面生效  -->
     <NoteEditor v-if="initContent" :init-content="initContent" @save="saveNote"></NoteEditor>
