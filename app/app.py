@@ -207,7 +207,7 @@ def try_get_parent_from_request() -> Optional[int]:
 @logged
 def file_do_upload():
     file = request.files['myFile']
-    parent = int(request.form['parent'])
+    parent = int(request.form.get('parent', '0'))
 
     # 0表示不属于任何类型，转换为None类型进行存储
     if parent == 0:

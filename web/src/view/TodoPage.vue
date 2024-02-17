@@ -164,7 +164,7 @@ function createFilePlaceHold(name: string) {
     expected_tomato: 1,
     used_tomato: 0
   }
-  aTask.value.unshift(item)
+  tTask.value.unshift(item)
 }
 
 // ========================================================== NoteEditor 相关配置 ==========================================================
