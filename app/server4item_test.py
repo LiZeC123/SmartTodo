@@ -325,13 +325,26 @@ def test_increase_used_tomato():
 
 def test_to_today_task():
     item = make_base_item("test_to_today_task")
+    item.tomato_type = TomatoType.Activate
     manager.create(item)
 
     assert manager.to_today_task(item.id, owner)
     assert manager.to_today_task(item.id + 999, owner) == False
+    assert manager.select(item.id).tomato_type == TomatoType.Today
 
     manager.remove(item)
 
+def test_get_tomato_item():
+    item1 = make_base_item("test_get_tomato_item1")
+    item2 = make_base_item("test_get_tomato_item2")
+    item2.tomato_type = TomatoType.Activate
+    manager.create(item1)
+    manager.create(item2)
+    lst = manager.get_tomato_item(owner)
+    assert len(lst) == 1
+
+    manager.remove(item1)
+    manager.remove(item2)
 
 def test_remove_by_id():
     item = make_base_item("test_remove_by_id")
