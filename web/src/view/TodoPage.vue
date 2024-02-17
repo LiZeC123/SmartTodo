@@ -194,6 +194,7 @@ let footerConfig: FooterConfig[] = [
   { name: '上传文件', needAdmin: false, f: selectFile },
   { name: '查看日志', needAdmin: true, f: () => window.open('/home/log/log') },
   { name: '任务汇总', needAdmin: false, f: () => window.open('/home/summary') },
+  { name: '番茄任务', needAdmin: false, f: () => window.open('/home/tomato') },
   {
     name: '退出登录',
     needAdmin: false,
@@ -204,10 +205,10 @@ let footerConfig: FooterConfig[] = [
   }
 ]
 
-let isAdmin = false
+let isAdmin = ref(false)
 
 function loadIsAdmin() {
-  axios.get<boolean>('/meta/isAdmin').then((rep) => (isAdmin = rep.data))
+  axios.get<boolean>('/meta/isAdmin').then((rep) => (isAdmin.value = rep.data))
 }
 
 function uploadFile(file: File | undefined) {
@@ -243,4 +244,3 @@ let alertShow = ref(false)
   margin: 0 auto;
 }
 </style>
-@/components/item/item
