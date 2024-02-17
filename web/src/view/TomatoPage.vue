@@ -37,9 +37,10 @@ async function doneTomatoTask(type: TomatoEventType, param: TomatoParam) {
     let res = await axios.post<boolean>('/tomato/finishTaskManually', param)
     if (res.data) {
       playNotifacationAudio()
+      tomatoItem.value = undefined
+      loadTomatoItems()
     }
   }
-  loadTomato()
 }
 
 // ========================================================== ItemList 相关配置 ==========================================================
@@ -51,18 +52,17 @@ const tCfg = [
     desc: '启动番茄钟',
     f: (_: number, id: string) => {
       axios.post('/tomato/setTask', { id }).then(() => {
-        // loadItem()
         loadTomato()
       })
     }
   },
-  {
-    name: 'calculator',
-    desc: '增加预计时间',
-    f: (index: number, id: string) => {
-      axios.post('/item/incExpTime', { id }).then(() => (tTask.value[index].expected_tomato += 1))
-    }
-  }
+  // {
+  //   name: 'calculator',
+  //   desc: '增加预计时间',
+  //   f: (index: number, id: string) => {
+  //     axios.post('/item/incExpTime', { id }).then(() => (tTask.value[index].expected_tomato += 1))
+  //   }
+  // }
 ]
 
 function loadTomatoItems() {

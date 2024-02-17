@@ -80,24 +80,24 @@ const tCfg = [
       })
     }
   },
-  {
-    name: 'clock',
-    desc: '启动番茄钟',
-    f: (_: number, id: string) => {
-      axios.post('/tomato/setTask', { id }).then(() => {
-        loadItem()
-        // TODO: 番茄钟交互逻辑
-        // loadTomato()
-      })
-    }
-  },
-  {
-    name: 'calculator',
-    desc: '增加预计时间',
-    f: (index: number, id: string) => {
-      axios.post('/item/incExpTime', { id }).then(() => (tTask.value[index].expected_tomato += 1))
-    }
-  }
+  // {
+  //   name: 'clock',
+  //   desc: '启动番茄钟',
+  //   f: (_: number, id: string) => {
+  //     axios.post('/tomato/setTask', { id }).then(() => {
+  //       loadItem()
+  //       // TODO: 番茄钟交互逻辑
+  //       // loadTomato()
+  //     })
+  //   }
+  // },
+  // {
+  //   name: 'calculator',
+  //   desc: '增加预计时间',
+  //   f: (index: number, id: string) => {
+  //     axios.post('/item/incExpTime', { id }).then(() => (tTask.value[index].expected_tomato += 1))
+  //   }
+  // }
 ]
 
 const aCfg = [
