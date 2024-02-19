@@ -1,5 +1,5 @@
 <template>
-  <TodoSubmit @update-todo="doCommitTodo"></TodoSubmit>
+  <TodoSubmit @commit="doCommitTodo"></TodoSubmit>
 
   <div class="container">
     <!-- 代办事项模块 -->

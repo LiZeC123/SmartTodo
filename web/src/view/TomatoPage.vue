@@ -2,7 +2,7 @@
   <div class="container">
     <!-- 番茄钟模块 -->
     <TomatoClock :item="tomatoItem" @done-task="doneTomatoTask"></TomatoClock>
-    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask"></ItemList>
+    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="doneItem"></ItemList>
   </div>
 </template>
 
@@ -23,6 +23,7 @@ onMounted(()=> {
   loadTomato()
   loadTomatoItems()
   document.title = '番茄任务'
+  window.onfocus = loadTomatoItems
 })
 
 async function loadTomato() {
@@ -71,6 +72,9 @@ function loadTomatoItems() {
   })
 }
 
+function doneItem(index: number, id: string) {
+  axios.post('/item/incUsedTime', { id }).then(() => (tTask.value[index].used_tomato += 1))
+}
 
 </script>
 

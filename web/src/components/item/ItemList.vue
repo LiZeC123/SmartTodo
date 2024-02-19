@@ -16,7 +16,7 @@
               :checked="doneItem(item)"
               :disabled="doneItem(item)"
           /></label>
-          <p @mousedown="jumpTo($event, item.name, item.url)">{{ mapName(item) }}</p>
+          <p @mousedown.left="jumpTo($event, item.name, item.url)">{{ mapName(item) }}</p>
 
           <a
             v-for="(btn, idxBtn) in btnCfg"
@@ -88,7 +88,7 @@ function mapTypeToClass(item: Item): string {
 
 // TODO: 鼠标事件可明确区分左右键,
 async function jumpTo(event: MouseEvent, name: string, url?: string) {
-  if (event.button === 0 && url !== undefined) {
+  if (url) {
     window.open(url)
   }
 }

@@ -2,7 +2,7 @@
   <div class="header">
     <div class="box">
       <div id="form" @keyup.enter="commitTodo">
-        <label for="title">SmartTodo</label>
+        <label for="title" @mousedown.left="openHome">SmartTodo</label>
         <div style="float: right; width: 60%">
           <label for="itemType"></label>
           <select id="itemType" v-model="todoType">
@@ -29,7 +29,7 @@ import { parseTitleToData } from './parse'
 import type { CreateItem, CreateType, FuncData, TodoType } from './types'
 
 const emit = defineEmits<{
-  (e: 'update-todo', type: CreateType, data: FuncData | CreateItem): void
+  (e: 'commit', type: CreateType, data: FuncData | CreateItem): void
 }>()
 
 let todoContent = ref('')
@@ -45,19 +45,23 @@ function commitTodo() {
   let match = /func (\S+) (.+)/.exec(content)
   if (match !== null) {
     const data: FuncData = { cmd: match[1], data: match[2] }
-    emit('update-todo', 'func', data)
+    emit('commit', 'func', data)
   } else {
     const data = parseTitleToData(todoContent.value, todoType.value)
     if (data.itemType === 'file') {
-      emit('update-todo', 'file', data)
+      emit('commit', 'file', data)
     } else {
-      emit('update-todo', 'create', data)
+      emit('commit', 'create', data)
     }
   }
 
   // 提交请求后直接清空内容, 而不必等待请求返回, 提高响应速度, 避免重复提交
   todoContent.value = ''
   todoType.value = 'single'
+}
+
+function openHome() {
+  window.open("/")
 }
 </script>
 
