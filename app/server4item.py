@@ -218,7 +218,7 @@ class ItemManager(BaseManager):
         items = self.db.execute(stmt).scalars().all()
         for item in items:
             self.manager[item.item_type].remove(item)
-            logger.info(f"Garbage Collection(Expired): {item.name}")
+            logger.info(f"垃圾回收(已过期的任务): {item.name}")
 
         stmt = sal.select(Item.id)
         ids = self.db.execute(stmt).scalars().all()
@@ -226,7 +226,7 @@ class ItemManager(BaseManager):
         unreferenced = self.db.execute(stmt).scalars().all()
         for item in unreferenced:
             self.manager[item.item_type].remove(item)
-            logger.info(f"Garbage Collection(Unreferenced): {item.name}")
+            logger.info(f"垃圾回收(无引用的任务): {item.name}")
 
         self.db.commit()
 

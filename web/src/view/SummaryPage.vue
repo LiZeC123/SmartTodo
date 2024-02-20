@@ -2,9 +2,8 @@
   <div class="container">
     <h2>任务时间轴</h2>
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
-    <h2>任务分析</h2>
-    <!-- 累计完成番茄钟数量: {{ stats.total.count }} 累计学习时间: {{ stats.total.hour }}小时 日均学习时间: {{ stats.total.average }}分钟  -->
-    <!-- 今日完成番茄钟数量: {{ stats.today.count }} 今日累计学习时间: {{ stats.today.minute }}分钟 -->
+    <h2>事件时间轴</h2>
+    <h2>智能分析</h2>
 
     <!-- TODO:  myChart -->
 
