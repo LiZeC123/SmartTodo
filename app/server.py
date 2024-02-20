@@ -1,6 +1,6 @@
 from typing import Optional
 
-from entity import Item
+from entity import Item, ItemType, TomatoTaskRecord, TomatoType
 from exception import UnauthorizedException
 from server4item import ItemManager
 from service4config import ConfigManager
@@ -10,7 +10,7 @@ from tool4report import ReportManager
 from tool4task import TaskManager
 from tool4token import TokenManager
 from tool4tomato import TomatoManager, TomatoRecordManager
-
+from tool4time import parse_time, now
 
 class Manager:
     def __init__(self, db):
@@ -128,6 +128,14 @@ class Manager:
 
     def finish_tomato_task_manually(self, tid: int, xid: int, owner: str):
         return self.finish_tomato_task(tid, xid, owner)
+
+    def add_tomato_record(self, name:str, start_time:str, owner: str):
+        item = Item(name=name, item_type=ItemType.Single, tomato_type=TomatoType.Today, owner=owner)
+        item.used_tomato = 1
+        self.item_manager.create(item)
+
+        record = TomatoTaskRecord(name=name, owner=owner, start_time=parse_time(start_time), finish_time=now())
+        self.tomato_manager.create_record(record)
 
     def garbage_collection(self):
         return self.item_manager.garbage_collection()

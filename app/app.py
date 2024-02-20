@@ -301,6 +301,15 @@ def clear_tomato_task():
     owner = get_owner_from_request()
     return manager.clear_tomato_task(tid, iid, owner)
 
+@app.route('/api/tomato/addRecord', methods=['POST'])
+@logged
+def add_record():
+    f: Dict = request.get_json()
+    name = f.get('name')
+    start_time = f.get('startTime')
+    owner = get_owner_from_request()
+    return manager.add_tomato_record(name, start_time, owner)
+
 
 # ####################### API For Functions #######################
 

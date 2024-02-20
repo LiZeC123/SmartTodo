@@ -3,6 +3,7 @@
     <!-- 番茄钟模块 -->
     <TomatoClock :item="tomatoItem" @done-task="doneTomatoTask"></TomatoClock>
     <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="doneItem"></ItemList>
+    <Footer :is-admin="false" :config="footerConfig"></Footer>
   </div>
 </template>
 
@@ -15,32 +16,39 @@ import { type Ref, ref, onMounted } from 'vue'
 import TomatoClock from '@/components/tomato/TomatoClock.vue'
 import ItemList from '@/components/item/ItemList.vue'
 import type { Item } from '@/components/item/types'
+import Footer from '@/components/footer/TodoFooter.vue'
+import type { FooterConfig } from '@/components/footer/types'
 
 // ========================================================== TomatoClock 相关配置 ==========================================================
 let tomatoItem: Ref<TomatoItem | undefined> = ref()
 
-onMounted(()=> {
+onMounted(() => {
   loadTomato()
   loadTomatoItems()
   document.title = '番茄任务'
   window.onfocus = loadTomatoItems
 })
 
-async function loadTomato() {
-  let res = await axios.get<TomatoItem>('/tomato/getTask')
-  tomatoItem.value = res.data
+function loadTomato() {
+  axios.get<TomatoItem>('/tomato/getTask').then((res) => { tomatoItem.value = res.data })
 }
 
-async function doneTomatoTask(type: TomatoEventType, param: TomatoParam) {
+function doneTomatoTask(type: TomatoEventType, param: TomatoParam) {
   if (type === 'undo') {
-    await axios.post('/tomato/undoTask', param)
-  } else if (type === 'done') {
-    let res = await axios.post<boolean>('/tomato/finishTaskManually', param)
-    if (res.data) {
-      playNotifacationAudio()
-      tomatoItem.value = undefined
-      loadTomatoItems()
+    const reason = prompt("请输入取消原因")
+    if (reason) {
+      param.reason = reason
     }
+
+    axios.post('/tomato/undoTask', param).then(() => tomatoItem.value = undefined)
+  } else if (type === 'done') {
+    axios.post<boolean>('/tomato/finishTaskManually', param).then(res => {
+      if (res.data) {
+        playNotifacationAudio()
+        tomatoItem.value = undefined
+        loadTomatoItems()
+      }
+    })
   }
 }
 
@@ -67,13 +75,34 @@ const tCfg = [
 ]
 
 function loadTomatoItems() {
-  axios.post<Item[]>('/item/getTomato').then((res) => {
-    tTask.value = res.data
-  })
+  axios.post<Item[]>('/item/getTomato').then((res) => { tTask.value = res.data })
 }
 
 function doneItem(index: number, id: string) {
   axios.post('/item/incUsedTime', { id }).then(() => (tTask.value[index].used_tomato += 1))
+}
+
+
+
+// ========================================================== Footer 相关配置 ==========================================================
+let footerConfig: FooterConfig[] = [
+  { name: '新增记录', needAdmin: false, f: addRecord },
+  { name: '查看记录', needAdmin: false, f: () => { } },
+]
+
+
+function addRecord() {
+  const name = prompt('请输入记录名称')
+  if (!name) {
+    return
+  }
+
+  const startTime = prompt('请输入开始时间')
+  if (!startTime) {
+    return
+  }
+
+  axios.post('/tomato/addRecord', {name, startTime}).then(loadTomatoItems)
 }
 
 </script>

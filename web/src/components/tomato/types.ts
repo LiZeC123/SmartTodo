@@ -13,4 +13,5 @@ export interface TomatoItem {
 export interface TomatoParam {
   taskId: number // 番茄钟任务的ID
   id: number //  番茄钟对应的Item的ID
+  reason?: string // 番茄钟取消原因
 }

@@ -10,7 +10,6 @@ export function playNotifacationAudio() {
 }
 
 export function sendNotification(title: string, body: string) {
-  // new Notification(, )
   new Notification(title, { body })
 }
 
