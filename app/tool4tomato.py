@@ -1,5 +1,5 @@
 import threading
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 from datetime import timedelta
 from typing import Dict, List
 
@@ -7,7 +7,7 @@ import sqlalchemy as sal
 from sqlalchemy import func
 
 from entity import Item, TomatoTaskRecord
-from tool4time import now, parse_timestamp, last_month, today_begin, this_week_begin
+from tool4time import get_hour_str_from, now, parse_timestamp, last_month, today_begin, this_week_begin
 
 Task = namedtuple("Task", ["taskId", "itemId", "taskName", "startTime"])
 
@@ -77,6 +77,10 @@ class TomatoRecordManager:
     def __init__(self, db):
         self.db = db
 
+    def get_time_line_summary(self, owner:str):
+        record = self.__select_record_before(owner, today_begin())
+        return {"counter": self.__time_line_stat(record), "items": [{"start": get_hour_str_from(r.start_time), "finish": get_hour_str_from(r.finish_time), "title": r.name} for r in record]}
+
     def get_tomato_stat(self, owner):
         d = self.__load_data(owner)
         return {"total": self.__total_stat(d), "today": self.__today_stat(d), "week": self.__week_chart_stat(d)}
@@ -101,12 +105,27 @@ class TomatoRecordManager:
 
         items = self.db.execute(stmt).all()
         return list(sorted(items, key=lambda x: x[1], reverse=True))
+    
+    def __select_record_before(self, owner:str, time) -> List[TomatoTaskRecord]:
+        stmt = sal.select(TomatoTaskRecord) \
+            .where(TomatoTaskRecord.owner == owner, TomatoTaskRecord.finish_time > time) \
+            .order_by(TomatoTaskRecord.id.asc())
+        return self.db.execute(stmt).scalars().all()
 
     def __load_data(self, owner: str, limit: int = 200) -> List[TomatoTaskRecord]:
         stmt = sal.select(TomatoTaskRecord).where(TomatoTaskRecord.owner == owner,
                                                   TomatoTaskRecord.finish_time > last_month()) \
             .order_by(TomatoTaskRecord.id.desc()).limit(limit)
         return self.db.execute(stmt).scalars().all()
+
+    @staticmethod
+    def __time_line_stat(data: List[TomatoTaskRecord]) -> dict:
+        time = timedelta()
+        for record in data:
+            time += (record.finish_time - record.start_time)
+        count = len(data)
+        return {"tomatoCounts": count, "totalMinutes": int(time.total_seconds() / 60)}
+
 
     @staticmethod
     def __total_stat(data: List[TomatoTaskRecord]) -> dict:

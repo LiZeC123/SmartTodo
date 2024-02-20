@@ -6,10 +6,11 @@
 </template>
 
 <script setup lang="ts">
-import MessageBox from '@/components/MessageBox.vue'
 import router from '@/router'
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+
+import MessageBox from '@/components/MessageBox.vue'
 
 let title = '数据'
 let content = ref('')

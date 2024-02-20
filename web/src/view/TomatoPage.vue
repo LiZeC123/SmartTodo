@@ -8,19 +8,17 @@
 </template>
 
 <script setup lang="ts">
-import { playNotifacationAudio } from '@/components/tomato/tools'
-import type { TomatoItem, TomatoEventType, TomatoParam } from '@/components/tomato/types'
 import axios from 'axios'
 import { type Ref, ref, onMounted } from 'vue'
 
 import TomatoClock from '@/components/tomato/TomatoClock.vue'
 import ItemList from '@/components/item/ItemList.vue'
-import type { Item } from '@/components/item/types'
 import Footer from '@/components/footer/TodoFooter.vue'
-import type { FooterConfig } from '@/components/footer/types'
 
-// ========================================================== TomatoClock 相关配置 ==========================================================
-let tomatoItem: Ref<TomatoItem | undefined> = ref()
+import { playNotifacationAudio } from '@/components/tomato/tools'
+import type { TomatoItem, TomatoEventType, TomatoParam } from '@/components/tomato/types'
+import type { Item } from '@/components/item/types'
+import type { FooterConfig } from '@/components/footer/types'
 
 onMounted(() => {
   loadTomato()
@@ -28,6 +26,9 @@ onMounted(() => {
   document.title = '番茄任务'
   window.onfocus = loadTomatoItems
 })
+
+// ========================================================== TomatoClock 相关配置 ==========================================================
+let tomatoItem: Ref<TomatoItem | undefined> = ref()
 
 function loadTomato() {
   axios.get<TomatoItem>('/tomato/getTask').then((res) => { tomatoItem.value = res.data })

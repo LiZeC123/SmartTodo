@@ -311,6 +311,27 @@ def add_record():
     return manager.add_tomato_record(name, start_time, owner)
 
 
+# ####################### API For Summary #######################
+
+@app.route('/api/summary/getReport', methods=['POST'])
+@logged
+def get_summary_items():
+    owner = get_owner_from_request()
+    return manager.get_summary_report(owner)
+
+@app.route('/api/summary/getNote', methods=['POST'])
+@logged
+def get_summary_note():
+    pass
+
+@app.route('/api/summary/updateNode', methods=['POST'])
+@logged
+def update_summary_note():
+    pass
+
+
+
+
 # ####################### API For Functions #######################
 
 @app.route("/api/meta/isAdmin", methods=["GET"])

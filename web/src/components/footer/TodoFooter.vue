@@ -1,10 +1,8 @@
 <template>
   <div>
     <!-- 脚部：印记和功能按钮 -->
-    <div class="footer" id="footerContainer">
+    <div class="footer">
       Copyright &copy; {{ new Date().getFullYear() }} LiZeC
-    </div>
-    <div class="footer" id="footerFunctionContainer">
       <a v-for="c in showConfig" @click="c.f" :key="c.name">{{ c.name }}</a>
     </div>
 
@@ -45,7 +43,8 @@ function uploadFile() {
 
 .footer a {
   text-decoration: none;
-  color: #999;
+  color: #666;
+  margin-left: 5px;
   margin-right: 5px;
 }
 </style>

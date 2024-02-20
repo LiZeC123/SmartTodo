@@ -191,10 +191,10 @@ function saveNote(content: string) {
 
 // ========================================================== Footer 相关配置 ==========================================================
 let footerConfig: FooterConfig[] = [
+  { name: '番茄任务', needAdmin: false, f: () => window.open('/home/tomato') },
+  { name: '任务总结', needAdmin: false, f: () => window.open('/home/summary') },
   { name: '上传文件', needAdmin: false, f: selectFile },
   { name: '查看日志', needAdmin: true, f: () => window.open('/home/log/log') },
-  { name: '任务汇总', needAdmin: false, f: () => window.open('/home/summary') },
-  { name: '番茄任务', needAdmin: false, f: () => window.open('/home/tomato') },
   {
     name: '退出登录',
     needAdmin: false,

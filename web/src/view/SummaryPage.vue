@@ -1,22 +1,73 @@
 <template>
-  <div>
-    <h2>统计信息</h2>
-    <!-- <p>累计完成番茄钟数量: {{ stats.total.count }} 累计学习时间: {{ stats.total.hour }}小时 日均学习时间: {{ stats.total.average }}分钟</p>
-    <p>今日完成番茄钟数量: {{ stats.today.count }} 今日累计学习时间: {{ stats.today.minute }}分钟</p>
-    <canvas id="myChart"></canvas>
+  <div class="container">
+    <h2>任务时间轴</h2>
+    <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
+    <h2>任务分析</h2>
+    <!-- 累计完成番茄钟数量: {{ stats.total.count }} 累计学习时间: {{ stats.total.hour }}小时 日均学习时间: {{ stats.total.average }}分钟  -->
+    <!-- 今日完成番茄钟数量: {{ stats.today.count }} 今日累计学习时间: {{ stats.today.minute }}分钟 -->
 
-    <item-list title="今日任务(汇总)" :btn-config="[]" :data="todaySummary"
-               @checkbox-change="increaseUsedTomatoTime"></item-list>
+    <!-- TODO:  myChart -->
 
-    <item-list title="打卡统计" :btn-config="[]" :data="habitSummary"></item-list>
+    <h2>今日总结</h2>
+    <NoteEditor :init-content="initContent" @save="saveNote"></NoteEditor>
 
-    <h2>日报框架</h2>
-    <MessageBox :message="dailyReport"> </MessageBox> -->
-
+    <AlertBox :text="alertText" :show="alertShow"></AlertBox>
   </div>
 </template>
 
 <script setup lang="ts">
+import axios from 'axios'
+import { onMounted, ref } from 'vue';
+
+import TimeLine from "@/components/timeline/TimeLine.vue"
+import NoteEditor from '@/components/editor/NoteEditor.vue'
+import AlertBox from '@/components/AlertBox.vue'
+
+import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/types';
+
+
+onMounted(() => {
+  loadTimeLineItems()
+  loadNote()
+})
+
+
+// ========================================================== TimeLine 相关配置 ==========================================================
+let timeLineItem = ref<TimeLineItem[]>([])
+let countInfo = ref<CountInfo>({ tomatoCounts: 0, totalMinutes: 0 })
+
+function loadTimeLineItems() {
+  axios.post<Report>("/summary/getReport").then(res => {
+    timeLineItem.value = res.data.items
+    countInfo.value = res.data.counter
+  })
+}
+
+
+
+
+// ========================================================== NoteEditor 相关配置 ==========================================================
+let initContent = ref("每日总结")
+
+function loadNote() {
+  axios.post<string>("/summary/getNote").then(res => initContent.value = res.data)
+}
+
+function saveNote(content: string) {
+  axios.post("/summary/updateNode", { content }).then(() => {
+    alertText.value = '文档已保存'
+    alertShow.value = true
+    setTimeout(() => (alertShow.value = false), 500)
+  })
+}
+
+
+// ========================================================== Alert 相关配置 ==========================================================
+let alertText = ref('')
+let alertShow = ref(false)
+
+
+
 // import ItemList from "@/components/m/ItemList";
 // import MessageBox from "@/components/m/MessageBox";
 
@@ -148,5 +199,9 @@
 </script>
 
 <style scoped>
-
+.container {
+  max-width: 1000px;
+  padding: 0 10px;
+  margin: 0 auto;
+}
 </style>

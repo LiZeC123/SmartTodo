@@ -137,6 +137,9 @@ class Manager:
         record = TomatoTaskRecord(name=name, owner=owner, start_time=parse_time(start_time), finish_time=now())
         self.tomato_manager.create_record(record)
 
+    def get_summary_report(self, owner: str):
+        return self.tomato_record_manager.get_time_line_summary(owner)
+
     def garbage_collection(self):
         return self.item_manager.garbage_collection()
 
