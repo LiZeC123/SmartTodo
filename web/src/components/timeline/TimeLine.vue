@@ -18,3 +18,11 @@ const focusHour = computed(() => Math.floor(props.count.totalMinutes / 60))
 const focusMinute = computed(() => Math.floor(props.count.totalMinutes % 60))
 
 </script>
+
+<style scoped>
+
+li {
+    font-family:monospace;
+}
+
+</style>
