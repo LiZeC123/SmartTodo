@@ -11,7 +11,7 @@
 
     <TodoFooter :is-admin="isAdmin" :config="footerConfig" @upload-file="uploadFile"></TodoFooter>
 
-    <AlertBox :text="alertText" :show="alertShow"></AlertBox>
+    <AlertBox :text="alertText"></AlertBox>
   </div>
 </template>
 
@@ -183,8 +183,7 @@ function loadNote() {
 function saveNote(content: string) {
   axios.post('note/update', { id: parent, content }).then(() => {
     alertText.value = '文档已保存'
-    alertShow.value = true
-    setTimeout(() => (alertShow.value = false), 500)
+    setTimeout(() => (alertText.value = undefined), 500)
   })
 }
 
@@ -232,8 +231,7 @@ function uploadFile(file: File | undefined) {
 
 
 // ========================================================== Alert 相关配置 ==========================================================
-let alertText = ref('')
-let alertShow = ref(false)
+let alertText: Ref<string | undefined> = ref('')
 
 </script>
 

@@ -11,13 +11,13 @@
     <h2>今日总结</h2>
     <NoteEditor :init-content="initContent" @save="saveNote"></NoteEditor>
 
-    <AlertBox :text="alertText" :show="alertShow"></AlertBox>
+    <AlertBox :text="alertText"></AlertBox>
   </div>
 </template>
 
 <script setup lang="ts">
 import axios from 'axios'
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, type Ref } from 'vue';
 
 import TimeLine from "@/components/timeline/TimeLine.vue"
 import EventTime from '@/components/eventline/EventLine.vue'
@@ -67,15 +67,13 @@ function loadNote() {
 function saveNote(content: string) {
   axios.post("/summary/updateNode", { content }).then(() => {
     alertText.value = '文档已保存'
-    alertShow.value = true
-    setTimeout(() => (alertShow.value = false), 500)
+    setTimeout(() => (alertText.value = undefined), 500)
   })
 }
 
 
 // ========================================================== Alert 相关配置 ==========================================================
-let alertText = ref('')
-let alertShow = ref(false)
+let alertText: Ref<string | undefined> = ref('')
 
 
 

@@ -1,11 +1,10 @@
 <template>
-  <div id="alert" class="alert-show" v-show="show">{{ text }}</div>
+  <div id="alert" class="alert-show" v-show="text">{{ text }}</div>
 </template>
 
 <script setup lang="ts">
 defineProps<{
-  text: string
-  show: boolean
+  text?: string
 }>()
 </script>
 
