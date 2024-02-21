@@ -39,7 +39,7 @@ class Item(Base):
 
     # 番茄钟相关属性
     # 番茄钟类型，具体取值见 TomatoType 类
-    tomato_type = Column(String(10), nullable=False, default=TomatoType.Today)
+    tomato_type = Column(String(10), nullable=False, default=TomatoType.Activate)
     expected_tomato = Column(SmallInteger, nullable=False, default=1)
     used_tomato = Column(SmallInteger, nullable=False, default=0)
 
@@ -66,6 +66,32 @@ class TomatoTaskRecord(Base):
         start_time = self.start_time.strftime("%Y-%m-%d %H:%M:%S")
         finish_time = self.finish_time.strftime("%Y-%m-%d %H:%M:%S")
         return f"{start_time} <---> {finish_time} : {self.name}"
+
+class TomatoEvent(Base):
+    """番茄任务事件库: 记录番茄任务相关的事件, 例如任务取消, 任务预计时间变更等"""
+    __tablename__ = "tomato_event"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(DateTime, nullable=False)
+    content = Column(Text, nullable=False)
+    
+
+class Note(Base):
+    """便签数据库: 存储创建的便签文本"""
+    __tablename__ = "note"
+
+    id = Column(Integer, primary_key=True)
+    content = Column(Text, nullable=False)
+    owner = Column(String(15), nullable=False)
+
+class Summary(Base):
+    """总结记录库: 存储每日总结的文本"""
+    __tablename__ = "summary"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    create_time = Column(DateTime, nullable=False)
+    content = Column(Text, nullable=False)
+    owner = Column(String(15), nullable=False)
 
 
 def class2dict(obj):
