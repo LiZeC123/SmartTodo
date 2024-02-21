@@ -341,13 +341,6 @@ def is_admin():
     return manager.is_admin_user(username)
 
 
-# @app.route("/api/log/tomato", methods=["GET"])
-# @logged(role='ROLE_ADMIN')
-# def get_tomato_log():
-#     owner = get_owner_from_request()
-#     return manager.get_tomato_log(owner)
-
-
 @app.route("/api/log/log", methods=["GET"])
 @logged(role='ROLE_ADMIN')
 def get_log():
