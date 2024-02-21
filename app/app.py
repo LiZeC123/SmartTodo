@@ -234,20 +234,20 @@ def note_update():
     manager.update_note(nid, owner=get_owner_from_request(), content=content)
 
 
-@app.route('/api/note/getAll', methods=['POST'])
-@logged
-def note_get_all_item():
-    owner: str = get_owner_from_request()
-    nid = get_xid_from_request()
-    return manager.all_items(owner, parent=nid)
+# @app.route('/api/note/getAll', methods=['POST'])
+# @logged
+# def note_get_all_item():
+#     owner: str = get_owner_from_request()
+#     nid = get_xid_from_request()
+#     return manager.all_items(owner, parent=nid)
 
 
-@app.route('/api/note/getTodo', methods=['POST'])
-@logged
-def note_get_todo_item():
-    owner: str = get_owner_from_request()
-    nid = get_xid_from_request()
-    return manager.activate_items(owner, parent=nid)
+# @app.route('/api/note/getTodo', methods=['POST'])
+# @logged
+# def note_get_todo_item():
+#     owner: str = get_owner_from_request()
+#     nid = get_xid_from_request()
+#     return manager.activate_items(owner, parent=nid)
 
 
 # ####################### API For Tomato #########################

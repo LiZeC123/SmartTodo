@@ -10,6 +10,7 @@
 <script setup lang="ts">
 import axios from 'axios'
 import { type Ref, ref, onMounted } from 'vue'
+import router from '@/router'
 
 import TomatoClock from '@/components/tomato/TomatoClock.vue'
 import ItemList from '@/components/item/ItemList.vue'
@@ -88,7 +89,7 @@ function doneItem(index: number, id: string) {
 // ========================================================== Footer 相关配置 ==========================================================
 let footerConfig: FooterConfig[] = [
   { name: '新增记录', needAdmin: false, f: addRecord },
-  { name: '任务总结', needAdmin: false, f: () => window.open('/home/summary') },
+  { name: '任务总结', needAdmin: false, f: () => router.push({ path: '/home/summary' }) },
 ]
 
 
@@ -103,7 +104,7 @@ function addRecord() {
     return
   }
 
-  axios.post('/tomato/addRecord', {name, startTime}).then(loadTomatoItems)
+  axios.post('/tomato/addRecord', { name, startTime }).then(loadTomatoItems)
 }
 
 </script>

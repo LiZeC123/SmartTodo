@@ -10,22 +10,25 @@
 
     <h2>今日总结</h2>
     <NoteEditor :init-content="initContent" @save="saveNote"></NoteEditor>
-
+    <Footer :is-admin="false" :config="footerConfig"></Footer>
     <AlertBox :text="alertText"></AlertBox>
   </div>
 </template>
 
 <script setup lang="ts">
 import axios from 'axios'
-import { onMounted, ref, type Ref } from 'vue';
+import { onMounted, ref, type Ref } from 'vue'
+import router from '@/router'
 
 import TimeLine from "@/components/timeline/TimeLine.vue"
 import EventTime from '@/components/eventline/EventLine.vue'
 import NoteEditor from '@/components/editor/NoteEditor.vue'
+import Footer from '@/components/footer/TodoFooter.vue'
 import AlertBox from '@/components/AlertBox.vue'
 
 import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/types'
 import type { EventItem } from '@/components/eventline/types'
+import type { FooterConfig } from '@/components/footer/types'
 
 
 onMounted(() => {
@@ -70,6 +73,12 @@ function saveNote(content: string) {
     setTimeout(() => (alertText.value = undefined), 500)
   })
 }
+
+
+// ========================================================== Footer 相关配置 ==========================================================
+let footerConfig: FooterConfig[] = [
+{ name: '番茄任务', needAdmin: false, f: () => router.push({ path: '/home/tomato' }) },
+]
 
 
 // ========================================================== Alert 相关配置 ==========================================================
