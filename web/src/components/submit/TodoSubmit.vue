@@ -2,7 +2,7 @@
   <div class="header">
     <div class="box">
       <div id="form" @keyup.enter="commitTodo">
-        <label for="title" @mousedown.left="openHome">SmartTodo</label>
+        <label for="title" @mousedown.left="$emit('goto-home')">SmartTodo</label>
         <div style="float: right; width: 60%">
           <label for="itemType"></label>
           <select id="itemType" v-model="todoType">
@@ -30,6 +30,7 @@ import type { CreateItem, CreateType, FuncData, TodoType } from './types'
 
 const emit = defineEmits<{
   (e: 'commit', type: CreateType, data: FuncData | CreateItem): void
+  (e: 'goto-home'): void
 }>()
 
 let todoContent = ref('')
@@ -58,10 +59,6 @@ function commitTodo() {
   // 提交请求后直接清空内容, 而不必等待请求返回, 提高响应速度, 避免重复提交
   todoContent.value = ''
   todoType.value = 'single'
-}
-
-function openHome() {
-  window.open("/")
 }
 </script>
 

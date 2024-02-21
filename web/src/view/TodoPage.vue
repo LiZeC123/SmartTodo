@@ -1,5 +1,5 @@
 <template>
-  <TodoSubmit @commit="doCommitTodo"></TodoSubmit>
+  <TodoSubmit @commit="doCommitTodo" @goto-home="gotoHome"></TodoSubmit>
 
   <div class="container">
     <!-- 代办事项模块 -->
@@ -61,6 +61,10 @@ function doCommitTodo(type: CreateType, data: FuncData | CreateItem) {
   }
 }
 
+function gotoHome() {
+  console.log('Do Push')
+  router.push({path: '/home/todo'})
+}
 
 
 // ========================================================== ItemList 相关配置 ==========================================================
