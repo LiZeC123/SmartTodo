@@ -88,7 +88,7 @@ function doneItem(index: number, id: string) {
 // ========================================================== Footer 相关配置 ==========================================================
 let footerConfig: FooterConfig[] = [
   { name: '新增记录', needAdmin: false, f: addRecord },
-  { name: '查看记录', needAdmin: false, f: () => { } },
+  { name: '任务总结', needAdmin: false, f: () => window.open('/home/summary') },
 ]
 
 
