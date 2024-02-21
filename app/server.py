@@ -1,11 +1,12 @@
 from typing import Optional
 
-from entity import Item, ItemType, TomatoTaskRecord, TomatoType
+from entity import Item, ItemType, TomatoTaskRecord, TomatoType, class2dict
 from exception import UnauthorizedException
 from server4item import ItemManager
 from service4config import ConfigManager
 from service4interpreter import OpInterpreter
 from tool4log import Log_File
+from tool4event import EventManager
 from tool4report import ReportManager
 from tool4task import TaskManager
 from tool4token import TokenManager
@@ -26,6 +27,7 @@ class Manager:
 
         self.op = OpInterpreter(self.item_manager, self.tomato_manager)
         self.report_manager = ReportManager(self.item_manager, self.tomato_record_manager)
+        self.event_manager = EventManager(db)
 
         self.__init_task()
 
@@ -114,8 +116,8 @@ class Manager:
     def get_tomato_task(self, owner: str):
         return self.tomato_manager.get_task(owner)
 
-    def undo_tomato_task(self, tid: int, xid: int, owner: str) -> bool:
-        return self.clear_tomato_task(tid, xid, owner)
+    def undo_tomato_task(self, tid: int, xid: int, reason: str, owner: str) -> bool:
+        return self.tomato_manager.clear_task(tid, xid, reason, owner)
 
     def finish_tomato_task(self, tid: int, xid: int, owner: str):
         if self.tomato_manager.finish_task(tid, xid, owner):
@@ -123,11 +125,6 @@ class Manager:
             return True
         return False
 
-    def clear_tomato_task(self, tid: int, xid: int, owner: str):
-        return self.tomato_manager.clear_task(tid, xid, owner)
-
-    def finish_tomato_task_manually(self, tid: int, xid: int, owner: str):
-        return self.finish_tomato_task(tid, xid, owner)
 
     def add_tomato_record(self, name:str, start_time:str, owner: str):
         item = Item(name=name, item_type=ItemType.Single, tomato_type=TomatoType.Today, owner=owner)
@@ -139,6 +136,14 @@ class Manager:
 
     def get_summary_report(self, owner: str):
         return self.tomato_record_manager.get_time_line_summary(owner)
+    
+    def get_summary_event_line(self, owner:str):
+        l = self.event_manager.get_today_event(owner)
+        return [class2dict(i) for i in l]
+
+    def get_event_line(self, owner:str):
+        l =  self.event_manager.get_today_event(owner)
+        return [class2dict(i) for i in l]
 
     def garbage_collection(self):
         return self.item_manager.garbage_collection()

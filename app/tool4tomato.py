@@ -7,6 +7,7 @@ import sqlalchemy as sal
 from sqlalchemy import func
 
 from entity import Item, TomatoTaskRecord
+from tool4event import EventManager
 from tool4time import get_hour_str_from, now, parse_timestamp, last_month, today_begin, this_week_begin
 
 Task = namedtuple("Task", ["taskId", "itemId", "taskName", "startTime"])
@@ -18,6 +19,7 @@ class TomatoManager:
         self.state: Dict[str, Task] = {}
         self.tid = 1025
         self.lock = threading.Lock()
+        self.event_manager = EventManager(db)
 
     def start_task(self, item: Item, owner: str):
         with self.lock:
@@ -37,10 +39,11 @@ class TomatoManager:
                 return True
             return False
 
-    def clear_task(self, tid: int, xid: int, owner: str) -> bool:
+    def clear_task(self, tid: int, xid: int, reason: str, owner: str) -> bool:
         with self.lock:
             if self.match(tid, xid, owner):
-                self.state.pop(owner)
+                task = self.state.pop(owner)
+                self.event_manager.add_event(f"由于 {reason} 中断番茄钟 {task.taskName}", owner)
                 return True
             return False
 

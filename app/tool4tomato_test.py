@@ -56,8 +56,8 @@ def test_clean():
     items = [Item(id=i, name=f"Test-{i}") for i in range(2)]
 
     tid = m.start_task(items[0], owner)
-    assert m.clear_task(tid - 1, items[0].id, owner) == False
-    assert m.clear_task(tid, items[0].id, owner) == True
+    assert m.clear_task(tid - 1, items[0].id, 'For Test', owner) == False
+    assert m.clear_task(tid, items[0].id, 'For Test', owner) == True
 
 
 def try_finish(m: TomatoManager, tid: int, xid: int, lst: list):

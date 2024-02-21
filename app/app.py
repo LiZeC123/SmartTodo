@@ -272,7 +272,9 @@ def undo_tomato_task():
     tid = get_tid_from_request()
     iid = get_xid_from_request()
     owner = get_owner_from_request()
-    return manager.undo_tomato_task(tid, iid, owner)
+    f: Dict = request.get_json()
+    reason = f.get('reason')
+    return manager.undo_tomato_task(tid, iid, reason, owner)
 
 
 @app.route('/api/tomato/finishTask', methods=['POST'])
@@ -283,23 +285,6 @@ def finish_tomato_task():
     owner = get_owner_from_request()
     return manager.finish_tomato_task(tid, iid, owner)
 
-
-@app.route('/api/tomato/finishTaskManually', methods=['POST'])
-@logged
-def finish_tomato_task_manually():
-    tid = get_tid_from_request()
-    iid = get_xid_from_request()
-    owner = get_owner_from_request()
-    return manager.finish_tomato_task_manually(tid, iid, owner)
-
-
-@app.route('/api/tomato/clearTask', methods=['POST'])
-@logged
-def clear_tomato_task():
-    tid = get_tid_from_request()
-    iid = get_xid_from_request()
-    owner = get_owner_from_request()
-    return manager.clear_tomato_task(tid, iid, owner)
 
 @app.route('/api/tomato/addRecord', methods=['POST'])
 @logged
@@ -319,10 +304,17 @@ def get_summary_items():
     owner = get_owner_from_request()
     return manager.get_summary_report(owner)
 
+@app.route('/api/summary/getEventLine', methods=['POST'])
+@logged
+def get_summary_event_line():
+    owner = get_owner_from_request()
+    return manager.get_event_line(owner)
+
+
 @app.route('/api/summary/getNote', methods=['POST'])
 @logged
 def get_summary_note():
-    pass
+    return "默认Mook数据"
 
 @app.route('/api/summary/updateNode', methods=['POST'])
 @logged

@@ -7,6 +7,7 @@ import sqlalchemy as sal
 
 from entity import Item, TomatoType, ItemType, class2dict
 from exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
+from tool4event import EventManager
 from tool4key import activate_key, create_time_key
 from tool4log import logger
 from tool4time import now, today
@@ -30,6 +31,7 @@ class ItemManager(BaseManager):
         self.base_manager = SingleItemManager(db)
         self.file_manager = FileItemManager(self.base_manager)
         self.note_manager = NoteItemManager(self.base_manager)
+        self.event_manager = EventManager(db)
 
         self.manager: Dict[str, BaseManager] = {
             ItemType.Single: self.base_manager,
@@ -129,14 +131,14 @@ class ItemManager(BaseManager):
 
     def undo(self, xid: int, owner: str, parent: Optional[int] = None):
         stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
-        item = self.db.scalar(stmt)
+        item:Item = self.db.scalar(stmt)
         self._undo(item)
+        self.event_manager.add_event(f"回退任务到活动任务列表: {item.name}", owner)
         return self.select_activate(owner, parent=parent)
 
     def _undo(self, item: Item):
         item.create_time = now()
         item.tomato_type = TomatoType.Activate
-        logger.info(f"回退任务到活动任务列表: {item.name}")
         self.db.commit()
 
     def increase_expected_tomato(self, xid: int, owner: str):
@@ -144,6 +146,7 @@ class ItemManager(BaseManager):
         item = self.db.scalar(stmt)
         if item:
             item.expected_tomato += 1
+            self.event_manager.add_event(f"增加预计的番茄钟时间: {item.name}", owner)
         self.db.commit()
         return item is not None
 

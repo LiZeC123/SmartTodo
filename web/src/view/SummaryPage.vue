@@ -3,6 +3,7 @@
     <h2>任务时间轴</h2>
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
     <h2>事件时间轴</h2>
+    <EventTime :items="eventLineItem"></EventTime>
     <h2>智能分析</h2>
 
     <!-- TODO:  myChart -->
@@ -19,14 +20,17 @@ import axios from 'axios'
 import { onMounted, ref } from 'vue';
 
 import TimeLine from "@/components/timeline/TimeLine.vue"
+import EventTime from '@/components/eventline/EventLine.vue'
 import NoteEditor from '@/components/editor/NoteEditor.vue'
 import AlertBox from '@/components/AlertBox.vue'
 
-import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/types';
+import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/types'
+import type { EventItem } from '@/components/eventline/types'
 
 
 onMounted(() => {
   loadTimeLineItems()
+  loadEventLineItems()
   loadNote()
 })
 
@@ -42,6 +46,14 @@ function loadTimeLineItems() {
   })
 }
 
+// ========================================================== EventLine 相关配置 ==========================================================
+let eventLineItem = ref<EventItem[]>([])
+
+function loadEventLineItems() {
+  axios.post<EventItem[]>("/summary/getEventLine").then(res => {
+    eventLineItem.value = res.data
+  })
+}
 
 
 

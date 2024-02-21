@@ -74,6 +74,7 @@ class TomatoEvent(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     time = Column(DateTime, nullable=False)
     content = Column(Text, nullable=False)
+    owner = Column(String(15), nullable=False)
     
 
 class Note(Base):

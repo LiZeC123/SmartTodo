@@ -43,7 +43,7 @@ function doneTomatoTask(type: TomatoEventType, param: TomatoParam) {
 
     axios.post('/tomato/undoTask', param).then(() => tomatoItem.value = undefined)
   } else if (type === 'done') {
-    axios.post<boolean>('/tomato/finishTaskManually', param).then(res => {
+    axios.post<boolean>('/tomato/finishTask', param).then(res => {
       if (res.data) {
         playNotifacationAudio()
         tomatoItem.value = undefined
