@@ -107,20 +107,6 @@ def get_activate_item():
     return manager.activate_items(owner, parent=parent)
 
 
-@app.route('/api/item/getSummary', methods=['POST'])
-@logged
-def get_summary():
-    owner: str = get_owner_from_request()
-    return manager.get_summary(owner)
-
-
-@app.route('/api/item/dailyReport', methods=['GET'])
-@logged
-def get_daily_report():
-    owner: str = get_owner_from_request()
-    return manager.get_daily_report(owner)
-
-
 @app.route('/api/item/back', methods=['POST'])
 @logged
 def back_item() -> bool:
@@ -314,12 +300,15 @@ def get_summary_event_line():
 @app.route('/api/summary/getNote', methods=['POST'])
 @logged
 def get_summary_note():
-    return "默认Mook数据"
+    owner = get_owner_from_request()
+    return manager.get_summary_note(owner)
 
 @app.route('/api/summary/updateNode', methods=['POST'])
 @logged
 def update_summary_note():
-    pass
+    content = request.get_json().get("content")
+    owner = get_owner_from_request()
+    return manager.update_summary_note(content, owner)
 
 
 

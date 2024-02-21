@@ -1,8 +1,10 @@
 from typing import List, Callable
 
+import sqlalchemy as sal
+
+from entity import Summary
 from server4item import ItemManager
-from tool4mail import send_message
-from tool4time import now
+from tool4time import now, today_str
 from tool4tomato import TomatoRecordManager
 
 
@@ -70,44 +72,64 @@ def render_list(msg: List[str], title: str, data: List, fn_get: Callable[[List],
 
 
 class ReportManager:
-    def __init__(self, item_manager: ItemManager, tomato_record_manager: TomatoRecordManager, send_message_func=None):
-        self.item_manager = item_manager
-        self.tomato_record_manager = tomato_record_manager
+    def __init__(self, db) -> None:
+        self.db = db
 
-        if send_message_func is None:
-            self.send_message = send_message
-        else:
-            self.send_message = send_message_func
+    def update_summary(self, content:str, owner: str)-> bool:
+        day = today_str()
+        summary = Summary(create_time=day, content=content, owner=owner)
+        self.db.add(summary)
+        self.db.commit()
+        return True
 
-    def get_daily_report(self, owner: str):
-        summary = ReportSummary(owner, "实时")
-        summary.set_tomato_task(self.tomato_record_manager.select_today_tomato(owner))
-        summary.set_task(self.item_manager.select_undone_item(owner), None)
-        return render_daily_report(summary)
+    def get_today_summary(self, owner: str)-> str:
+        day = today_str()
+        stmt = sal.select(Summary.content).where(Summary.create_time == day)
+        content =  self.db.scalar(stmt)
+        if content is None:
+            return ""
+        return content
 
-    def get_summary(self, owner: str):
-        return {
-            "items": self.item_manager.select_summary(owner),
-            "stats": self.tomato_record_manager.get_tomato_stat(owner),
-            "habit": self.item_manager.select_habit(owner)
-        }
 
-    def send_daily_report(self, user):
-        owner, email_address, qw_hook = user
-        stat = self.tomato_record_manager.get_daily_stat(owner)
-        summary = ReportSummary(owner, "SmartTodo")
-        summary.set_tomato_stat(stat['count'], stat['minute'])
-        summary.set_task(self.item_manager.select_undone_item(owner), self.item_manager.select_done_item(owner))
-        summary.set_habit(self.item_manager.select_habit(owner))
-        summary.set_tomato_task(self.tomato_record_manager.select_today_tomato(owner))
 
-        message = render_daily_report(summary)
-        self.send_message(summary.title, message, email_address, qw_hook)
+    # def __init__(self, item_manager: ItemManager, tomato_record_manager: TomatoRecordManager, send_message_func=None):
+    #     self.item_manager = item_manager
+    #     self.tomato_record_manager = tomato_record_manager
 
-    def send_weekly_report(self, user):
-        owner, email_address, qw_hook = user
-        summary = ReportSummary(owner, "SmartTodo")
-        summary.set_tomato_task(self.tomato_record_manager.select_week_tomato(owner))
+    #     if send_message_func is None:
+    #         self.send_message = send_message
+    #     else:
+    #         self.send_message = send_message_func
 
-        message = render_weekly_report(summary)
-        self.send_message(summary.title, message, email_address, qw_hook)
+    # def get_daily_report(self, owner: str):
+    #     summary = ReportSummary(owner, "实时")
+    #     summary.set_tomato_task(self.tomato_record_manager.select_today_tomato(owner))
+    #     summary.set_task(self.item_manager.select_undone_item(owner), None)
+    #     return render_daily_report(summary)
+
+    # def get_summary(self, owner: str):
+    #     return {
+    #         "items": self.item_manager.select_summary(owner),
+    #         "stats": self.tomato_record_manager.get_tomato_stat(owner),
+    #         "habit": self.item_manager.select_habit(owner)
+    #     }
+
+    # def send_daily_report(self, user):
+    #     owner, email_address, qw_hook = user
+    #     stat = self.tomato_record_manager.get_daily_stat(owner)
+    #     summary = ReportSummary(owner, "SmartTodo")
+    #     summary.set_tomato_stat(stat['count'], stat['minute'])
+    #     summary.set_task(self.item_manager.select_undone_item(owner), self.item_manager.select_done_item(owner))
+    #     summary.set_habit(self.item_manager.select_habit(owner))
+    #     summary.set_tomato_task(self.tomato_record_manager.select_today_tomato(owner))
+
+    #     message = render_daily_report(summary)
+    #     self.send_message(summary.title, message, email_address, qw_hook)
+
+    # def send_weekly_report(self, user):
+    #     owner, email_address, qw_hook = user
+    #     summary = ReportSummary(owner, "SmartTodo")
+    #     summary.set_tomato_task(self.tomato_record_manager.select_week_tomato(owner))
+
+    #     message = render_weekly_report(summary)
+    #     self.send_message(summary.title, message, email_address, qw_hook)

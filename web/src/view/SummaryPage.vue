@@ -61,7 +61,7 @@ function loadEventLineItems() {
 
 
 // ========================================================== NoteEditor 相关配置 ==========================================================
-let initContent = ref("每日总结")
+let initContent = ref("")
 
 function loadNote() {
   axios.post<string>("/summary/getNote").then(res => initContent.value = res.data)

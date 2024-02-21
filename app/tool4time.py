@@ -20,6 +20,9 @@ def now_stamp() -> float:
 def today() -> date:
     return now().date()
 
+def today_str() -> str:
+    return now().strftime("%Y-%m-%d")
+
 
 def today_begin() -> datetime:
     now_time = now()

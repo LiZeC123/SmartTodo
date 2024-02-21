@@ -90,7 +90,7 @@ class Summary(Base):
     __tablename__ = "summary"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    create_time = Column(DateTime, nullable=False)
+    create_time = Column(String(10), nullable=False)
     content = Column(Text, nullable=False)
     owner = Column(String(15), nullable=False)
 

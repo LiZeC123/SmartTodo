@@ -26,7 +26,7 @@ class Manager:
         self.tomato_record_manager = TomatoRecordManager(db)
 
         self.op = OpInterpreter(self.item_manager, self.tomato_manager)
-        self.report_manager = ReportManager(self.item_manager, self.tomato_record_manager)
+        self.report_manager = ReportManager(db)
         self.event_manager = EventManager(db)
 
         self.__init_task()
@@ -35,8 +35,6 @@ class Manager:
         self.task_manager.add_daily_task("垃圾回收", self.garbage_collection, "01:00")
         self.task_manager.add_daily_task("重置可重复任务", self.reset_daily_task, "01:30")
         self.task_manager.add_daily_task("重置未完成的今日任务", self.reset_today_task, "01:35")
-        # self.task_manager.add_daily_task("发送每日总结邮件", self.send_daily_report, "19:45")
-        # self.task_manager.add_friday_task("发送每周总结邮件", self.send_weekly_report, "19:45")
         self.task_manager.start()
 
     def valid_token(self, token: str, role: str):
@@ -71,9 +69,6 @@ class Manager:
 
     def activate_items(self, owner: str, /, parent: Optional[int] = None):
         return self.item_manager.select_activate(owner, parent)
-
-    def get_summary(self, owner: str):
-        return self.report_manager.get_summary(owner)
 
     def remove(self, xid: int, owner: str):
         self.item_manager.remove_by_id(xid, owner)
@@ -145,6 +140,12 @@ class Manager:
         l =  self.event_manager.get_today_event(owner)
         return [class2dict(i) for i in l]
 
+    def get_summary_note(self, owner:str):
+        return self.report_manager.get_today_summary(owner)
+
+    def update_summary_note(self, content:str, owner:str):
+        return self.report_manager.update_summary(content, owner)
+
     def garbage_collection(self):
         return self.item_manager.garbage_collection()
 
@@ -157,16 +158,6 @@ class Manager:
     def exec_function(self, command: str, data: str, parent: Optional[int], owner: str):
         self.op.exec_function(command, data, parent, owner)
 
-    def send_daily_report(self):
-        for user in self.config.get_users_msg_info():
-            self.report_manager.send_daily_report(user)
-
-    def send_weekly_report(self):
-        for user in self.config.get_users_msg_info():
-            self.report_manager.send_weekly_report(user)
-
-    def get_daily_report(self, owner):
-        return self.report_manager.get_daily_report(owner)
 
     @staticmethod
     def get_log():
