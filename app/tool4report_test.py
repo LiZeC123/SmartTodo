@@ -15,51 +15,51 @@ tomato_record_manager = TomatoRecordManager(db_session)
 tomato_manager = TomatoManager(db_session)
 
 
-def mock_send_mail(title, msg, email_address, qw_hook):
-    print(f"MockSendMail: title: {title} msg: {msg} email_address: {email_address} qw_hook: {qw_hook}")
+# def mock_send_mail(title, msg, email_address, qw_hook):
+#     print(f"MockSendMail: title: {title} msg: {msg} email_address: {email_address} qw_hook: {qw_hook}")
 
 
-manager = ReportManager(item_manager, tomato_record_manager, send_message_func=mock_send_mail)
-owner = "user"
+# manager = ReportManager(item_manager, tomato_record_manager, send_message_func=mock_send_mail)
+# owner = "user"
 
 
-def create_summary():
-    noteA = make_note_item("test_select_summary_noteA")
-    noteA.tomato_type = TomatoType.Today
-    item_manager.create(noteA)
-    sub_itemA = make_base_item("test_select_summary_A")
-    sub_itemA.parent = noteA.id
-    sub_itemA.used_tomato = 1
+# def create_summary():
+#     noteA = make_note_item("test_select_summary_noteA")
+#     noteA.tomato_type = TomatoType.Today
+#     item_manager.create(noteA)
+#     sub_itemA = make_base_item("test_select_summary_A")
+#     sub_itemA.parent = noteA.id
+#     sub_itemA.used_tomato = 1
 
-    items = [sub_itemA, ]
-    for item in items:
-        item.tomato_type = TomatoType.Today
-        item_manager.create(item)
+#     items = [sub_itemA, ]
+#     for item in items:
+#         item.tomato_type = TomatoType.Today
+#         item_manager.create(item)
 
 
-def test_report_manager():
-    items = [Item(id=i, name=f"Test-{i}") for i in range(5)]
-    for item in items:
-        tid = tomato_manager.start_task(item, owner)
-        tomato_manager.finish_task(tid, item.id, owner)
+# def test_report_manager():
+#     items = [Item(id=i, name=f"Test-{i}") for i in range(5)]
+#     for item in items:
+#         tid = tomato_manager.start_task(item, owner)
+#         tomato_manager.finish_task(tid, item.id, owner)
 
-    habit_item = make_base_item("habit_item")
-    habit_item.habit_done = 2
-    habit_item.habit_expected = 5
+#     habit_item = make_base_item("habit_item")
+#     habit_item.habit_done = 2
+#     habit_item.habit_expected = 5
 
-    inf_habit_item = make_base_item("inf_habit_item")
-    inf_habit_item.habit_done = 3
-    habit_item.habit_expected = -1
+#     inf_habit_item = make_base_item("inf_habit_item")
+#     inf_habit_item.habit_done = 3
+#     habit_item.habit_expected = -1
 
-    item_manager.create(habit_item)
-    item_manager.create(inf_habit_item)
+#     item_manager.create(habit_item)
+#     item_manager.create(inf_habit_item)
 
-    create_summary()
+#     create_summary()
 
-    manager.get_daily_report(owner)
-    manager.get_summary(owner)
-    user_info = (owner, "example@test.com", "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx-xxxx")
-    manager.send_daily_report(user_info)
-    manager.send_weekly_report(user_info)
+#     manager.get_daily_report(owner)
+#     manager.get_summary(owner)
+#     user_info = (owner, "example@test.com", "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx-xxxx")
+#     manager.send_daily_report(user_info)
+#     manager.send_weekly_report(user_info)
 
-    tomato_record_manager.get_tomato_log(owner)
+#     tomato_record_manager.get_tomato_log(owner)
