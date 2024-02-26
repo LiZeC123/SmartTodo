@@ -23,7 +23,7 @@ class ReportManager:
 
     def get_today_summary(self, owner: str)-> str:
         day = today_str()
-        stmt = sal.select(Summary.content).where(Summary.create_time == day, owner=owner)
+        stmt = sal.select(Summary.content).where(Summary.create_time == day, Summary.owner == owner)
         content =  self.db.scalar(stmt)
         if content is None:
             return ""
