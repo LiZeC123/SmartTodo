@@ -84,25 +84,7 @@ const tCfg = [
         aTask.value = res.data
       })
     }
-  },
-  // {
-  //   name: 'clock',
-  //   desc: '启动番茄钟',
-  //   f: (_: number, id: string) => {
-  //     axios.post('/tomato/setTask', { id }).then(() => {
-  //       loadItem()
-  //       // TODO: 番茄钟交互逻辑
-  //       // loadTomato()
-  //     })
-  //   }
-  // },
-  // {
-  //   name: 'calculator',
-  //   desc: '增加预计时间',
-  //   f: (index: number, id: string) => {
-  //     axios.post('/item/incExpTime', { id }).then(() => (tTask.value[index].expected_tomato += 1))
-  //   }
-  // }
+  }
 ]
 
 const aCfg = [
@@ -172,9 +154,16 @@ function createFilePlaceHold(name: string) {
   tTask.value.unshift(item)
 }
 
-function jumpTo(name: string, path: string) {
-  path = "/" + path
-  router.push({ path })
+function jumpTo(_: string, path: string) {
+  if (path.startsWith('http')) {
+    // 绝对路径直接打开
+    window.open(path)
+  } else {
+    // note对应的路径, 路由跳转
+    path = "/" + path
+    router.push({ path })
+  }
+
 }
 
 
