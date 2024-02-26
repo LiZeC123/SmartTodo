@@ -62,10 +62,10 @@ class TomatoTaskRecord(Base):
     owner = Column(String(15), nullable=False)
     name = Column(Text, nullable=False)
 
-    def __str__(self) -> str:
-        start_time = self.start_time.strftime("%Y-%m-%d %H:%M:%S")
-        finish_time = self.finish_time.strftime("%Y-%m-%d %H:%M:%S")
-        return f"{start_time} <---> {finish_time} : {self.name}"
+    # def __str__(self) -> str:
+    #     start_time = self.start_time.strftime("%Y-%m-%d %H:%M:%S")
+    #     finish_time = self.finish_time.strftime("%Y-%m-%d %H:%M:%S")
+    #     return f"{start_time} <---> {finish_time} : {self.name}"
 
 class TomatoEvent(Base):
     """番茄任务事件库: 记录番茄任务相关的事件, 例如任务取消, 任务预计时间变更等"""

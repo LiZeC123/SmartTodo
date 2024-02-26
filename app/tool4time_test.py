@@ -15,6 +15,11 @@ def test_base():
     assert parse_deadline_timestamp(get_timestamp_from_str(now_str()) * 1000).date() == today()
     tool4time.now = _now
 
+def test_begin():
+    assert get_hour_str_from(get_datetime_from_str("2024-2-26 22:00:00")) == '22:00'
+    this_week_begin()
+    last_month()
+
 
 def test_parse_deadline_str():
     _now = tool4time.now
