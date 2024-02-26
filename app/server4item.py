@@ -239,6 +239,7 @@ class ItemManager(BaseManager):
         for item in items:
             item.used_tomato = 0
             item.tomato_type = TomatoType.Today
+            item.create_time = now()
             logger.info(f"重置可重复任务: {item.name}")
         self.db.commit()
 
