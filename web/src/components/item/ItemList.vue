@@ -3,28 +3,14 @@
     <div v-if="showList">
       <h2>{{ title }}</h2>
       <ol id="todoList" class="demo-box" @contextmenu.prevent>
-        <li
-          v-for="(item, index) in data"
-          :key="item.id"
-          id="li-active"
-          :class="[{ done: doneItem(item) }, mapTypeToClass(item)]"
-        >
-          <label
-            ><input
-              type="checkbox"
-              @change="$emit('done', index, item.id)"
-              :checked="doneItem(item)"
-              :disabled="doneItem(item)"
-          /></label>
+        <li v-for="(item, index) in data" :key="item.id" id="li-active"
+          :class="[{ done: doneItem(item) }, mapTypeToClass(item)]">
+          <label><input type="checkbox" @change="$emit('done', index, item.id)" :checked="doneItem(item)"
+              :disabled="doneItem(item)" /></label>
           <p @mousedown.left="jumpTo($event, item.name, item.url)">{{ mapName(item) }}</p>
 
-          <a
-            v-for="(btn, idxBtn) in btnCfg"
-            :key="btn.name"
-            :class="['function', 'function-' + idxBtn]"
-            @click="btn.f(index, item.id)"
-            :title="btn.desc"
-          >
+          <a v-for="(btn, idxBtn) in btnCfg" :key="btn.name" :class="['function', 'function-' + idxBtn]"
+            @click="btn.f(index, item.id)" :title="btn.desc">
             <font-awesome-icon :icon="['fas', btn.name]" />
           </a>
         </li>
@@ -45,8 +31,9 @@ const props = defineProps<{
   data?: Array<Item>
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'done', idx: number, id: string): void
+  (e: 'jump-to', name: string, url: string): void
 }>()
 
 let showList = computed(() => {
@@ -89,7 +76,7 @@ function mapTypeToClass(item: Item): string {
 // TODO: 鼠标事件可明确区分左右键,
 async function jumpTo(event: MouseEvent, name: string, url?: string) {
   if (url) {
-    window.open(url)
+    emit('jump-to', name, url)
   }
 }
 

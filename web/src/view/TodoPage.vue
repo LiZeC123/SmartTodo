@@ -3,8 +3,10 @@
 
   <div class="container">
     <!-- 代办事项模块 -->
-    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="(idx, id) => incTime(tTask)(idx, id)"></ItemList>
-    <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="(idx, id) => incTime(aTask)(idx, id)"></ItemList>
+    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="(idx, id) => incTime(tTask)(idx, id)" @jump-to="jumpTo">
+    </ItemList>
+    <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="(idx, id) => incTime(aTask)(idx, id)" @jump-to="jumpTo">
+    </ItemList>
 
     <!-- Note编辑器, 仅对Note类型页面生效  -->
     <NoteEditor v-if="initContent" :init-content="initContent" @save="saveNote"></NoteEditor>
@@ -62,8 +64,7 @@ function doCommitTodo(type: CreateType, data: FuncData | CreateItem) {
 }
 
 function gotoHome() {
-  console.log('Do Push')
-  router.push({path: '/home/todo'})
+  router.push({ path: '/todo' })
 }
 
 
@@ -171,6 +172,12 @@ function createFilePlaceHold(name: string) {
   tTask.value.unshift(item)
 }
 
+function jumpTo(name: string, path: string) {
+  path = "/" + path
+  router.push({ path })
+}
+
+
 // ========================================================== NoteEditor 相关配置 ==========================================================
 let initContent = ref('')
 
@@ -194,10 +201,9 @@ function saveNote(content: string) {
 
 // ========================================================== Footer 相关配置 ==========================================================
 let footerConfig: FooterConfig[] = [
-  { name: '番茄任务', needAdmin: false, f: () => window.open('/home/tomato') },
-  { name: '任务总结', needAdmin: false, f: () => window.open('/home/summary') },
+  { name: '番茄任务', needAdmin: false, f: () => router.push({ path: '/tomato' }) },
   { name: '上传文件', needAdmin: false, f: selectFile },
-  { name: '查看日志', needAdmin: true, f: () => window.open('/home/log/log') },
+  { name: '查看日志', needAdmin: true, f: () => router.push({ path: '/log/log' }) },
   {
     name: '退出登录',
     needAdmin: false,

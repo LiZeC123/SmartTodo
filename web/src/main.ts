@@ -48,7 +48,7 @@ router.beforeEach((to, from, next) => {
     if (to.path === '/login') {
         // 已登录状态；当路由到login时，跳转至home
         if (isLogin) {
-            router.push({path: '/home/todo'})
+            router.push({path: '/todo'})
         }
     }
     next();
