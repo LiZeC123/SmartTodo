@@ -77,9 +77,25 @@ function saveNote(content: string) {
 
 // ========================================================== Footer 相关配置 ==========================================================
 let footerConfig: FooterConfig[] = [
+  { name: '新增记录', needAdmin: false, f: addRecord },
   { name: '番茄任务', needAdmin: false, f: () => router.push({ path: '/tomato' }) },
   { name: '待办列表', needAdmin: false, f: () => router.push({ path: '/todo' }) },
 ]
+
+function addRecord() {
+  const name = prompt('请输入记录名称')
+  if (!name) {
+    return
+  }
+
+  const startTime = prompt('请输入开始时间')
+  if (!startTime) {
+    return
+  }
+
+  axios.post('/tomato/addRecord', { name, startTime }).then(loadTimeLineItems)
+}
+
 
 
 // ========================================================== Alert 相关配置 ==========================================================

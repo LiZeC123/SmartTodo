@@ -88,25 +88,9 @@ function doneItem(index: number, id: string) {
 
 // ========================================================== Footer 相关配置 ==========================================================
 let footerConfig: FooterConfig[] = [
-  { name: '新增记录', needAdmin: false, f: addRecord },
-  { name: '任务总结', needAdmin: false, f: () => router.push({ path: '/summary' }) },
   { name: '待办列表', needAdmin: false, f: () => router.push({ path: '/todo' }) },
+  { name: '总结列表', needAdmin: false, f: () => router.push({ path: '/summary' }) },
 ]
-
-
-function addRecord() {
-  const name = prompt('请输入记录名称')
-  if (!name) {
-    return
-  }
-
-  const startTime = prompt('请输入开始时间')
-  if (!startTime) {
-    return
-  }
-
-  axios.post('/tomato/addRecord', { name, startTime }).then(loadTomatoItems)
-}
 
 </script>
 
