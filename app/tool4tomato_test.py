@@ -1,6 +1,10 @@
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
+
 import random
 import time
 
+from entity import Base
 from tool4tomato import *
 
 
@@ -84,3 +88,12 @@ def test_thread_finish_and_clean():
     print(lst)
     assert lst.count(True) == 1
     # assert lst.count(False) == 2 * (THREAD_COUNT - 1)
+
+
+engine = create_engine('sqlite://', future=True)
+db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+Base.metadata.create_all(engine)
+
+def test_tomato_record_base():
+    manager = TomatoRecordManager(db_session)
+    assert manager.get_time_line_summary(owner) is not None

@@ -84,30 +84,30 @@ class TomatoRecordManager:
         record = self.__select_record_before(owner, today_begin())
         return {"counter": self.__time_line_stat(record), "items": [{"start": get_hour_str_from(r.start_time), "finish": get_hour_str_from(r.finish_time), "title": r.name} for r in record]}
 
-    def get_tomato_stat(self, owner):
-        d = self.__load_data(owner)
-        return {"total": self.__total_stat(d), "today": self.__today_stat(d), "week": self.__week_chart_stat(d)}
+    # def get_tomato_stat(self, owner):
+    #     d = self.__load_data(owner)
+    #     return {"total": self.__total_stat(d), "today": self.__today_stat(d), "week": self.__week_chart_stat(d)}
 
-    def get_daily_stat(self, owner):
-        d = self.__load_data(owner)
-        return self.__today_stat(d)
+    # def get_daily_stat(self, owner):
+    #     d = self.__load_data(owner)
+    #     return self.__today_stat(d)
 
-    def select_today_tomato(self, owner: str) -> list:
-        return self.__select_tomato_before(owner, today_begin())
+    # def select_today_tomato(self, owner: str) -> list:
+    #     return self.__select_tomato_before(owner, today_begin())
 
-    def select_week_tomato(self, owner: str) -> list:
-        return self.__select_tomato_before(owner, this_week_begin())
+    # def select_week_tomato(self, owner: str) -> list:
+    #     return self.__select_tomato_before(owner, this_week_begin())
 
-    def get_tomato_log(self, owner: str) -> str:
-        return "\n".join(map(str, self.__load_data(owner=owner, limit=20)))
+    # def get_tomato_log(self, owner: str) -> str:
+    #     return "\n".join(map(str, self.__load_data(owner=owner, limit=20)))
 
-    def __select_tomato_before(self, owner: str, time):
-        stmt = sal.select(TomatoTaskRecord.name, func.count()) \
-            .where(TomatoTaskRecord.owner == owner, TomatoTaskRecord.start_time > time) \
-            .group_by(TomatoTaskRecord.name)
+    # def __select_tomato_before(self, owner: str, time):
+    #     stmt = sal.select(TomatoTaskRecord.name, func.count()) \
+    #         .where(TomatoTaskRecord.owner == owner, TomatoTaskRecord.start_time > time) \
+    #         .group_by(TomatoTaskRecord.name)
 
-        items = self.db.execute(stmt).all()
-        return list(sorted(items, key=lambda x: x[1], reverse=True))
+    #     items = self.db.execute(stmt).all()
+    #     return list(sorted(items, key=lambda x: x[1], reverse=True))
     
     def __select_record_before(self, owner:str, time) -> List[TomatoTaskRecord]:
         stmt = sal.select(TomatoTaskRecord) \
@@ -115,11 +115,11 @@ class TomatoRecordManager:
             .order_by(TomatoTaskRecord.id.asc())
         return self.db.execute(stmt).scalars().all()
 
-    def __load_data(self, owner: str, limit: int = 200) -> List[TomatoTaskRecord]:
-        stmt = sal.select(TomatoTaskRecord).where(TomatoTaskRecord.owner == owner,
-                                                  TomatoTaskRecord.finish_time > last_month()) \
-            .order_by(TomatoTaskRecord.id.desc()).limit(limit)
-        return self.db.execute(stmt).scalars().all()
+    # def __load_data(self, owner: str, limit: int = 200) -> List[TomatoTaskRecord]:
+    #     stmt = sal.select(TomatoTaskRecord).where(TomatoTaskRecord.owner == owner,
+    #                                               TomatoTaskRecord.finish_time > last_month()) \
+    #         .order_by(TomatoTaskRecord.id.desc()).limit(limit)
+    #     return self.db.execute(stmt).scalars().all()
 
     @staticmethod
     def __time_line_stat(data: List[TomatoTaskRecord]) -> dict:
@@ -130,53 +130,53 @@ class TomatoRecordManager:
         return {"tomatoCounts": count, "totalMinutes": int(time.total_seconds() / 60)}
 
 
-    @staticmethod
-    def __total_stat(data: List[TomatoTaskRecord]) -> dict:
-        time = timedelta()
-        for record in data:
-            time += (record.finish_time - record.start_time)
+    # @staticmethod
+    # def __total_stat(data: List[TomatoTaskRecord]) -> dict:
+    #     time = timedelta()
+    #     for record in data:
+    #         time += (record.finish_time - record.start_time)
 
-        elapsed_day = 1
-        count = len(data)
-        if count >= 2:
-            first_time = data[-1].start_time
-            last_time = data[0].finish_time
-            elapsed_day = (last_time - first_time).days + 1
+    #     elapsed_day = 1
+    #     count = len(data)
+    #     if count >= 2:
+    #         first_time = data[-1].start_time
+    #         last_time = data[0].finish_time
+    #         elapsed_day = (last_time - first_time).days + 1
 
-        average_time = time.total_seconds() / elapsed_day
+    #     average_time = time.total_seconds() / elapsed_day
 
-        return {
-            "count": count,
-            "hour": int(time.total_seconds() / 60 / 60),
-            "average": int(average_time / 60)
-        }
+    #     return {
+    #         "count": count,
+    #         "hour": int(time.total_seconds() / 60 / 60),
+    #         "average": int(average_time / 60)
+    #     }
 
-    @staticmethod
-    def __today_stat(data: List[TomatoTaskRecord]) -> dict:
-        today = now().date()
-        count = 0
-        time = timedelta()
-        for record in data:
-            start = record.start_time
-            finish = record.finish_time
-            if start.date() == today:
-                count += 1
-                time += (finish - start)
-        return {
-            "count": count,
-            "minute": int(time.total_seconds() / 60)
-        }
+    # @staticmethod
+    # def __today_stat(data: List[TomatoTaskRecord]) -> dict:
+    #     today = now().date()
+    #     count = 0
+    #     time = timedelta()
+    #     for record in data:
+    #         start = record.start_time
+    #         finish = record.finish_time
+    #         if start.date() == today:
+    #             count += 1
+    #             time += (finish - start)
+    #     return {
+    #         "count": count,
+    #         "minute": int(time.total_seconds() / 60)
+    #     }
 
-    @staticmethod
-    def __week_chart_stat(data: List[TomatoTaskRecord]) -> list:
-        WEEK_LENGTH = 15
-        today = now().date()
-        counts = [timedelta() for _ in range(WEEK_LENGTH)]
-        for record in data:
-            start = record.start_time
-            finish = record.finish_time
-            delta = (today - start.date()).days
-            if delta < WEEK_LENGTH:
-                counts[delta] += (finish - start)
+    # @staticmethod
+    # def __week_chart_stat(data: List[TomatoTaskRecord]) -> list:
+    #     WEEK_LENGTH = 15
+    #     today = now().date()
+    #     counts = [timedelta() for _ in range(WEEK_LENGTH)]
+    #     for record in data:
+    #         start = record.start_time
+    #         finish = record.finish_time
+    #         delta = (today - start.date()).days
+    #         if delta < WEEK_LENGTH:
+    #             counts[delta] += (finish - start)
 
-        return list(map(lambda time: int(time.total_seconds() / 60), counts))
+    #     return list(map(lambda time: int(time.total_seconds() / 60), counts))
