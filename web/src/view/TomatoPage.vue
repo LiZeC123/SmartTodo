@@ -16,6 +16,7 @@ import router from '@/router'
 
 import TomatoClock from '@/components/tomato/TomatoClock.vue'
 import ItemList from '@/components/item/ItemList.vue'
+import TimeLine from "@/components/timeline/TimeLine.vue"
 import Footer from '@/components/footer/TodoFooter.vue'
 
 import { playNotifacationAudio } from '@/components/tomato/tools'
