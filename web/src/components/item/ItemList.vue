@@ -3,7 +3,7 @@
     <div v-if="showList">
       <h2>{{ title }}</h2>
       <ol id="todoList" class="demo-box" @contextmenu.prevent>
-        <li v-for="(item, index) in data" :key="item.id" id="li-active"
+        <li v-for="(item, index) in sortedData" :key="item.id" id="li-active"
           :class="[{ done: doneItem(item) }, mapTypeToClass(item)]">
           <label><input type="checkbox" @change="$emit('done', index, item.id)" :checked="doneItem(item)"
               :disabled="doneItem(item)" /></label>
@@ -22,8 +22,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-// import Alert from '@/components/AlertBox.vue'
 import type { ButtonConfig, Item } from './types'
+import { compareItem } from './sort';
 
 const props = defineProps<{
   title?: string
@@ -38,6 +38,10 @@ const emit = defineEmits<{
 
 let showList = computed(() => {
   return props.data && props.data.length > 0
+})
+
+let sortedData = computed(() => {
+  return props.data?.sort(compareItem)
 })
 
 function doneItem(item: Item): boolean {

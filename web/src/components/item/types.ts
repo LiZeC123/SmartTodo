@@ -8,6 +8,7 @@ export interface Item {
   id: string
   name: string
   item_type: string
+  create_time: string
   repeatable: boolean
   specific: number
   deadline?: string

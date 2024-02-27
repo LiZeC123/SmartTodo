@@ -100,6 +100,7 @@ const aCfg = [
     desc: '转为今日任务',
     f: (index: number, id: string) => {
       axios.post('/item/toTodayTask', { id }).then(() => {
+        aTask.value[index].create_time = new Date().toISOString()
         tTask.value.push(...aTask.value.splice(index, 1))
       })
     }
@@ -146,6 +147,7 @@ function createFilePlaceHold(name: string) {
     id: '1',
     name,
     item_type: 'file',
+    create_time: new Date().toISOString(),
     repeatable: false,
     specific: 0,
     expected_tomato: 1,

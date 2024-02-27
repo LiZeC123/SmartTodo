@@ -8,7 +8,6 @@ import sqlalchemy as sal
 from entity import Item, TomatoType, ItemType, class2dict
 from exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
 from tool4event import EventManager
-from tool4key import activate_key, create_time_key
 from tool4log import logger
 from tool4time import now, today
 from tool4web import extract_title, download
@@ -68,13 +67,13 @@ class ItemManager(BaseManager):
         stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
                                       Item.tomato_type == TomatoType.Today)
         today_items = self.db.execute(stmt).scalars().all()
-        return list(map(class2dict, sorted(today_items, key=create_time_key)))
+        return list(map(class2dict, today_items))
 
     def select_activate(self, owner: str, parent: Optional[int]) -> List:
         stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
                                       Item.tomato_type == TomatoType.Activate)
         activates = self.db.execute(stmt).scalars().all()
-        return list(map(class2dict, sorted(activates, key=activate_key, reverse=True)))
+        return list(map(class2dict, activates))
 
     def get_item_by_name(self, name: str, parent: Optional[int], owner: str) -> List[Item]:
         stmt = sal.select(Item).where(Item.name.like(f"%{name}%"), Item.parent == parent, Item.owner == owner)
@@ -177,7 +176,7 @@ class ItemManager(BaseManager):
     def get_tomato_item(self, owner: str)-> List[Item]:
         stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today, Item.item_type == ItemType.Single)
         items = self.db.execute(stmt).scalars().all()
-        return list(map(class2dict, sorted(items, key=create_time_key)))
+        return list(map(class2dict, items))
 
     def get_title(self, xid: int, owner: str) -> str:
         stmt = sal.select(Item.name).where(Item.id == xid, Item.owner == owner)
