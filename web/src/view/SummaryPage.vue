@@ -3,9 +3,7 @@
   <div class="container">
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
     <EventTime :items="eventLineItem"></EventTime>
-    <h2>智能分析</h2>
-
-    <!-- TODO:  myChart -->
+    <SmartAnalysis :report="smartReport"></SmartAnalysis>
 
     <h2>今日总结</h2>
     <NoteEditor :init-content="initContent" @save="saveNote"></NoteEditor>
@@ -22,18 +20,21 @@ import router from '@/router'
 import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 import TimeLine from "@/components/timeline/TimeLine.vue"
 import EventTime from '@/components/eventline/EventLine.vue'
+import SmartAnalysis from '@/components/analysis/SmartAnalysis.vue'
 import NoteEditor from '@/components/editor/NoteEditor.vue'
 import Footer from '@/components/footer/TodoFooter.vue'
 import AlertBox from '@/components/AlertBox.vue'
 
 import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/types'
 import type { EventItem } from '@/components/eventline/types'
+import type {SmartAnalysisReport} from '@/components/analysis/types'
 import type { FooterConfig } from '@/components/footer/types'
 
 
 onMounted(() => {
   loadTimeLineItems()
   loadEventLineItems()
+  loadAnalysisReport()
   loadNote()
   document.title = '总结列表'
 })
@@ -65,6 +66,17 @@ function loadEventLineItems() {
   })
 }
 
+// ========================================================== SmartAnalysis 相关配置 ==========================================================
+
+let smartReport = ref<SmartAnalysisReport>({count: 0, groups: []})
+
+
+function loadAnalysisReport() {
+  axios.post<SmartAnalysisReport>("/summary/getSmartReport").then(res => {
+    smartReport.value = res.data
+    console.log(smartReport.value.count, smartReport.value.groups)
+  })
+}
 
 
 // ========================================================== NoteEditor 相关配置 ==========================================================

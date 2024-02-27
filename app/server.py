@@ -1,3 +1,4 @@
+from itertools import groupby
 from typing import Optional
 
 from entity import Item, ItemType, TomatoTaskRecord, TomatoType, class2dict
@@ -145,6 +146,18 @@ class Manager:
 
     def update_summary_note(self, content:str, owner:str):
         return self.report_manager.update_summary(content, owner)
+
+    def get_smart_analysis_report(self, owner:str):
+        items = self.item_manager.select_done_item(owner)
+        groups = []
+        for iid, g in groupby(sorted(items, key=lambda x: x.parent if x.parent is not None else 0), key=lambda x: x.parent):
+            if iid is not None:
+                pname = self.item_manager.select(iid).name
+            else:
+                pname = '全局任务'
+            groups.append({"name": pname, "items": [class2dict(i) for i in g]})
+    
+        return {"count": len(items), "groups": groups}
 
     def garbage_collection(self):
         return self.item_manager.garbage_collection()

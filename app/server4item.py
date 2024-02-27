@@ -118,8 +118,8 @@ class ItemManager(BaseManager):
         habits = self.db.execute(stmt).scalars().all()
         return list(map(class2dict, habits))
 
-    def select_done_item(self, owner: str) -> list:
-        stmt = sal.select(Item.name).where(Item.owner == owner, Item.expected_tomato == Item.used_tomato)
+    def select_done_item(self, owner: str) -> List[Item]:
+        stmt = sal.select(Item).where(Item.owner == owner, Item.expected_tomato == Item.used_tomato)
         return self.db.execute(stmt).scalars().all()
 
     def select_undone_item(self, owner: str) -> list:

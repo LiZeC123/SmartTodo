@@ -294,7 +294,11 @@ def update_summary_note():
     owner = get_owner_from_request()
     return manager.update_summary_note(content, owner)
 
-
+@app.route('/api/summary/getSmartReport', methods=['POST'])
+@logged
+def get_smart_analysis_report():
+    owner = get_owner_from_request()
+    return manager.get_smart_analysis_report(owner)
 
 
 # ####################### API For Functions #######################
