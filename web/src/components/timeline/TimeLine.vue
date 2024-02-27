@@ -1,4 +1,5 @@
 <template>
+    <h2>任务时间轴</h2>
     <p>已完成 {{ props.count.tomatoCounts }} 个番茄钟, 累计专注 {{ focusHour }} 小时 {{ focusMinute }} 分钟</p>
     <li v-for="item in props.items">{{ item.start }} - {{ item.finish }}  {{ item.title }}</li>
 </template>

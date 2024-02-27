@@ -1,8 +1,6 @@
 <template>
   <div class="container">
-    <h2>任务时间轴</h2>
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
-    <h2>事件时间轴</h2>
     <EventTime :items="eventLineItem"></EventTime>
     <h2>智能分析</h2>
 

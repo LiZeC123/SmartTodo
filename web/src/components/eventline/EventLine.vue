@@ -1,5 +1,5 @@
 <template>
-    <p></p>
+    <h2>事件时间轴</h2>
     <li v-for="item in items">{{ item.time }}  {{ item.content }}</li>
 </template>
 

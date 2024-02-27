@@ -2,9 +2,8 @@
   <div class="container">
     <!-- 番茄钟模块 -->
     <TomatoClock :item="tomatoItem" @done-task="doneTomatoTask"></TomatoClock>
-    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="doneItem"></ItemList>
-    <h2>任务时间轴</h2>
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
+    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="doneItem"></ItemList> 
     <Footer :is-admin="false" :config="footerConfig"></Footer>
   </div>
 </template>
