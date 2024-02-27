@@ -43,7 +43,7 @@ class TomatoManager:
         with self.lock:
             if self.match(tid, xid, owner):
                 task = self.state.pop(owner)
-                self.event_manager.add_event(f"由于 {reason} 中断番茄钟 {task.taskName}", owner)
+                self.event_manager.add_event(f"由于 {reason} 取消番茄钟 {task.taskName}", owner)
                 return True
             return False
 

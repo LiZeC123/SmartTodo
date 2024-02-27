@@ -132,7 +132,7 @@ class ItemManager(BaseManager):
         stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
         item:Item = self.db.scalar(stmt)
         self._undo(item)
-        self.event_manager.add_event(f"回退任务到活动任务列表: {item.name}", owner)
+        self.event_manager.add_event(f"回退任务到列表: {item.name}", owner)
         return self.select_activate(owner, parent=parent)
 
     def _undo(self, item: Item):
@@ -145,7 +145,7 @@ class ItemManager(BaseManager):
         item = self.db.scalar(stmt)
         if item:
             item.expected_tomato += 1
-            self.event_manager.add_event(f"增加预计的番茄钟时间: {item.name}", owner)
+            self.event_manager.add_event(f"增加预计的时间: {item.name}", owner)
         self.db.commit()
         return item is not None
 
