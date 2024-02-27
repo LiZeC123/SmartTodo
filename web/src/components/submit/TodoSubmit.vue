@@ -2,8 +2,8 @@
   <div class="header">
     <div class="box">
       <div id="form" @keyup.enter="commitTodo">
-        <label for="title" @mousedown.left="$emit('goto-home')">SmartTodo</label>
-        <div style="float: right; width: 60%">
+        <label for="title" @mousedown.left="$emit('logo')">SmartTodo</label>
+        <div v-show="enableSubmit" style="float: right; width: 60%">
           <label for="itemType"></label>
           <select id="itemType" v-model="todoType">
             <option value="single">创建待办</option>
@@ -28,9 +28,14 @@ import { ref, type Ref } from 'vue'
 import { parseTitleToData } from './parse'
 import type { CreateItem, CreateType, FuncData, TodoType } from './types'
 
+const props = defineProps<{
+  enableSubmit?: boolean
+}>()
+
+
 const emit = defineEmits<{
   (e: 'commit', type: CreateType, data: FuncData | CreateItem): void
-  (e: 'goto-home'): void
+  (e: 'logo'): void
 }>()
 
 let todoContent = ref('')

@@ -1,4 +1,5 @@
 <template>
+  <TodoSubmit @logo="gotoHome"></TodoSubmit>
   <div class="container">
     <!-- 番茄钟模块 -->
     <TomatoClock :item="tomatoItem" @done-task="doneTomatoTask"></TomatoClock>
@@ -13,6 +14,7 @@ import axios from 'axios'
 import { type Ref, ref, onMounted } from 'vue'
 import router from '@/router'
 
+import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 import TomatoClock from '@/components/tomato/TomatoClock.vue'
 import ItemList from '@/components/item/ItemList.vue'
 import TimeLine from "@/components/timeline/TimeLine.vue"
@@ -31,6 +33,13 @@ onMounted(() => {
   document.title = '番茄任务'
   window.onfocus = loadTomatoItems
 })
+
+// ========================================================== TodoSubmit 相关配置 ==========================================================
+function gotoHome() {
+  document.title = '代办事项列表'
+  router.push({ path: '/todo' })
+}
+
 
 // ========================================================== TomatoClock 相关配置 ==========================================================
 let tomatoItem: Ref<TomatoItem | undefined> = ref()
@@ -95,7 +104,6 @@ function loadTimeLineItems() {
 // ========================================================== Footer 相关配置 ==========================================================
 let footerConfig: FooterConfig[] = [
   { name: '新增记录', needAdmin: false, f: addRecord },
-  { name: '待办列表', needAdmin: false, f: () => router.push({ path: '/todo' }) },
   { name: '总结列表', needAdmin: false, f: () => router.push({ path: '/summary' }) },
 ]
 

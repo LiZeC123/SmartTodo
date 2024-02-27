@@ -1,4 +1,5 @@
 <template>
+  <TodoSubmit @logo="gotoHome"></TodoSubmit>
   <div class="container">
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
     <EventTime :items="eventLineItem"></EventTime>
@@ -18,6 +19,7 @@ import axios from 'axios'
 import { onMounted, ref, type Ref } from 'vue'
 import router from '@/router'
 
+import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 import TimeLine from "@/components/timeline/TimeLine.vue"
 import EventTime from '@/components/eventline/EventLine.vue'
 import NoteEditor from '@/components/editor/NoteEditor.vue'
@@ -33,7 +35,14 @@ onMounted(() => {
   loadTimeLineItems()
   loadEventLineItems()
   loadNote()
+  document.title = '总结列表'
 })
+
+// ========================================================== TodoSubmit 相关配置 ==========================================================
+function gotoHome() {
+  document.title = '代办事项列表'
+  router.push({ path: '/todo' })
+}
 
 
 // ========================================================== TimeLine 相关配置 ==========================================================
@@ -76,7 +85,6 @@ function saveNote(content: string) {
 // ========================================================== Footer 相关配置 ==========================================================
 let footerConfig: FooterConfig[] = [
   { name: '番茄任务', needAdmin: false, f: () => router.push({ path: '/tomato' }) },
-  { name: '待办列表', needAdmin: false, f: () => router.push({ path: '/todo' }) },
 ]
 
 

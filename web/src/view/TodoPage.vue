@@ -1,5 +1,5 @@
 <template>
-  <TodoSubmit @commit="doCommitTodo" @goto-home="gotoHome"></TodoSubmit>
+  <TodoSubmit :enableSubmit="true" @commit="doCommitTodo" @logo="gotoHome"></TodoSubmit>
 
   <div class="container">
     <!-- 代办事项模块 -->
@@ -64,6 +64,7 @@ function doCommitTodo(type: CreateType, data: FuncData | CreateItem) {
 }
 
 function gotoHome() {
+  document.title = '代办事项列表'
   router.push({ path: '/todo' })
 }
 

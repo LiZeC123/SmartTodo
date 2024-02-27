@@ -1,7 +1,8 @@
 <template>
+  <TodoSubmit @logo="gotoHome"></TodoSubmit>
   <div class="container">
-    <h2>{{ title }}</h2>
-    <MessageBox :message="content"></MessageBox>
+    <MessageBox :title="title" :message="content"></MessageBox>
+    <Footer :is-admin="false" :config='[]'></Footer>
   </div>
 </template>
 
@@ -10,21 +11,30 @@ import router from '@/router'
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
+import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 import MessageBox from '@/components/MessageBox.vue'
+import Footer from '@/components/footer/TodoFooter.vue'
 
-let title = '数据'
+// ========================================================== TodoSubmit 相关配置 ==========================================================
+function gotoHome() {
+  document.title = '代办事项列表'
+  router.push({ path: '/todo' })
+}
+
+// ========================================================== MessageBox 相关配置 ==========================================================
+let title = ref('数据')
 let content = ref('')
 
 onMounted(() => {
   const type = router.currentRoute.value.params.type as string
   switch (type) {
     case 'log':
-      title = '系统日志'
+      title.value = '系统日志'
       break
     default:
       console.warn('无效的类型')
   }
-  document.title = title
+  document.title = title.value
   axios.get('/log/' + type).then((rep) => (content.value = rep.data))
 })
 </script>
