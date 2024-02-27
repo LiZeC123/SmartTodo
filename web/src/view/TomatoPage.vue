@@ -3,6 +3,8 @@
     <!-- 番茄钟模块 -->
     <TomatoClock :item="tomatoItem" @done-task="doneTomatoTask"></TomatoClock>
     <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="doneItem"></ItemList>
+    <h2>任务时间轴</h2>
+    <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
     <Footer :is-admin="false" :config="footerConfig"></Footer>
   </div>
 </template>
@@ -19,11 +21,13 @@ import Footer from '@/components/footer/TodoFooter.vue'
 import { playNotifacationAudio } from '@/components/tomato/tools'
 import type { TomatoItem, TomatoEventType, TomatoParam } from '@/components/tomato/types'
 import type { Item } from '@/components/item/types'
+import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/types'
 import type { FooterConfig } from '@/components/footer/types'
 
 onMounted(() => {
   loadTomato()
   loadTomatoItems()
+  loadTimeLineItems()
   document.title = '番茄任务'
   window.onfocus = loadTomatoItems
 })
@@ -67,13 +71,6 @@ const tCfg = [
       })
     }
   },
-  // {
-  //   name: 'calculator',
-  //   desc: '增加预计时间',
-  //   f: (index: number, id: string) => {
-  //     axios.post('/item/incExpTime', { id }).then(() => (tTask.value[index].expected_tomato += 1))
-  //   }
-  // }
 ]
 
 function loadTomatoItems() {
@@ -84,13 +81,41 @@ function doneItem(index: number, id: string) {
   axios.post('/item/incUsedTime', { id }).then(() => (tTask.value[index].used_tomato += 1))
 }
 
+// ========================================================== TimeLine 相关配置 ==========================================================
+let timeLineItem = ref<TimeLineItem[]>([])
+let countInfo = ref<CountInfo>({ tomatoCounts: 0, totalMinutes: 0 })
 
+function loadTimeLineItems() {
+  axios.post<Report>("/summary/getReport").then(res => {
+    timeLineItem.value = res.data.items
+    countInfo.value = res.data.counter
+  })
+}
 
 // ========================================================== Footer 相关配置 ==========================================================
 let footerConfig: FooterConfig[] = [
+  { name: '新增记录', needAdmin: false, f: addRecord },
   { name: '待办列表', needAdmin: false, f: () => router.push({ path: '/todo' }) },
   { name: '总结列表', needAdmin: false, f: () => router.push({ path: '/summary' }) },
 ]
+
+
+function addRecord() {
+  const name = prompt('请输入记录名称')
+  if (!name) {
+    return
+  }
+
+  const startTime = prompt('请输入开始时间')
+  if (!startTime) {
+    return
+  }
+
+  axios.post('/tomato/addRecord', { name, startTime }).then(() => {
+    loadTomatoItems()
+    loadTimeLineItems()
+  })
+}
 
 </script>
 
