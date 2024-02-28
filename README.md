@@ -43,18 +43,48 @@ Smart-Todo是一个简单智能的待办事项管理程序. Smart-Todo提供了�
 项目部署
 -------------
 
-本项目已经支持Docker方式部署, clone本项目后, 执行如下命令拉取并运行
+本项目已经支持Docker方式部署, 并且已经在Github提供的镜像托管服务`ghcr.io`上发布了此项目的镜像文件, 可根据需要在如下的两种部署方式种选择一种方式部署
+
+### 方式一: 直接使用镜像
+
+将如下的内容保存为`docker-compose.yml` 
+
+```yml
+version: '3.0'
+services:
+  todo:
+    container_name: smart-todo
+    image: ghcr.io/lizec123/smart-todo:latest
+    environment:
+      TZ: Asia/Shanghai
+    ports: 
+      - "8080:80"
+    volumes:
+      - ./config:/app/config
+      - ./data/database:/app/data/database
+      - ./data/notebase:/app/data/notebase
+      - ./data/filebase:/app/data/filebase
+      - ./data/log:/app/data/log
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+```
+
+执行如下命令拉取并运行服务
 
 ```bash
 docker-compose up -d
 ```
 
-此操作将从Github提供的镜像托管服务`ghcr.io`上拉取镜像, 如果无法便利的访问此服务, 可以手动执行如下的命令构建镜像并运行
+### 方式二: 本地构建镜像后运行
+
+如果无法访问`ghcr.io`, 则可以将此项目clone到本地后, 手动执行如下的命令在本地构建镜像
 
 ```
 docker build . --file docker/Dockerfile --tag ghcr.io/lizec123/smart-todo
-docker-compose up -d
 ```
+之后可以参考上一节的内容创建`docker-compose.yml`文件并启动服务.
+
+### 部署说明
 
 项目默认在8080端口提供服务, 可通过修改`docker-compose.yml`文件修改项目配置.
 
