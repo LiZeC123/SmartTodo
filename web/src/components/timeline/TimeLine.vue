@@ -22,7 +22,7 @@ const fullItems = computed(() => fullTimeLine(props.items))
 function elapsedTime(item: TimeLineItem): string {
     const v = timeStrToMinutes(item.finish) - timeStrToMinutes(item.start)
 
-    return v.toString().padStart(3, '0')
+    return v.toString().padStart(2, '0')
 }
 
 </script>
