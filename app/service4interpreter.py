@@ -36,7 +36,7 @@ class OpInterpreter:
         item = self.item_manager.get_unique_or_null_item_by_name(name, parent, owner)
         if item is not None:
             name = item.name
-        for subtask in reversed(subtasks):
+        for subtask in subtasks:
             sub_item = Item(name=f"{name}：{subtask}", item_type=ItemType.Single, tomato_type=TomatoType.Activate,
                             owner=owner, parent=parent)
             self.item_manager.create(sub_item)
