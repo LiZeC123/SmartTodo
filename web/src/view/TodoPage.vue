@@ -158,13 +158,13 @@ function createFilePlaceHold(name: string) {
 }
 
 function jumpTo(_: string, path: string) {
-  if (path.startsWith('http')) {
-    // 绝对路径直接打开
-    window.open(path)
-  } else {
+  if (path.startsWith('note')) {
     // note对应的路径, 路由跳转
     path = "/" + path
     router.push({ path })
+  } else {
+    // 外部URL, 文件URL等直接打开
+    window.open(path)
   }
 
 }
