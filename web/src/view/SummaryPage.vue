@@ -74,7 +74,6 @@ let smartReport = ref<SmartAnalysisReport>({count: 0, groups: []})
 function loadAnalysisReport() {
   axios.post<SmartAnalysisReport>("/summary/getSmartReport").then(res => {
     smartReport.value = res.data
-    console.log(smartReport.value.count, smartReport.value.groups)
   })
 }
 
