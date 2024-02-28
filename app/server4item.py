@@ -5,7 +5,7 @@ from typing import Optional, Dict, List
 
 import sqlalchemy as sal
 
-from entity import Item, TomatoType, ItemType, class2dict
+from entity import Item, TomatoType, ItemType, Note, class2dict
 from exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
 from tool4event import EventManager
 from tool4log import logger
@@ -29,7 +29,7 @@ class ItemManager(BaseManager):
         self.db = db
         self.base_manager = SingleItemManager(db)
         self.file_manager = FileItemManager(self.base_manager)
-        self.note_manager = NoteItemManager(self.base_manager)
+        self.note_manager = NoteItemManager(self.base_manager, db=db)
         self.event_manager = EventManager(db)
 
         self.manager: Dict[str, BaseManager] = {
@@ -194,7 +194,7 @@ class ItemManager(BaseManager):
         if item.item_type != ItemType.Note:
             raise UnauthorizedException(f"Item {nid} isn't a note, and can't be updated")
 
-        self.note_manager.update_note(nid, content)
+        self.note_manager.update_note(nid, content, owner)
 
     def update(self, item: Item) -> Item:
         return self.manager[item.item_type].update(item)
@@ -312,13 +312,13 @@ class FileItemManager(BaseManager):
 class NoteItemManager(BaseManager):
     _NOTE_FOLDER = "data/notebase"
 
-    def __init__(self, m: BaseManager):
+    def __init__(self, m: BaseManager, db):
         self.manager = m
+        self.db = db
 
     def create(self, item: Item) -> Item:
         item = self.manager.create(item)
-        filename = os.path.join(NoteItemManager._NOTE_FOLDER, str(item.id))
-        self.__write_init_content(filename, title=item.name)
+        self.__write_init_content(item)
         item.url = f"note/{item.id}"
         return self.manager.update(item)
 
@@ -327,30 +327,45 @@ class NoteItemManager(BaseManager):
 
     def remove(self, item: Item):
         nid = item.id
-        filename = os.path.join(NoteItemManager._NOTE_FOLDER, str(nid))
-        try:
-            os.remove(filename)
-            self.manager.remove(item)
-        except FileNotFoundError:
+        stmt = sal.select(Note).where(Note.id == nid)
+        note: Note = self.db.scalar(stmt)
+        if note is None:
             logger.warning(f"{NoteItemManager.__name__}: Note Not Found: {nid}")
-            self.manager.remove(item)
+        self.db.delete(note)
+        self.db.commit()
+        self.manager.remove(item)
 
-    @staticmethod
-    def get_note(nid: int) -> str:
+    def get_note(self, nid: int) -> str:
+        # 首先尝试从数据库加载
+        stmt = sal.select(Note).where(Note.id == nid)
+        note: Note = self.db.scalar(stmt)
+        if note is not None:
+            logger.info(f"从数据库加载Note: {nid}")
+            return note.content
+        
+        # 如果数据库加载失败, 在尝试从文件加载
         filename = os.path.join(NoteItemManager._NOTE_FOLDER, str(nid))
         with open(filename, 'r', encoding="utf-8") as f:
+            logger.info(f"从文件库加载Note: {nid}")
             return f.read()
 
-    @staticmethod
-    def update_note(nid: int, content: str):
-        filename = os.path.join(NoteItemManager._NOTE_FOLDER, str(nid))
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(content)
+    def update_note(self, nid: int, content: str, owner:str) -> bool:
+        stmt = sal.select(Note).where(Note.id == nid)
+        note = self.db.scalar(stmt)
+        if note is None:
+            note = Note(id=nid, content=content, owner=owner)
+        else:
+            note.content = content
+        
+        self.db.add(note)
+        self.db.commit()
+        return True
 
-    @staticmethod
-    def __write_init_content(filename, title):
-        with open(filename, "w", encoding="utf-8") as f:
-            content = f"<h1>{title}</h1>" \
-                      f"<div>====================</div>" \
-                      f"<div><br></div><div><br></div><div><br></div><div><br></div>"
-            f.write(content)
+    def __write_init_content(self, item:Item):
+        content = f"<h1>{item.name}</h1>" \
+            f"<div>====================</div>" \
+            f"<div><br></div><div><br></div><div><br></div><div><br></div>"
+        note = Note(id=item.id, content=content, owner=item.owner)
+        self.db.add(note)
+        self.db.commit()
+
