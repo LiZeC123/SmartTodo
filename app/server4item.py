@@ -331,8 +331,9 @@ class NoteItemManager(BaseManager):
         note: Note = self.db.scalar(stmt)
         if note is None:
             logger.warning(f"{NoteItemManager.__name__}: Note Not Found: {nid}")
-        self.db.delete(note)
-        self.db.commit()
+        else:
+            self.db.delete(note)
+            self.db.commit()
         self.manager.remove(item)
 
     def get_note(self, nid: int) -> str:
