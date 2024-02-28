@@ -5,7 +5,7 @@ export function playNotifacationAudio() {
   if (audio) {
     audio.loop = true
     audio.play()
-    setTimeout(audio.pause, OneMinuteMS)
+    setTimeout(() => audio.pause(), OneMinuteMS)
   }
 }
 
