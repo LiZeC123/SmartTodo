@@ -31,8 +31,13 @@ onMounted(() => {
   loadTomatoItems()
   loadTimeLineItems()
   document.title = '番茄任务'
-  window.onfocus = loadTomatoItems
+  window.onfocus = reloadList
 })
+
+function reloadList() {
+  loadTomatoItems()
+  loadTimeLineItems()
+}
 
 // ========================================================== TodoSubmit 相关配置 ==========================================================
 function gotoHome() {
@@ -61,7 +66,7 @@ function doneTomatoTask(type: TomatoEventType, param: TomatoParam) {
       if (res.data) {
         playNotifacationAudio()
         tomatoItem.value = undefined
-        loadTomatoItems()
+        reloadList()
       }
     })
   }
@@ -119,10 +124,7 @@ function addRecord() {
     return
   }
 
-  axios.post('/tomato/addRecord', { name, startTime }).then(() => {
-    loadTomatoItems()
-    loadTimeLineItems()
-  })
+  axios.post('/tomato/addRecord', { name, startTime }).then(reloadList)
 }
 
 </script>
