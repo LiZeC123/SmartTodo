@@ -41,7 +41,6 @@ li {
 
 .tomato {
     margin-top: 4px;
-    margin-bottom: 4px;
 }
 
 .empty {
