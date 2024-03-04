@@ -35,7 +35,7 @@ export function fullTimeLine(items: TimeLineItem[]): TimeLineItem[] {
     let last = s0
     for (let i = 1; i < items.length; i++) {
         const item = items[i]
-        if(timeStrToMinutes(last.finish) + 5 < timeStrToMinutes(item.start)) {
+        if(timeStrToMinutes(last.finish) + 10 < timeStrToMinutes(item.start)) {
             ans.push({start: last.finish, finish: item.start, title})
         }
         ans.push(item)
