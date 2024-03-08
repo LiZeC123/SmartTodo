@@ -1,12 +1,12 @@
-
 import sqlalchemy as sal
+from sqlalchemy.orm import Session
 
 from entity import Summary
 from tool4time import today_str
 
 
 class ReportManager:
-    def __init__(self, db) -> None:
+    def __init__(self, db: Session) -> None:
         self.db = db
 
     def update_summary(self, content:str, owner: str)-> bool:

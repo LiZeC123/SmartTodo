@@ -1,6 +1,8 @@
 from itertools import groupby
 from typing import Optional
 
+from sqlalchemy.orm import Session
+
 from entity import Item, ItemType, TomatoTaskRecord, TomatoType, class2dict
 from exception import UnauthorizedException
 from server4item import ItemManager
@@ -15,7 +17,7 @@ from tool4tomato import TomatoManager, TomatoRecordManager
 from tool4time import parse_time, now
 
 class Manager:
-    def __init__(self, db):
+    def __init__(self, db: Session):
         self.config = ConfigManager()
         self.token_manager = TokenManager()
 

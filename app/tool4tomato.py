@@ -4,7 +4,7 @@ from datetime import timedelta
 from typing import Dict, List
 
 import sqlalchemy as sal
-from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from entity import Item, TomatoTaskRecord
 from tool4event import EventManager
@@ -14,7 +14,7 @@ Task = namedtuple("Task", ["taskId", "itemId", "taskName", "startTime"])
 
 
 class TomatoManager:
-    def __init__(self, db):
+    def __init__(self, db: Session):
         self.db = db
         self.state: Dict[str, Task] = {}
         self.tid = 1025
@@ -77,7 +77,7 @@ Record = namedtuple("Record", ["start", "finish", "title", "extend"])
 
 
 class TomatoRecordManager:
-    def __init__(self, db):
+    def __init__(self, db: Session):
         self.db = db
 
     def get_time_line_summary(self, owner:str):

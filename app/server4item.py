@@ -4,6 +4,7 @@ from os.path import join
 from typing import Optional, Dict, List
 
 import sqlalchemy as sal
+from sqlalchemy.orm import Session
 
 from entity import Item, TomatoType, ItemType, Note, class2dict
 from exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
@@ -25,7 +26,7 @@ class BaseManager:
 
 
 class ItemManager(BaseManager):
-    def __init__(self, db):
+    def __init__(self, db: Session):
         self.db = db
         self.base_manager = SingleItemManager(db)
         self.file_manager = FileItemManager(self.base_manager)
@@ -153,10 +154,6 @@ class ItemManager(BaseManager):
         stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
         item = self.db.scalar(stmt)
         if item:
-            if item.habit_expected != 0 and item.last_check_time.date() != today():
-                item.habit_done += 1
-                item.last_check_time = now()
-                logger.info(f"完成打卡任务: {item.name}")
             if item.used_tomato < item.expected_tomato:
                 item.used_tomato += 1
                 logger.info(f"手动完成任务: {item.name}")

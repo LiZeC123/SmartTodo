@@ -63,16 +63,8 @@ def test_create_item_with_attr():
     multi_tomato_item = make_base_item("multi_tomato_item")
     multi_tomato_item.expected_tomato = 3
 
-    habit_item = make_base_item("habit_item")
-    habit_item.habit_done = 2
-    habit_item.habit_expected = 5
 
-    inf_habit_item = make_base_item("inf_habit_item")
-    inf_habit_item.habit_done = 3
-    habit_item.habit_expected = -1
-
-    items = [deadline_item, repeatable_item, specific_item, activate_item, multi_tomato_item, habit_item,
-             inf_habit_item]
+    items = [deadline_item, repeatable_item, specific_item, activate_item, multi_tomato_item]
 
     # Test Base Insert
     for item in items:
@@ -253,14 +245,6 @@ def test_select_summary():
         manager.remove(item)
 
 
-def test_select_habit():
-    item = make_base_item("test_select_habit")
-    item.habit_expected = -1
-    manager.create(item)
-    manager.select_habit(owner)
-    manager.remove(item)
-
-
 def test_select_done_item():
     done_item = make_base_item("test_select_done_item")
     done_item.expected_tomato = 2
@@ -308,16 +292,13 @@ def test_increase_expected_tomato():
 
 def test_increase_used_tomato():
     item = make_base_item("test_increase_used_tomato")
-    item.habit_expected = -1
     manager.create(item)
 
     manager.increase_used_tomato(item.id, owner)
-    assert item.habit_done == 1
     assert item.used_tomato == 1
 
     # 测试重复提交不更新数据
     manager.increase_used_tomato(item.id, owner)
-    assert item.habit_done == 1
     assert item.used_tomato == 1
 
     manager.remove(item)
