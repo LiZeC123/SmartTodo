@@ -9,7 +9,15 @@ from sqlalchemy.orm import mapped_column
 from tool4time import now
 
 class Base(DeclarativeBase):
-    pass
+    def to_dict(self):
+        d = {}
+        for c in self.__table__.columns:
+            v = getattr(self, c.name, None)
+            if type(v) == datetime:
+                d[c.name] = v.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                d[c.name] = v
+        return d       
 
 
 class ItemType:
@@ -53,6 +61,16 @@ class Item(Base):
         # noinspection PyTypeChecker
         return str(class2dict(self))
 
+class TomatoStatus(Base):
+    __tablename__ = "tomato_status"
+
+    item_id: Mapped[int]            = mapped_column(Integer, primary_key=True)
+    name: Mapped[str]               = mapped_column(Text, nullable=False)
+    start_time: Mapped[datetime]    = mapped_column(DateTime, nullable=False, default=now)
+    owner: Mapped[str]              = mapped_column(String(15), nullable=False, unique=True)
+
+    def to_dict(self):
+        return {"itemId": self.item_id, "taskName": self.name, "startTime": self.start_time.strftime("%Y-%m-%d %H:%M:%S"), "finished": False}
 
 class TomatoTaskRecord(Base):
     __tablename__ = "tomato_task_record"

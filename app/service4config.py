@@ -1,5 +1,6 @@
 import json
 from os.path import exists, join
+from typing import List
 
 from tool4log import logger
 
@@ -20,7 +21,7 @@ class ConfigManager:
         users = self.config['USER_INFO']
         return username in users and users[username]['password'] == password
 
-    def get_roles(self, username: str):
+    def get_roles(self, username: str) -> List[str]:
         users: dict = self.config['USER_INFO']
         if username in users:
             return users[username]['role']

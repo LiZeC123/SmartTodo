@@ -12,3 +12,5 @@ th.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(me
 logger.addHandler(th)
 
 task_logger = logging.getLogger("task")
+
+#TODO: 自动创建LOG目录

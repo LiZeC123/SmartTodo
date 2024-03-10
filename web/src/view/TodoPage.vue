@@ -80,9 +80,8 @@ const tCfg = [
     name: 'angle-double-down',
     desc: '退回此项目',
     f: (index: number, id: string) => {
-      axios.post<Item[]>('/item/back', { id, parent }).then((res) => {
-        tTask.value.splice(index, 1)
-        aTask.value = res.data
+      axios.post<boolean>('/item/back', { id, parent }).then(() => {
+        aTask.value.push(...tTask.value.splice(index, 1))
       })
     }
   }

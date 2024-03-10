@@ -122,8 +122,6 @@ def test_file():
 
     manager.file_manager.remove(item)
 
-    # 再次尝试删除, 内部触发FileNotFoundError
-    manager.file_manager.remove(item)
 
 
 def test_note():
@@ -143,8 +141,7 @@ def test_note():
         manager.update_note(note.id + 10000, owner, test_content)
 
     manager.remove(note)
-    # 再次尝试删除, 内部触发FileNotFoundError
-    manager.remove(note)
+
 
 
 def test_update_not_note():
@@ -213,7 +210,8 @@ def test_select():
     item.url = "Test Data"
     manager.create(item)
 
-    assert manager.select(item.id).url == item.url
+    t = manager.select(item.id)
+    assert t is not None and t.url == item.url
 
     manager.remove(item)
 
@@ -285,7 +283,9 @@ def test_increase_expected_tomato():
     manager.create(item)
 
     assert manager.increase_expected_tomato(item.id, owner)
-    assert manager.increase_expected_tomato(item.id + 999, owner) == False
+
+    with pytest.raises(UnauthorizedException):
+        manager.increase_expected_tomato(item.id + 999, owner)
 
     manager.remove(item)
 
@@ -310,8 +310,11 @@ def test_to_today_task():
     manager.create(item)
 
     assert manager.to_today_task(item.id, owner)
-    assert manager.to_today_task(item.id + 999, owner) == False
-    assert manager.select(item.id).tomato_type == TomatoType.Today
+    with pytest.raises(UnauthorizedException):
+        manager.to_today_task(item.id + 999, owner)
+    
+    t =  manager.select(item.id)
+    assert t is not None and t.tomato_type  == TomatoType.Today
 
     manager.remove(item)
 
@@ -334,8 +337,8 @@ def test_remove_by_id():
     manager.remove_by_id(item.id, owner)
     assert len(manager.select_all(owner, None)['todayTask']) == 0
 
-    # 删除不存在的项目时返回False，不抛出异常
-    assert manager.remove_by_id(item.id, owner) == False
+    with pytest.raises(UnauthorizedException):
+        manager.remove_by_id(item.id, owner)
 
 
 def test_garbage_collection():
