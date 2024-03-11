@@ -25,9 +25,7 @@ class TokenManager:
         info = self.query_info(token)
         if info is None:
             return False
-        role_list: Optional[List[str]] = info.get('role')
-        if role_list is None:
-            return False
+        role_list: List[str] = info.get('role', [])
         return role in role_list
     
     def get_username_from(self, token: str) -> str:

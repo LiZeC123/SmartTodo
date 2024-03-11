@@ -121,6 +121,18 @@ def test_file():
     manager.update(item)
 
     manager.file_manager.remove(item)
+    # 再次删除, 触发异常分支
+    manager.file_manager.remove(item)
+
+
+def test_file_no_url():
+    item = make_base_item("file_no_url")
+    manager.create(item)
+
+    item.item_type = ItemType.File
+    manager.update(item)
+
+    manager.remove(item)
 
 
 
@@ -142,6 +154,10 @@ def test_note():
 
     manager.remove(note)
 
+def test_note_no_exists():
+    fake_id = 65535
+    with pytest.raises(UnmatchedException):
+        manager.note_manager.must_get_note(fake_id)
 
 
 def test_update_not_note():
@@ -150,15 +166,6 @@ def test_update_not_note():
     manager.create(item)
     with pytest.raises(UnauthorizedException):
         manager.update_note(item.id, owner, test_content)
-    manager.remove(item)
-
-
-def test_check_authority():
-    item = make_base_item("test_check_authority")
-    manager.create(item)
-    manager.check_authority(item.id, owner)
-    with pytest.raises(UnauthorizedException):
-        manager.check_authority(item.id, "others")
     manager.remove(item)
 
 

@@ -86,7 +86,7 @@ class TomatoManager:
         return self.query_task(owner) is not None
 
 
-    def add_tomato_record(self, name:str, start_time:str, owner: str):
+    def add_tomato_record(self, name:str, start_time:str, owner: str) -> bool:
         item = Item(name=name, item_type=ItemType.Single, tomato_type=TomatoType.Today, owner=owner)
         item.used_tomato = 1
         self.item_manager.create(item)
@@ -94,6 +94,7 @@ class TomatoManager:
         record = TomatoTaskRecord(name=name, owner=owner, start_time=parse_time(start_time), finish_time=now())
         self.db.add(record)
         self.db.flush()
+        return True
 
 
     def __insert_record(self, task: TomatoStatus):
@@ -108,13 +109,6 @@ class TomatoRecordManager:
         self.db = db
         self.item_manager = item_manager
 
-    def create_record(self, record: TomatoTaskRecord):
-        self.db.add(record)
-        self.db.flush()
-
-    def create_just_in_time_record(self):
-        """插入一条即时番茄钟记录. 存在临时事项导致未即时启用番茄钟的情况, 可在该事项结束后, 手动补录番茄钟记录"""
-        pass
 
     def get_time_line_summary(self, owner:str):
         record = self.__select_record_before(owner, today_begin())
@@ -124,11 +118,11 @@ class TomatoRecordManager:
         items = self.item_manager.select_done_item(owner)
         groups = []
         for iid, g in groupby(sorted(items, key=lambda x: x.parent if x.parent is not None else 0), key=lambda x: x.parent):
+            item = None
             if iid is not None:
-                pname = self.item_manager.select(iid).name
-            else:
-                pname = '全局任务'
-            groups.append({"name": pname, "items": [class2dict(i) for i in g]})
+                item = self.item_manager.select(iid)
+            pname = '全局任务' if item is None else item.name
+            groups.append({"name": pname, "items": [i.to_dict() for i in g]})
     
         return {"count": len(items), "groups": groups}
 

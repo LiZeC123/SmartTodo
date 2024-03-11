@@ -39,13 +39,6 @@ class ItemManager(BaseManager):
             ItemType.Note: self.note_manager
         }
 
-    def check_authority(self, xid: int, owner: str):
-        stmt = sal.select(Item.owner).where(Item.id == xid)
-        expected_owner = self.db.scalar(stmt)
-        if expected_owner is None:
-            raise UnmatchedException(f"No Item matched xId {xid}")
-        if expected_owner != owner:
-            raise UnauthorizedException(f"User {owner} dose not have authority For xID {xid}")
 
     def create(self, item: Item) -> Item:
         return self.manager[item.item_type].create(item)
@@ -174,15 +167,12 @@ class ItemManager(BaseManager):
         return list(map(class2dict, items))
 
     def get_title(self, xid: int, owner: str) -> str:
-        stmt = sal.select(Item.name).where(Item.id == xid, Item.owner == owner)
-        title =  self.db.scalar(stmt)
-        if title is None:
-            raise UnauthorizedException("")
-        return title
+        item = self.select_with_authority(xid, owner)
+        return item.name
 
     def get_note(self, nid: int, owner: str) -> str:
-        self.check_authority(nid, owner)
-        return self.note_manager.get_note(nid)
+        item = self.select_with_authority(nid, owner)
+        return self.note_manager.get_note(item.id)
 
     def update_note(self, nid: int, owner: str, content: str):
         item = self.select(nid)
@@ -294,22 +284,22 @@ class FileItemManager(BaseManager):
 
     def remove(self, item: Item):
         if item.url is None:
-            return False
+            logger.warning(f"{FileItemManager.__name__}: url Not Found: {item.name}")
+            return self.manager.remove(item)
         
         filename = item.url.replace("/file", FileItemManager._FILE_FOLDER)
         try:
             os.remove(filename)
             return self.manager.remove(item)
         except FileNotFoundError:
-            # 对于文件没有找到这种情况, 可以删除记录
+            # 对于文件没有找到这种情况, 仅打印日志
             logger.warning(f"{FileItemManager.__name__}: File Not Found: {filename}")
-            return self.manager.remove(item)
 
 
 class NoteItemManager(BaseManager):
     _NOTE_FOLDER = "data/notebase"
 
-    def __init__(self, m: BaseManager, db):
+    def __init__(self, m: BaseManager, db: scoped_session[Session]):
         self.manager = m
         self.db = db
 
@@ -323,42 +313,29 @@ class NoteItemManager(BaseManager):
         return self.manager.update(item)
 
     def remove(self, item: Item):
-        nid = item.id
-        stmt = sal.select(Note).where(Note.id == nid)
-        note: Note = self.db.scalar(stmt)
-        if note is None:
-            logger.warning(f"{NoteItemManager.__name__}: Note Not Found: {nid}")
-            return False
-        
+        note = self.must_get_note(item.id)
         self.db.delete(note)
         self.db.flush()
         return self.manager.remove(item)
 
     def get_note(self, nid: int) -> str:
-        # 首先尝试从数据库加载
-        stmt = sal.select(Note).where(Note.id == nid)
-        note: Note = self.db.scalar(stmt)
-        if note is not None:
-            logger.info(f"从数据库加载Note: {nid}")
-            return note.content
-        
-        # 如果数据库加载失败, 在尝试从文件加载
-        filename = os.path.join(NoteItemManager._NOTE_FOLDER, str(nid))
-        with open(filename, 'r', encoding="utf-8") as f:
-            logger.info(f"从文件库加载Note: {nid}")
-            return f.read()
+        note = self.must_get_note(nid)        
+        return note.content
 
     def update_note(self, nid: int, content: str, owner:str) -> bool:
-        stmt = sal.select(Note).where(Note.id == nid)
-        note = self.db.scalar(stmt)
-        if note is None:
-            note = Note(id=nid, content=content, owner=owner)
-        else:
-            note.content = content
+        note = self.must_get_note(nid)
+        note.content = content
         
         self.db.add(note)
         self.db.flush()
         return True
+
+    def must_get_note(self, nid: int) -> Note:
+        stmt = sal.select(Note).where(Note.id == nid)
+        note = self.db.scalar(stmt)
+        if note is None:
+            raise UnmatchedException(f"{NoteItemManager.__name__}: Note Not Found: {nid}")
+        return note
 
     def __write_init_content(self, item:Item):
         content = f"<h1>{item.name}</h1>" \

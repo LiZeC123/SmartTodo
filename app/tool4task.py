@@ -8,7 +8,7 @@ import schedule
 from tool4log import logger
 
 
-def make_task(name, task) -> Callable:
+def make_task(name: str, task: Callable) -> Callable:
     def task_func():
         logger.info(f"定时任务管理器: 执行任务: {name}")
         try:
@@ -27,11 +27,11 @@ class TaskManager(threading.Thread):
         self.HALF_HOUR_SEC = 30 * 60
 
     @staticmethod
-    def add_daily_task(name, task, hour: str):
+    def add_daily_task(name: str, task: Callable, hour: str):
         schedule.every().day.at(hour).do(make_task(name, task))
 
     @staticmethod
-    def add_friday_task(name, task, hour: str):
+    def add_friday_task(name: str, task: Callable, hour: str):
         schedule.every().friday.at(hour).do(make_task(name, task))
 
     def start(self) -> None:
