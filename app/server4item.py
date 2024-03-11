@@ -169,7 +169,7 @@ class ItemManager(BaseManager):
         return item is not None
     
     def get_tomato_item(self, owner: str)-> List[Dict]:
-        stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today, Item.item_type == ItemType.Single)
+        stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today, Item.item_type == ItemType.Single, Item.expected_tomato > Item.used_tomato)
         items = self.db.execute(stmt).scalars().all()
         return list(map(class2dict, items))
 
