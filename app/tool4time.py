@@ -13,10 +13,6 @@ def now_str_fn() -> str:
     return now().strftime("%Y%m%d_%H%M%S")
 
 
-def now_stamp() -> float:
-    return now().timestamp()
-
-
 def today() -> date:
     return now().date()
 
@@ -64,9 +60,6 @@ def get_hour_str_from(t: datetime) -> str:
 
 # ################################# API For Server ################################# #
 
-def parse_timestamp(timestamp: float) -> datetime:
-    return datetime.fromtimestamp(timestamp)
-
 
 def parse_deadline_timestamp(timestamp: float) -> datetime:
     return datetime.fromtimestamp(timestamp / 1000)
@@ -95,7 +88,3 @@ def parse_time(time_str: str) -> datetime:
 def is_work_time():
     # weekday返回的范围是0~6, 且周一返回0
     return 9 <= now().hour < 18 and 0 <= now().weekday() <= 4
-
-
-def zero_time() -> datetime:
-    return datetime(2022, 2, 2, 2, 2)

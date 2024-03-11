@@ -1,79 +1,97 @@
 import functools
-import json
-from typing import Dict, Optional
+from typing import Any, Dict, Optional, Sequence
 
-from flask import Flask, request, abort
+from flask import Flask, jsonify, request, abort
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from entity import Item, Base
-from exception import UnauthorizedException
-from server import Manager
+from entity import Item, Base, class2dict
+from exception import IllegalArgumentException, UnauthorizedException
+from service4config import ConfigManager
+from service4interpreter import OpInterpreter
+from tool4log import Log_File
+from tool4event import EventManager
+from tool4report import ReportManager
+from server4item import ItemManager
+from tool4task import TaskManager
+from tool4token import TokenManager
+from tool4tomato import TomatoManager, TomatoRecordManager
 from tool4log import logger
 from tool4time import parse_deadline_timestamp
 
 app = Flask(__name__)
 
 engine = create_engine('sqlite:///data/database/data.db', echo=True, future=True)
+
+# 定义一个基于线程的Session
+# https://docs.sqlalchemy.org/en/20/orm/contextual.html
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 # 初始化所有的表
 Base.metadata.create_all(engine)
 
-manager = Manager(db_session)
+
+config_manager = ConfigManager()
+event_manager = EventManager(db_session)
+report_manager = ReportManager(db_session)
+item_manager = ItemManager(db_session)
+task_manager = TaskManager()
+token_manager = TokenManager()
+tomato_manager = TomatoManager(db_session, item_manager=item_manager)
+tomato_record_manager = TomatoRecordManager(db_session, item_manager=item_manager)
+op_interpreter = OpInterpreter(item_manager, tomato_manager)
 
 
-def make_result(data) -> str:
-    return json.dumps(data)
+class authority_check:
+    def __init__(self, role='ROLE_USER') -> None:
+        self.role = role
 
+    def __call__(self, func) -> Any:
+        @functools.wraps(func)
+        def wrapped_function(*args, **kwargs):
+            token = request.headers.get('token')
+            if token is None or not token_manager.valid_token(token, self.role):
+                abort(401)
 
-def logged(func=None, role='ROLE_USER', wrap=True):
-    if func is None:
-        return functools.partial(logged, role=role)
+            try:
+                owner = token_manager.get_username_from(token)
+                return jsonify(func(*args, **kwargs, owner=owner))
+            except UnauthorizedException as e:
+                logger.warning(e)
+                abort(401)  
 
-    @functools.wraps(func)  # 设置函数名称，否则由于函数同名导致Flask绑定失败
-    def wrapper(*args, **kw):
-        if not wrap:
-            return func(*args, **kw)
+        return wrapped_function
 
-        token = request.headers.get('token')
-        if not manager.valid_token(token, role):
-            abort(401)
-
-        try:
-            return make_result(func(*args, **kw))
-        except UnauthorizedException as e:
-            logger.warning(e)
-            abort(401)
-
-    return wrapper
-
-
-@app.route('/api/login', methods=['POST'])
+@app.post('/api/login')
 def login():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
-    token = manager.try_login(username, password)
-    if token is None:
+
+    if config_manager.try_login(username, password):
+        return token_manager.create_token({"username": username, "role": config_manager.get_roles(username)})
+    else:
         real_ip = request.headers.get("X-Real-IP")
         logger.warning(f"已拒绝来自{real_ip}的请求, 此请求尝试以'{password}'为密码登录账号'{username}'")
         return ""
-    return token
 
 
-@app.route('/api/logout', methods=['POST'])
-@logged
+
+@app.post('/api/logout')
+@authority_check()
 def logout():
     token = request.form.get('token')
-    manager.logout(token)
+    if token is None:
+        return jsonify(False)
+    token_manager.remove_token(token)
+    return jsonify(True)
 
 
 # ####################### API For Item #######################
-@app.route("/api/item/create", methods=["POST"])
-@logged
-def create_item():
+@app.post("/api/item/create")
+@authority_check()
+def create_item(owner:str):
     f: Dict = request.get_json()
-    item = Item(name=f['name'], item_type=f['itemType'], owner=get_owner_from_request())
+    item = Item(name=f['name'], item_type=f['itemType'], owner=owner)
 
     if "deadline" in f:
         item.deadline = parse_deadline_timestamp(f["deadline"])
@@ -87,111 +105,103 @@ def create_item():
     if "parent" in f:
         item.parent = int(f["parent"])
 
-    manager.create(item)
+    item_manager.create(item)
 
 
-@app.route('/api/item/getAll', methods=['POST'])
-@logged
-def get_all_item():
-    owner: str = get_owner_from_request()
+@app.post('/api/item/getAll')
+@authority_check()
+def get_all_item(owner:str):
     parent = try_get_parent_from_request()
-    return manager.all_items(owner, parent=parent)
+    return item_manager.select_all(owner=owner, parent=parent)
 
 
-@app.route('/api/item/getActivate', methods=['POST'])
-@logged
-def get_activate_item():
-    # Deprecated
-    owner: str = get_owner_from_request()
+@app.post('/api/item/getActivate')
+@authority_check()
+def get_activate_item(owner:str):
     parent = try_get_parent_from_request()
-    return manager.activate_items(owner, parent=parent)
+    return item_manager.select_activate(owner, parent=parent)
 
 
-@app.route('/api/item/back', methods=['POST'])
-@logged
-def back_item() -> bool:
+@app.post('/api/item/back')
+@authority_check()
+def back_item(owner:str) -> bool:
     xid = get_xid_from_request()
-    owner = get_owner_from_request()
     parent = try_get_parent_from_request()
-    return manager.undo(xid=xid, owner=owner, parent=parent)
+    return item_manager.undo(xid=xid, owner=owner, parent=parent)
 
 
-@app.route("/api/item/remove", methods=["POST"])
-@logged
-def remove_item():
+@app.post("/api/item/remove")
+@authority_check()
+def remove_item(owner:str):
     iid = get_xid_from_request()
-    owner = get_owner_from_request()
-    manager.remove(iid, owner)
+    parent = try_get_parent_from_request()
+    return item_manager.undo(xid=iid, owner=owner, parent=parent)
 
 
-@app.route('/api/item/incExpTime', methods=['POST'])
-@logged
-def increase_expected_tomato() -> bool:
+@app.post('/api/item/incExpTime')
+@authority_check()
+def increase_expected_tomato(owner:str) -> bool:
     xid = get_xid_from_request()
-    owner = get_owner_from_request()
-    return manager.increase_expected_tomato(xid=xid, owner=owner)
+    return item_manager.increase_expected_tomato(xid=xid, owner=owner)
 
 
-@app.route('/api/item/incUsedTime', methods=['POST'])
-@logged
-def increase_used_tomato() -> bool:
+@app.post('/api/item/incUsedTime')
+@authority_check()
+def increase_used_tomato(owner:str) -> bool:
     xid = get_xid_from_request()
-    owner = get_owner_from_request()
-    return manager.increase_used_tomato(xid=xid, owner=owner)
+    return item_manager.increase_used_tomato(xid=xid, owner=owner)
 
 
-@app.route('/api/item/toTodayTask', methods=['POST'])
-@logged
-def to_today_task() -> bool:
+@app.post('/api/item/toTodayTask')
+@authority_check()
+def to_today_task(owner:str) -> bool:
     xid = get_xid_from_request()
-    owner = get_owner_from_request()
-    return manager.to_today_task(xid=xid, owner=owner)
+    return item_manager.to_today_task(xid=xid, owner=owner)
 
 
-@app.route("/api/item/getTitle", methods=["POST"])
-@logged
-def get_title():
+@app.post("/api/item/getTitle")
+@authority_check()
+def get_title(owner:str):
     iid = get_xid_from_request()
-    owner = get_owner_from_request()
-    return manager.get_title(iid, owner)
+    return item_manager.get_title(iid, owner)
 
-@app.route("/api/item/getTomato", methods=["POST"])
-@logged
-def get_tomato_item():
-    owner = get_owner_from_request()
-    return manager.get_tomato_item(owner)
+@app.post("/api/item/getTomato")
+@authority_check()
+def get_tomato_item(owner:str):
+    return item_manager.get_tomato_item(owner)
 
 
 def get_xid_from_request() -> int:
     f: Dict = request.get_json()
-    xid = int(f.get('id'))
-    return xid
+    xid = f.get('id')
+    if xid is None:
+        raise IllegalArgumentException("fail to get xid")
+    return int(xid)
 
 
-def get_tid_from_request() -> int:
-    f: Dict = request.get_json()
-    tid = int(f.get('taskId'))
-    return tid
-
-
-def get_owner_from_request() -> str:
-    token = request.headers.get('token')
-    return manager.get_username_by_token(token)
+def get_required_value_from_request(f:Dict, names: Sequence[str]) -> tuple:
+    rst = []
+    for name in names:
+        v = f.get(name)
+        if v is None:
+            raise IllegalArgumentException(f"fail to get {name} from request")
+        rst.append(v)
+    return tuple(rst)
 
 
 def try_get_parent_from_request() -> Optional[int]:
     f: Dict = request.get_json()
-    if f is not None and "parent" in f:
-        return int(f.get("parent"))
-    else:
+    parent = f.get("parent")
+    if parent is None:
         return None
 
+    return int(parent)
 
 # ####################### API For File #######################
 
-@app.route("/api/file/upload", methods=["POST"])
-@logged
-def file_do_upload():
+@app.post("/api/file/upload")
+@authority_check()
+def file_do_upload(owner:str):
     file = request.files['myFile']
     parent = int(request.form.get('parent', '0'))
 
@@ -199,141 +209,137 @@ def file_do_upload():
     if parent == 0:
         parent = None
 
-    owner = get_owner_from_request()
-    return manager.create_upload_file(file, parent, owner)
+    return item_manager.create_upload_file(file, parent, owner)
 
 
 # ####################### API For Note #######################
 
-@app.route('/api/note/content', methods=['POST'])
-@logged
-def note_content():
+@app.post('/api/note/content')
+@authority_check()
+def note_content(owner:str):
     nid = get_xid_from_request()
-    return manager.get_note(nid, owner=get_owner_from_request())
+    return item_manager.get_note(nid, owner=owner)
 
 
-@app.route('/api/note/update', methods=['POST'])
-@logged
-def note_update():
+@app.post('/api/note/update')
+@authority_check()
+def note_update(owner:str):
     nid = get_xid_from_request()
     content = request.get_json().get("content")
-    manager.update_note(nid, owner=get_owner_from_request(), content=content)
+    item_manager.update_note(nid, owner=owner, content=content)
 
 
 # ####################### API For Tomato #########################
-@app.route('/api/tomato/setTask', methods=['POST'])
-@logged
-def set_tomato_task():
+@app.post('/api/tomato/setTask')
+@authority_check()
+def set_tomato_task(owner:str):
     iid = get_xid_from_request()
-    owner = get_owner_from_request()
-    return manager.set_tomato_task(iid, owner)
+    return tomato_manager.start_task(iid, owner)
 
 
-@app.route('/api/tomato/getTask', methods=['GET'])
-@logged
-def get_tomato_task():
-    owner = get_owner_from_request()
-    return manager.get_tomato_task(owner)
+@app.get('/api/tomato/getTask')
+@authority_check()
+def get_tomato_task(owner:str):
+    return tomato_manager.get_task(owner)
 
 
-@app.route('/api/tomato/undoTask', methods=['POST'])
-@logged
-def undo_tomato_task():
-    tid = get_tid_from_request()
+@app.post('/api/tomato/undoTask')
+@authority_check()
+def undo_tomato_task(owner:str):
     iid = get_xid_from_request()
-    owner = get_owner_from_request()
     f: Dict = request.get_json()
-    reason = f.get('reason')
-    return manager.undo_tomato_task(tid, iid, reason, owner)
+    reason = f['reason']
+    return tomato_manager.clear_task( iid, reason, owner)
 
 
-@app.route('/api/tomato/finishTask', methods=['POST'])
-@logged
-def finish_tomato_task():
-    tid = get_tid_from_request()
+@app.post('/api/tomato/finishTask')
+@authority_check()
+def finish_tomato_task(owner:str):
     iid = get_xid_from_request()
-    owner = get_owner_from_request()
-    return manager.finish_tomato_task(tid, iid, owner)
+    return tomato_manager.finish_task(iid, owner)
 
 
-@app.route('/api/tomato/addRecord', methods=['POST'])
-@logged
-def add_record():
+@app.post('/api/tomato/addRecord')
+@authority_check()
+def add_record(owner:str):
     f: Dict = request.get_json()
-    name = f.get('name')
-    start_time = f.get('startTime')
-    owner = get_owner_from_request()
-    return manager.add_tomato_record(name, start_time, owner)
+    name = f['name']
+    start_time = f['startTime']
+    return tomato_manager.add_tomato_record(name, start_time, owner)
 
 
 # ####################### API For Summary #######################
 
-@app.route('/api/summary/getReport', methods=['POST'])
-@logged
-def get_summary_items():
-    owner = get_owner_from_request()
-    return manager.get_summary_report(owner)
+@app.post('/api/summary/getReport')
+@authority_check()
+def get_summary_items(owner:str):
+    return tomato_record_manager.get_time_line_summary(owner)
 
-@app.route('/api/summary/getEventLine', methods=['POST'])
-@logged
-def get_summary_event_line():
-    owner = get_owner_from_request()
-    return manager.get_event_line(owner)
+@app.post('/api/summary/getEventLine')
+@authority_check()
+def get_summary_event_line(owner:str):
+    rst = event_manager.get_today_event(owner)
+    return [class2dict(i) for i in rst]
 
 
-@app.route('/api/summary/getNote', methods=['POST'])
-@logged
-def get_summary_note():
-    owner = get_owner_from_request()
-    return manager.get_summary_note(owner)
+@app.post('/api/summary/getNote')
+@authority_check()
+def get_summary_note(owner:str):
+    return report_manager.get_today_summary(owner)
 
-@app.route('/api/summary/updateNode', methods=['POST'])
-@logged
-def update_summary_note():
+@app.post('/api/summary/updateNode')
+@authority_check()
+def update_summary_note(owner:str):
     content = request.get_json().get("content")
-    owner = get_owner_from_request()
-    return manager.update_summary_note(content, owner)
+    return report_manager.update_summary(content, owner)
 
-@app.route('/api/summary/getSmartReport', methods=['POST'])
-@logged
-def get_smart_analysis_report():
-    owner = get_owner_from_request()
-    return manager.get_smart_analysis_report(owner)
+@app.post('/api/summary/getSmartReport')
+@authority_check()
+def get_smart_analysis_report(owner:str):
+    return tomato_record_manager.get_smart_analysis_report(owner)
 
 
 # ####################### API For Functions #######################
 
-@app.route("/api/meta/isAdmin", methods=["GET"])
-@logged
-def is_admin():
-    username = get_owner_from_request()
-    return manager.is_admin_user(username)
+@app.get("/api/meta/isAdmin")
+@authority_check()
+def is_admin(owner:str):
+    return config_manager.is_admin_user(owner)
 
 
-@app.route("/api/log/log", methods=["GET"])
-@logged(role='ROLE_ADMIN')
+@app.get("/api/log/log")
+@authority_check("ROLE_ADMIN")
 def get_log():
-    return manager.get_log()
+    with open(Log_File, encoding='utf-8') as f:
+        return "".join(f.readlines())
 
 
 
-@app.route("/api/admin/func", methods=["POST"])
-@logged(role='ROLE_ADMIN')
-def exec_function():
+@app.post("/api/admin/func")
+@authority_check("ROLE_ADMIN")
+def exec_function(owner:str):
     f: Dict = request.get_json()
     command: str = f.get("cmd", "<undefined>")
     data: str = f.get("data", "")
-    owner = get_owner_from_request()
     parent = try_get_parent_from_request()
-    manager.exec_function(command, data, parent, owner)
+    op_interpreter.exec_function(command, data, parent, owner)
+    return True
 
 
 @app.teardown_appcontext
 def remove_session(exception=None):
+    db_session.commit()
     db_session.remove()
     if exception:
         logger.exception(f"清理Session: 此Session中存在异常 {exception}")
 
+def init_task_manager():
+    task_manager.add_daily_task("垃圾回收", item_manager.garbage_collection, "01:00")
+    task_manager.add_daily_task("重置可重复任务", item_manager.reset_daily_task, "01:10")
+    task_manager.add_daily_task("重置未完成的今日任务", item_manager.reset_today_task, "01:20")
+    task_manager.start()
+
 
 if __name__ == '__main__':
+    init_task_manager()
     app.run("localhost", 4231, threaded=True)

@@ -1,12 +1,12 @@
-
 import sqlalchemy as sal
+from sqlalchemy.orm import scoped_session, Session
 
 from entity import Summary
 from tool4time import today_str
 
 
 class ReportManager:
-    def __init__(self, db) -> None:
+    def __init__(self, db: scoped_session[Session]) -> None:
         self.db = db
 
     def update_summary(self, content:str, owner: str)-> bool:
@@ -18,7 +18,7 @@ class ReportManager:
         else:
             summary.content = content
         self.db.add(summary)
-        self.db.commit()
+        self.db.flush()
         return True
 
     def get_today_summary(self, owner: str)-> str:
@@ -29,3 +29,4 @@ class ReportManager:
             return ""
         return content
 
+    

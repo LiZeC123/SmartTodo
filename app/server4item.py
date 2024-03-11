@@ -1,9 +1,10 @@
 import os
 from collections import defaultdict
 from os.path import join
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Sequence
 
 import sqlalchemy as sal
+from sqlalchemy.orm import scoped_session, Session
 
 from entity import Item, TomatoType, ItemType, Note, class2dict
 from exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
@@ -20,12 +21,12 @@ class BaseManager:
     def update(self, item: Item) -> Item:
         raise NotImplementedError
 
-    def remove(self, item: Item):
+    def remove(self, item: Item) -> bool:
         raise NotImplementedError()
 
 
 class ItemManager(BaseManager):
-    def __init__(self, db):
+    def __init__(self, db: scoped_session[Session]):
         self.db = db
         self.base_manager = SingleItemManager(db)
         self.file_manager = FileItemManager(self.base_manager)
@@ -38,13 +39,6 @@ class ItemManager(BaseManager):
             ItemType.Note: self.note_manager
         }
 
-    def check_authority(self, xid: int, owner: str):
-        stmt = sal.select(Item.owner).where(Item.id == xid)
-        expected_owner = self.db.scalar(stmt)
-        if expected_owner is None:
-            raise UnmatchedException(f"No Item matched xId {xid}")
-        if expected_owner != owner:
-            raise UnauthorizedException(f"User {owner} dose not have authority For xID {xid}")
 
     def create(self, item: Item) -> Item:
         return self.manager[item.item_type].create(item)
@@ -54,8 +48,16 @@ class ItemManager(BaseManager):
         item = Item(name=name, item_type=ItemType.File, owner=owner, parent=parent, url=url)
         return self.base_manager.create(item)
 
-    def select(self, iid: int) -> Item:
+    def select(self, iid: int) -> Optional[Item]:
         return self.db.scalar(sal.select(Item).where(Item.id == iid))
+    
+    def select_with_authority(self, xid: int, owner:str) -> Item:
+        stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
+        item = self.db.scalar(stmt)
+        if item is None:
+            raise UnauthorizedException(f"User {owner} dose not have authority For xID {xid}")
+
+        return item
 
     def select_all(self, owner: str, parent: Optional[int]):
         return {
@@ -75,7 +77,7 @@ class ItemManager(BaseManager):
         activates = self.db.execute(stmt).scalars().all()
         return list(map(class2dict, activates))
 
-    def get_item_by_name(self, name: str, parent: Optional[int], owner: str) -> List[Item]:
+    def get_item_by_name(self, name: str, parent: Optional[int], owner: str) -> Sequence[Item]:
         stmt = sal.select(Item).where(Item.name.like(f"%{name}%"), Item.parent == parent, Item.owner == owner)
         return self.db.execute(stmt).scalars().all()
 
@@ -113,78 +115,64 @@ class ItemManager(BaseManager):
             ans[parent] = list(map(class2dict, lists))
         return ans
 
-    def select_habit(self, owner: str):
-        stmt = sal.select(Item).where(Item.owner == owner, Item.habit_expected != 0)
-        habits = self.db.execute(stmt).scalars().all()
-        return list(map(class2dict, habits))
 
-    def select_done_item(self, owner: str) -> List[Item]:
+    def select_done_item(self, owner: str) -> Sequence[Item]:
         stmt = sal.select(Item).where(Item.owner == owner, Item.expected_tomato == Item.used_tomato)
         return self.db.execute(stmt).scalars().all()
 
-    def select_undone_item(self, owner: str) -> list:
+    def select_undone_item(self, owner: str) -> Sequence[str]:
         stmt = sal.select(Item.name).where(Item.owner == owner, Item.tomato_type == TomatoType.Today,
                                            Item.expected_tomato != Item.used_tomato,
                                            Item.item_type != ItemType.Note)
         return self.db.execute(stmt).scalars().all()
 
     def undo(self, xid: int, owner: str, parent: Optional[int] = None):
-        stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
-        item:Item = self.db.scalar(stmt)
+        item = self.select_with_authority(xid=xid, owner=owner)
         self._undo(item)
         self.event_manager.add_event(f"回退任务到列表: {item.name}", owner)
-        return self.select_activate(owner, parent=parent)
+        return True
+        # return self.select_activate(owner, parent=parent)
 
     def _undo(self, item: Item):
         item.create_time = now()
         item.tomato_type = TomatoType.Activate
-        self.db.commit()
+        self.db.flush()
 
     def increase_expected_tomato(self, xid: int, owner: str):
-        stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
-        item = self.db.scalar(stmt)
-        if item:
-            item.expected_tomato += 1
-            self.event_manager.add_event(f"增加预计的时间: {item.name}", owner)
-        self.db.commit()
+        item = self.select_with_authority(xid=xid, owner=owner)
+        item.expected_tomato += 1
+        self.event_manager.add_event(f"增加预计的时间: {item.name}", owner)
+        self.db.flush()
         return item is not None
 
     def increase_used_tomato(self, xid: int, owner: str):
-        stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
-        item = self.db.scalar(stmt)
-        if item:
-            if item.habit_expected != 0 and item.last_check_time.date() != today():
-                item.habit_done += 1
-                item.last_check_time = now()
-                logger.info(f"完成打卡任务: {item.name}")
-            if item.used_tomato < item.expected_tomato:
-                item.used_tomato += 1
-                logger.info(f"手动完成任务: {item.name}")
-        self.db.commit()
+        item = self.select_with_authority(xid=xid, owner=owner)
+        if item.used_tomato < item.expected_tomato:
+            item.used_tomato += 1
+            logger.info(f"手动完成任务: {item.name}")
+        self.db.flush()
         return item is not None
 
     def to_today_task(self, xid: int, owner: str):
-        stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
-        item = self.db.scalar(stmt)
-        if item:
-            item.create_time = now()
-            item.tomato_type = TomatoType.Today
-            logger.info(f"添加任务到今日任务列表: {item.name}")
-        self.db.commit()
+        item = self.select_with_authority(xid=xid, owner=owner)
+        item.create_time = now()
+        item.tomato_type = TomatoType.Today
+        logger.info(f"添加任务到今日任务列表: {item.name}")
+        self.db.flush()
         return item is not None
     
-    def get_tomato_item(self, owner: str)-> List[Item]:
-        stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today, Item.item_type == ItemType.Single)
+    def get_tomato_item(self, owner: str)-> List[Dict]:
+        stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today, Item.item_type == ItemType.Single, Item.expected_tomato > Item.used_tomato)
         items = self.db.execute(stmt).scalars().all()
         return list(map(class2dict, items))
 
     def get_title(self, xid: int, owner: str) -> str:
-        stmt = sal.select(Item.name).where(Item.id == xid, Item.owner == owner)
-        return self.db.scalar(stmt)
+        item = self.select_with_authority(xid, owner)
+        return item.name
 
     def get_note(self, nid: int, owner: str) -> str:
-        self.check_authority(nid, owner)
-        return self.note_manager.get_note(nid)
+        item = self.select_with_authority(nid, owner)
+        return self.note_manager.get_note(item.id)
 
     def update_note(self, nid: int, owner: str, content: str):
         item = self.select(nid)
@@ -203,12 +191,7 @@ class ItemManager(BaseManager):
         return self.manager[item.item_type].remove(item)
 
     def remove_by_id(self, xid: int, owner: str) -> bool:
-        try:
-            self.check_authority(xid, owner)
-        except UnmatchedException:
-            return False
-        
-        item = self.select(xid)
+        item = self.select_with_authority(xid, owner)
         self.manager[item.item_type].remove(item)
         return True
 
@@ -230,7 +213,7 @@ class ItemManager(BaseManager):
             self.manager[item.item_type].remove(item)
             logger.info(f"垃圾回收(无引用的任务): {item.name}")
 
-        self.db.commit()
+        self.db.flush()
 
     def reset_daily_task(self):
         stmt = sal.select(Item).where(Item.repeatable == True)
@@ -240,7 +223,7 @@ class ItemManager(BaseManager):
             item.tomato_type = TomatoType.Today
             item.create_time = now()
             logger.info(f"重置可重复任务: {item.name}")
-        self.db.commit()
+        self.db.flush()
 
     def reset_today_task(self):
         stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today, Item.repeatable == False,
@@ -249,7 +232,7 @@ class ItemManager(BaseManager):
         for item in items:
             # 使用逻辑回退, 从而保证回退操作的逻辑是一致的
             self._undo(item)
-        self.db.commit()
+        self.db.flush()
 
 
 class SingleItemManager(BaseManager):
@@ -262,16 +245,17 @@ class SingleItemManager(BaseManager):
             item.url = item.name
             item.name = title
         self.db.add(item)
-        self.db.commit()
+        self.db.flush()
         return item
 
     def update(self, item: Item) -> Item:
-        self.db.commit()
+        self.db.flush()
         return item
 
     def remove(self, item: Item):
         self.db.delete(item)
-        self.db.commit()
+        self.db.flush()
+        return True
 
 
 class FileItemManager(BaseManager):
@@ -299,20 +283,23 @@ class FileItemManager(BaseManager):
         return self.manager.update(item)
 
     def remove(self, item: Item):
+        if item.url is None:
+            logger.warning(f"{FileItemManager.__name__}: url Not Found: {item.name}")
+            return self.manager.remove(item)
+        
         filename = item.url.replace("/file", FileItemManager._FILE_FOLDER)
         try:
             os.remove(filename)
-            self.manager.remove(item)
+            return self.manager.remove(item)
         except FileNotFoundError:
-            # 对于文件没有找到这种情况, 可以删除记录
+            # 对于文件没有找到这种情况, 仅打印日志
             logger.warning(f"{FileItemManager.__name__}: File Not Found: {filename}")
-            self.manager.remove(item)
 
 
 class NoteItemManager(BaseManager):
     _NOTE_FOLDER = "data/notebase"
 
-    def __init__(self, m: BaseManager, db):
+    def __init__(self, m: BaseManager, db: scoped_session[Session]):
         self.manager = m
         self.db = db
 
@@ -326,41 +313,29 @@ class NoteItemManager(BaseManager):
         return self.manager.update(item)
 
     def remove(self, item: Item):
-        nid = item.id
-        stmt = sal.select(Note).where(Note.id == nid)
-        note: Note = self.db.scalar(stmt)
-        if note is None:
-            logger.warning(f"{NoteItemManager.__name__}: Note Not Found: {nid}")
-        else:
-            self.db.delete(note)
-            self.db.commit()
-        self.manager.remove(item)
+        note = self.must_get_note(item.id)
+        self.db.delete(note)
+        self.db.flush()
+        return self.manager.remove(item)
 
     def get_note(self, nid: int) -> str:
-        # 首先尝试从数据库加载
-        stmt = sal.select(Note).where(Note.id == nid)
-        note: Note = self.db.scalar(stmt)
-        if note is not None:
-            logger.info(f"从数据库加载Note: {nid}")
-            return note.content
-        
-        # 如果数据库加载失败, 在尝试从文件加载
-        filename = os.path.join(NoteItemManager._NOTE_FOLDER, str(nid))
-        with open(filename, 'r', encoding="utf-8") as f:
-            logger.info(f"从文件库加载Note: {nid}")
-            return f.read()
+        note = self.must_get_note(nid)        
+        return note.content
 
     def update_note(self, nid: int, content: str, owner:str) -> bool:
+        note = self.must_get_note(nid)
+        note.content = content
+        
+        self.db.add(note)
+        self.db.flush()
+        return True
+
+    def must_get_note(self, nid: int) -> Note:
         stmt = sal.select(Note).where(Note.id == nid)
         note = self.db.scalar(stmt)
         if note is None:
-            note = Note(id=nid, content=content, owner=owner)
-        else:
-            note.content = content
-        
-        self.db.add(note)
-        self.db.commit()
-        return True
+            raise UnmatchedException(f"{NoteItemManager.__name__}: Note Not Found: {nid}")
+        return note
 
     def __write_init_content(self, item:Item):
         content = f"<h1>{item.name}</h1>" \
@@ -368,5 +343,5 @@ class NoteItemManager(BaseManager):
             f"<div><br></div><div><br></div><div><br></div><div><br></div>"
         note = Note(id=item.id, content=content, owner=item.owner)
         self.db.add(note)
-        self.db.commit()
+        self.db.flush()
 

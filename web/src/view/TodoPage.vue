@@ -43,7 +43,7 @@ onMounted(() => {
   loadItem()
   loadNote()
   loadIsAdmin()
-  window.onfocus = checkUpdateStatus
+  window.onfocus = loadItem
 })
 
 // ========================================================== TodoSubmit 相关配置 ==========================================================
@@ -73,16 +73,13 @@ function gotoHome() {
 let tTask: Ref<Item[]> = ref([])
 let aTask: Ref<Item[]> = ref([])
 
-let lastUpdateDate = ref(new Date().getDate())
-
 const tCfg = [
   {
     name: 'angle-double-down',
     desc: '退回此项目',
     f: (index: number, id: string) => {
-      axios.post<Item[]>('/item/back', { id, parent }).then((res) => {
-        tTask.value.splice(index, 1)
-        aTask.value = res.data
+      axios.post<boolean>('/item/back', { id, parent }).then(() => {
+        aTask.value.push(...tTask.value.splice(index, 1))
       })
     }
   }
@@ -134,14 +131,6 @@ function incTime(xTask: Item[]) {
   }
 }
 
-function checkUpdateStatus() {
-  const today = new Date().getDate()
-  if (today !== lastUpdateDate.value) {
-    console.log('检测到日期变化, 刷新当前页面')
-    loadItem()
-    lastUpdateDate.value = today
-  }
-}
 
 function createFilePlaceHold(name: string) {
   const item: Item = {

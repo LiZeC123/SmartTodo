@@ -15,3 +15,10 @@ def test_class2dict():
     d = class2dict(tomato)
     assert get_datetime_from_str(d['start_time']) == now_time
     assert d['owner'] == tomato.owner
+
+def test_to_dict():
+    item = Item(name="A", item_type=ItemType.Single, owner="lizec")
+    d = item.to_dict()
+    assert d['name'] == item.name
+    assert d['item_type'] == item.item_type
+    assert d['owner'] == item.owner

@@ -63,16 +63,8 @@ def test_create_item_with_attr():
     multi_tomato_item = make_base_item("multi_tomato_item")
     multi_tomato_item.expected_tomato = 3
 
-    habit_item = make_base_item("habit_item")
-    habit_item.habit_done = 2
-    habit_item.habit_expected = 5
 
-    inf_habit_item = make_base_item("inf_habit_item")
-    inf_habit_item.habit_done = 3
-    habit_item.habit_expected = -1
-
-    items = [deadline_item, repeatable_item, specific_item, activate_item, multi_tomato_item, habit_item,
-             inf_habit_item]
+    items = [deadline_item, repeatable_item, specific_item, activate_item, multi_tomato_item]
 
     # Test Base Insert
     for item in items:
@@ -129,9 +121,19 @@ def test_file():
     manager.update(item)
 
     manager.file_manager.remove(item)
-
-    # 再次尝试删除, 内部触发FileNotFoundError
+    # 再次删除, 触发异常分支
     manager.file_manager.remove(item)
+
+
+def test_file_no_url():
+    item = make_base_item("file_no_url")
+    manager.create(item)
+
+    item.item_type = ItemType.File
+    manager.update(item)
+
+    manager.remove(item)
+
 
 
 def test_note():
@@ -151,8 +153,11 @@ def test_note():
         manager.update_note(note.id + 10000, owner, test_content)
 
     manager.remove(note)
-    # 再次尝试删除, 内部触发FileNotFoundError
-    manager.remove(note)
+
+def test_note_no_exists():
+    fake_id = 65535
+    with pytest.raises(UnmatchedException):
+        manager.note_manager.must_get_note(fake_id)
 
 
 def test_update_not_note():
@@ -161,15 +166,6 @@ def test_update_not_note():
     manager.create(item)
     with pytest.raises(UnauthorizedException):
         manager.update_note(item.id, owner, test_content)
-    manager.remove(item)
-
-
-def test_check_authority():
-    item = make_base_item("test_check_authority")
-    manager.create(item)
-    manager.check_authority(item.id, owner)
-    with pytest.raises(UnauthorizedException):
-        manager.check_authority(item.id, "others")
     manager.remove(item)
 
 
@@ -221,7 +217,8 @@ def test_select():
     item.url = "Test Data"
     manager.create(item)
 
-    assert manager.select(item.id).url == item.url
+    t = manager.select(item.id)
+    assert t is not None and t.url == item.url
 
     manager.remove(item)
 
@@ -251,14 +248,6 @@ def test_select_summary():
     items = [noteA, noteB, sub_itemA, sub_itemB, sub_itemC]
     for item in items:
         manager.remove(item)
-
-
-def test_select_habit():
-    item = make_base_item("test_select_habit")
-    item.habit_expected = -1
-    manager.create(item)
-    manager.select_habit(owner)
-    manager.remove(item)
 
 
 def test_select_done_item():
@@ -301,23 +290,22 @@ def test_increase_expected_tomato():
     manager.create(item)
 
     assert manager.increase_expected_tomato(item.id, owner)
-    assert manager.increase_expected_tomato(item.id + 999, owner) == False
+
+    with pytest.raises(UnauthorizedException):
+        manager.increase_expected_tomato(item.id + 999, owner)
 
     manager.remove(item)
 
 
 def test_increase_used_tomato():
     item = make_base_item("test_increase_used_tomato")
-    item.habit_expected = -1
     manager.create(item)
 
     manager.increase_used_tomato(item.id, owner)
-    assert item.habit_done == 1
     assert item.used_tomato == 1
 
     # 测试重复提交不更新数据
     manager.increase_used_tomato(item.id, owner)
-    assert item.habit_done == 1
     assert item.used_tomato == 1
 
     manager.remove(item)
@@ -329,8 +317,11 @@ def test_to_today_task():
     manager.create(item)
 
     assert manager.to_today_task(item.id, owner)
-    assert manager.to_today_task(item.id + 999, owner) == False
-    assert manager.select(item.id).tomato_type == TomatoType.Today
+    with pytest.raises(UnauthorizedException):
+        manager.to_today_task(item.id + 999, owner)
+    
+    t =  manager.select(item.id)
+    assert t is not None and t.tomato_type  == TomatoType.Today
 
     manager.remove(item)
 
@@ -353,8 +344,8 @@ def test_remove_by_id():
     manager.remove_by_id(item.id, owner)
     assert len(manager.select_all(owner, None)['todayTask']) == 0
 
-    # 删除不存在的项目时返回False，不抛出异常
-    assert manager.remove_by_id(item.id, owner) == False
+    with pytest.raises(UnauthorizedException):
+        manager.remove_by_id(item.id, owner)
 
 
 def test_garbage_collection():

@@ -9,12 +9,13 @@ from service4interpreter import *
 from tool4time import now
 
 engine = create_engine('sqlite://', echo=True, future=True)
-db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+db_session= scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 Base.metadata.create_all(engine)
+
 
 owner = "user"
 item_manager = ItemManager(db_session)
-tomato_manager = TomatoManager(db_session)
+tomato_manager = TomatoManager(db_session, item_manager=item_manager)
 op = OpInterpreter(item_manager, tomato_manager)
 
 
@@ -31,18 +32,6 @@ def test_split():
     op.exec_function(command="sn", data="split 6 章节", parent=None, owner=owner)
     op.exec_function(command="sx", data="Item -Ta", parent=None, owner=owner)
     op.exec_function(command="sx", data="XX -Ta", parent=None, owner=owner)
-
-
-def test_habit():
-    op.exec_function(command="habit", data="", parent=None, owner=owner)
-    op.exec_function(command="habit", data="habit 3", parent=None, owner=owner)
-
-
-def test_make_tomato():
-    op.exec_function(command="mkt", data="Meeting 10:15 11:45", parent=None, owner=owner)
-
-    with pytest.raises(IllegalArgumentException):
-        op.exec_function_with_exception(command="mkt", data="Meeting 10:125 11:45", parent=None, owner=owner)
 
 
 def test_renew():
@@ -94,28 +83,6 @@ def test_parse_sx_data():
     with pytest.raises(IllegalArgumentException):
         parse_sx_data("task")
 
-
-def test_parse_habit_data():
-    usages = [
-        # 无限任务
-        ("habit", "habit", -1),
-        ("habit2  ", "habit2", -1),
-        ("  habit3  ", "habit3", -1),
-        # 正常数据
-        ("habit 3", "habit", 3),
-        (" habit  3 ", "habit", 3),
-    ]
-    for (data, name, count) in usages:
-        assert parse_habit_data(data) == (name, count)
-
-    usages = [
-        "",
-        "habit x",
-    ]
-
-    for data in usages:
-        with pytest.raises(IllegalArgumentException):
-            parse_habit_data(data)
 
 
 def test_parse_renew_data():

@@ -1,88 +1,130 @@
-import threading
+from itertools import groupby
 from collections import namedtuple
 from datetime import timedelta
-from typing import Dict, List
+from typing import Dict, Optional, Sequence
 
 import sqlalchemy as sal
-from sqlalchemy import func
+from sqlalchemy.orm import scoped_session, Session
 
-from entity import Item, TomatoTaskRecord
+from server4item import ItemManager
+from entity import Item, ItemType, TomatoStatus, TomatoTaskRecord, TomatoType
 from tool4event import EventManager
-from tool4time import get_hour_str_from, now, parse_timestamp, last_month, today_begin, this_week_begin
+from tool4log import logger
+from tool4time import get_hour_str_from, now, parse_time, today_begin
 
-Task = namedtuple("Task", ["taskId", "itemId", "taskName", "startTime"])
+
 
 
 class TomatoManager:
-    def __init__(self, db):
+    def __init__(self, db: scoped_session[Session], item_manager: ItemManager):
         self.db = db
-        self.state: Dict[str, Task] = {}
-        self.tid = 1025
-        self.lock = threading.Lock()
+        self.item_manager = item_manager
         self.event_manager = EventManager(db)
 
-    def start_task(self, item: Item, owner: str):
-        with self.lock:
-            tid = self.__inc()
-            self.state[owner] = Task(tid, item.id, item.name, now().timestamp()*1000)
-            return tid
+    def start_task(self, xid: int, owner: str) -> str:
+        # Step1: 查询Item状态是否符合预期
+        item = self.item_manager.select_with_authority(xid, owner)
+        if item.used_tomato == item.expected_tomato:
+            return '启动失败: 当前任务已完成全部番茄钟'
+        
+        # Step2: 检查当前用户是否已经开启其他番茄钟
+        status = self.query_task(owner)
+        if status:
+            return '启动失败: 当前存在正在执行的番茄钟'
+        
+        # Step3: 确认无误, 开启番茄钟
+        # 针对owner字段设置了唯一索引, 避免一个用户同时提交多个番茄钟请求, 导致状态异常
+        status = TomatoStatus(item_id=item.id, name=item.name, owner=owner)
+        self.db.add(status)
+        self.db.flush()
+        return ""
 
-    def __inc(self):
-        self.tid += 1
-        return self.tid
 
-    def finish_task(self, tid: int, xid: int, owner: str) -> bool:
-        with self.lock:
-            if self.match(tid, xid, owner):
-                self.__insert_record(owner)
-                self.state.pop(owner)
-                return True
+    def finish_task(self, xid: int, owner: str) -> bool:
+        status = self.query_task(owner)
+        if status is None: 
             return False
-
-    def clear_task(self, tid: int, xid: int, reason: str, owner: str) -> bool:
-        with self.lock:
-            if self.match(tid, xid, owner):
-                task = self.state.pop(owner)
-                self.event_manager.add_event(f"由于 {reason} 取消番茄钟 {task.taskName}", owner)
-                return True
+        
+        if status.item_id != xid:
+            logger.error(f"完成番茄钟失败: 用户{owner}当前任务的Id不匹配, 期望为 { status.item_id } 实际为 {xid}")
             return False
+        
+        with self.db.begin(nested=True):
+            self.db.delete(status)
+            self.item_manager.increase_used_tomato(xid, owner)
+            self.__insert_record(status)
+            return True
+
+
+    def clear_task(self, xid: int, reason: str, owner: str) -> bool:
+        status = self.query_task(owner)
+        if status is None: 
+            return False
+        
+        if status.item_id != xid:
+            logger.error(f"清除番茄钟失败: 用户{owner}当前任务的Id不匹配, 期望为 { status.item_id } 实际为 {xid}")
+            return False
+        
+        self.event_manager.add_event(f"由于 {reason} 取消番茄钟 {status.name}", owner)
+        self.db.delete(instance=status)
+        self.db.flush()
+        return True
+
+
+    def query_task(self, owner: str)-> Optional[TomatoStatus]:
+        stmt =  sal.select(TomatoStatus).where(TomatoStatus.owner == owner)
+        return self.db.scalar(stmt)
+
 
     def get_task(self, owner: str)-> Dict | None:
-        t = self.state.get(owner)
-        if t:
-            return t._asdict()
+        status = self.query_task(owner)
+        if status:
+            return status.to_dict()
 
 
     def has_task(self, owner) -> bool:
-        return self.state.get(owner) is not None
+        return self.query_task(owner) is not None
 
-    def match(self, tid: int, xid: int, owner: str):
-        t = self.state.get(owner)
-        if t:
-            return t.itemId == xid and t.taskId == tid        
-        return False
 
-    def create_record(self, record:TomatoTaskRecord):
+    def add_tomato_record(self, name:str, start_time:str, owner: str) -> bool:
+        item = Item(name=name, item_type=ItemType.Single, tomato_type=TomatoType.Today, owner=owner)
+        item.used_tomato = 1
+        self.item_manager.create(item)
+
+        record = TomatoTaskRecord(name=name, owner=owner, start_time=parse_time(start_time), finish_time=now())
         self.db.add(record)
-        self.db.commit()
-
-    def __insert_record(self, owner: str):
-        task = self.state[owner]
-        record = TomatoTaskRecord(start_time=parse_timestamp(task.startTime / 1000), finish_time=now(),
-                                  owner=owner, name=task.taskName)
-        self.create_record(record)
+        self.db.flush()
+        return True
 
 
-Record = namedtuple("Record", ["start", "finish", "title", "extend"])
+    def __insert_record(self, task: TomatoStatus):
+        record = TomatoTaskRecord(start_time=task.start_time, finish_time=now(),
+                                  owner=task.owner, name=task.name)
+        self.db.add(record)
+
 
 
 class TomatoRecordManager:
-    def __init__(self, db):
+    def __init__(self, db: scoped_session[Session], item_manager: ItemManager):
         self.db = db
+        self.item_manager = item_manager
+
 
     def get_time_line_summary(self, owner:str):
         record = self.__select_record_before(owner, today_begin())
         return {"counter": self.__time_line_stat(record), "items": [{"start": get_hour_str_from(r.start_time), "finish": get_hour_str_from(r.finish_time), "title": r.name} for r in record]}
+
+    def get_smart_analysis_report(self, owner:str):
+        items = self.item_manager.select_done_item(owner)
+        groups = []
+        for iid, g in groupby(sorted(items, key=lambda x: x.parent if x.parent is not None else 0), key=lambda x: x.parent):
+            item = None
+            if iid is not None:
+                item = self.item_manager.select(iid)
+            pname = '全局任务' if item is None else item.name
+            groups.append({"name": pname, "items": [i.to_dict() for i in g]})
+    
+        return {"count": len(items), "groups": groups}
 
     # def get_tomato_stat(self, owner):
     #     d = self.__load_data(owner)
@@ -109,7 +151,7 @@ class TomatoRecordManager:
     #     items = self.db.execute(stmt).all()
     #     return list(sorted(items, key=lambda x: x[1], reverse=True))
     
-    def __select_record_before(self, owner:str, time) -> List[TomatoTaskRecord]:
+    def __select_record_before(self, owner:str, time) -> Sequence[TomatoTaskRecord]:
         stmt = sal.select(TomatoTaskRecord) \
             .where(TomatoTaskRecord.owner == owner, TomatoTaskRecord.finish_time > time) \
             .order_by(TomatoTaskRecord.id.asc())
@@ -122,7 +164,7 @@ class TomatoRecordManager:
     #     return self.db.execute(stmt).scalars().all()
 
     @staticmethod
-    def __time_line_stat(data: List[TomatoTaskRecord]) -> dict:
+    def __time_line_stat(data: Sequence[TomatoTaskRecord]) -> dict:
         time = timedelta()
         for record in data:
             time += (record.finish_time - record.start_time)
