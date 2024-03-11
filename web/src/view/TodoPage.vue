@@ -43,7 +43,7 @@ onMounted(() => {
   loadItem()
   loadNote()
   loadIsAdmin()
-  window.onfocus = checkUpdateStatus
+  window.onfocus = loadItem
 })
 
 // ========================================================== TodoSubmit 相关配置 ==========================================================
@@ -72,8 +72,6 @@ function gotoHome() {
 // ========================================================== ItemList 相关配置 ==========================================================
 let tTask: Ref<Item[]> = ref([])
 let aTask: Ref<Item[]> = ref([])
-
-let lastUpdateDate = ref(new Date().getDate())
 
 const tCfg = [
   {
@@ -133,14 +131,6 @@ function incTime(xTask: Item[]) {
   }
 }
 
-function checkUpdateStatus() {
-  const today = new Date().getDate()
-  if (today !== lastUpdateDate.value) {
-    console.log('检测到日期变化, 刷新当前页面')
-    loadItem()
-    lastUpdateDate.value = today
-  }
-}
 
 function createFilePlaceHold(name: string) {
   const item: Item = {
