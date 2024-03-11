@@ -23,7 +23,7 @@ jobs:
       run: |
         cp -r config app/config
         cd app
-        mkdir -p data/database data/log data/notebase data/filebase
+        mkdir data
         pip install -r requirements.txt
         pip install pytest pytest-cov   
         pytest --cov=./ --cov-report=xml  

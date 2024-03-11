@@ -2,10 +2,9 @@ import functools
 from typing import Any, Dict, Optional, Sequence
 
 from flask import Flask, jsonify, request, abort
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
 
-from entity import Item, Base, class2dict
+
+from entity import Item, init_database
 from exception import IllegalArgumentException, UnauthorizedException
 from service4config import ConfigManager
 from service4interpreter import OpInterpreter
@@ -21,15 +20,8 @@ from tool4time import parse_deadline_timestamp
 
 app = Flask(__name__)
 
-engine = create_engine('sqlite:///data/database/data.db', echo=True, future=True)
 
-# 定义一个基于线程的Session
-# https://docs.sqlalchemy.org/en/20/orm/contextual.html
-db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
-# 初始化所有的表
-Base.metadata.create_all(engine)
-
-
+db_session = init_database()
 config_manager = ConfigManager()
 event_manager = EventManager(db_session)
 report_manager = ReportManager(db_session)
@@ -38,7 +30,7 @@ task_manager = TaskManager()
 token_manager = TokenManager()
 tomato_manager = TomatoManager(db_session, item_manager=item_manager)
 tomato_record_manager = TomatoRecordManager(db_session, item_manager=item_manager)
-op_interpreter = OpInterpreter(item_manager, tomato_manager)
+op_interpreter = OpInterpreter(item_manager)
 
 
 class authority_check:
@@ -279,7 +271,7 @@ def get_summary_items(owner:str):
 @authority_check()
 def get_summary_event_line(owner:str):
     rst = event_manager.get_today_event(owner)
-    return [class2dict(i) for i in rst]
+    return [i.to_dict() for i in rst]
 
 
 @app.post('/api/summary/getNote')

@@ -1,14 +1,8 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
-
-
-from entity import Base
+from entity import init_database
 from tool4tomato import *
 
 
-engine = create_engine('sqlite://', echo=True, future=True)
-db= scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
-Base.metadata.create_all(engine)
+db = init_database('sqlite://')
 
 
 item_manager = ItemManager(db=db)

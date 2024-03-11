@@ -9,9 +9,8 @@ from tool4tomato import TomatoManager
 
 
 class OpInterpreter:
-    def __init__(self, item_manager: ItemManager, tomato_manager: TomatoManager):
+    def __init__(self, item_manager: ItemManager):
         self.item_manager = item_manager
-        self.tomato_manager = tomato_manager
 
     def batch_create_item(self, data: str, parent: Optional[int], owner: str):
         names = [d.strip() for d in data.split("-") if not d.isspace()]

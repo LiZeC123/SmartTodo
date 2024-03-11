@@ -64,10 +64,7 @@ services:
       - "8080:80"
     volumes:
       - ./config:/app/config
-      - ./data/database:/app/data/database
-      - ./data/notebase:/app/data/notebase
-      - ./data/filebase:/app/data/filebase
-      - ./data/log:/app/data/log
+      - ./data:/app/data
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
 ```

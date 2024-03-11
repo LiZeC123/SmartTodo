@@ -1,10 +1,10 @@
 from datetime import datetime
 from typing import Optional
+from os import mkdir
+from os.path import exists, join
 
-from sqlalchemy import DateTime, Integer, String, Text, SmallInteger, ForeignKey
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column
+from sqlalchemy import DateTime, Integer, String, Text, SmallInteger, ForeignKey, create_engine
+from sqlalchemy.orm import DeclarativeBase,Mapped,mapped_column,  scoped_session, sessionmaker
 
 from tool4time import now
 
@@ -56,11 +56,6 @@ class Item(Base):
     expected_tomato: Mapped[int]    = mapped_column(SmallInteger, nullable=False, default=1)
     used_tomato: Mapped[int]        = mapped_column(SmallInteger, nullable=False, default=0)
 
-
-    def __str__(self) -> str:
-        # noinspection PyTypeChecker
-        return str(class2dict(self))
-
 class TomatoStatus(Base):
     __tablename__ = "tomato_status"
 
@@ -109,12 +104,13 @@ class Summary(Base):
     owner: Mapped[str]            = mapped_column(String(15), nullable=False)
 
 
-def class2dict(obj):
-    d = {}
-    for c in obj.__table__.columns:
-        v = getattr(obj, c.name, None)
-        if type(v) == datetime:
-            d[c.name] = v.strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            d[c.name] = v
-    return d
+def init_database(url: str= 'sqlite:///data/data.db'):
+    engine = create_engine(url=url, echo=True, future=True)
+
+    # 初始化所有的表
+    Base.metadata.create_all(engine)
+
+    # 定义一个基于线程的Session
+    # https://docs.sqlalchemy.org/en/20/orm/contextual.html
+    return scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+

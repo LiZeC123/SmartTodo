@@ -1,22 +1,16 @@
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
 
-from entity import Base
+from entity import init_database
 from exception import NotUniqueItemException
 from server4item_test import make_base_item
 from service4interpreter import *
 from tool4time import now
 
-engine = create_engine('sqlite://', echo=True, future=True)
-db_session= scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
-Base.metadata.create_all(engine)
-
-
+db_session = init_database('sqlite://')
 owner = "user"
 item_manager = ItemManager(db_session)
 tomato_manager = TomatoManager(db_session, item_manager=item_manager)
-op = OpInterpreter(item_manager, tomato_manager)
+op = OpInterpreter(item_manager)
 
 
 def test():

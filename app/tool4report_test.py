@@ -1,12 +1,7 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
-
-from entity import Base
+from entity import init_database
 from tool4report import *
 
-engine = create_engine('sqlite://', future=True)
-db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
-Base.metadata.create_all(engine)
+db_session = init_database('sqlite://')
 
 manager = ReportManager(db_session)
 owner = "user"

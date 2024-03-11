@@ -34,7 +34,7 @@ COPY docker/nginx.conf /etc/nginx/
 # 复制项目代码到容器的app目录
 COPY app .
 
-VOLUME [ "/app/config", "/app/data/database", "/app/data/notebase", "/app/data/filebase", "/app/data/log"]
+VOLUME [ "/app/config", "/app/data"]
 
 EXPOSE 80
 

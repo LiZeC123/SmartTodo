@@ -6,11 +6,11 @@ from typing import Optional, Dict, List, Sequence
 import sqlalchemy as sal
 from sqlalchemy.orm import scoped_session, Session
 
-from entity import Item, TomatoType, ItemType, Note, class2dict
+from entity import Item, TomatoType, ItemType, Note
 from exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
 from tool4event import EventManager
 from tool4log import logger
-from tool4time import now, today
+from tool4time import now
 from tool4web import extract_title, download
 
 
@@ -69,13 +69,13 @@ class ItemManager(BaseManager):
         stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
                                       Item.tomato_type == TomatoType.Today)
         today_items = self.db.execute(stmt).scalars().all()
-        return list(map(class2dict, today_items))
+        return [i.to_dict() for i in today_items]
 
     def select_activate(self, owner: str, parent: Optional[int]) -> List:
         stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
                                       Item.tomato_type == TomatoType.Activate)
         activates = self.db.execute(stmt).scalars().all()
-        return list(map(class2dict, activates))
+        return [i.to_dict() for i in activates]
 
     def get_item_by_name(self, name: str, parent: Optional[int], owner: str) -> Sequence[Item]:
         stmt = sal.select(Item).where(Item.name.like(f"%{name}%"), Item.parent == parent, Item.owner == owner)
@@ -112,7 +112,7 @@ class ItemManager(BaseManager):
                 # 汇总页面上仅显示各个Note之中的任务
                 continue
             lists.insert(0, self.select(parent))
-            ans[parent] = list(map(class2dict, lists))
+            ans[parent] = [i.to_dict() for i in lists]
         return ans
 
 
@@ -164,7 +164,7 @@ class ItemManager(BaseManager):
     def get_tomato_item(self, owner: str)-> List[Dict]:
         stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today, Item.item_type == ItemType.Single, Item.expected_tomato > Item.used_tomato)
         items = self.db.execute(stmt).scalars().all()
-        return list(map(class2dict, items))
+        return [i.to_dict() for i in items]
 
     def get_title(self, xid: int, owner: str) -> str:
         item = self.select_with_authority(xid, owner)
@@ -263,6 +263,8 @@ class FileItemManager(BaseManager):
 
     def __init__(self, m: BaseManager):
         self.manager = m
+        if not os.path.exists(self._FILE_FOLDER):
+            os.mkdir(self._FILE_FOLDER)
 
     def create(self, item: Item) -> Item:
         """从指定的URL下载文件到服务器"""

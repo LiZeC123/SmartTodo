@@ -1,12 +1,7 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
-
-from entity import Base
+from entity import init_database
 from tool4event import EventManager
 
-engine = create_engine('sqlite://', future=True)
-db = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
-Base.metadata.create_all(engine)
+db = init_database('sqlite://')
 owner = "user"
 
 def test_base():

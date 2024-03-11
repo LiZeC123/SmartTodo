@@ -1,8 +1,16 @@
 import logging
+from os import mkdir
+from os.path import exists, join
+
 from logging import handlers
-from os.path import join
+
+
 
 _LOG_BASE = join("data", "log")
+if not exists(_LOG_BASE):
+    mkdir(_LOG_BASE)
+
+
 Log_File = join(_LOG_BASE, "log.txt")
 
 logger = logging.getLogger("app")
@@ -11,6 +19,3 @@ th = handlers.TimedRotatingFileHandler(filename=Log_File, when='midnight', backu
 th.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(th)
 
-task_logger = logging.getLogger("task")
-
-#TODO: 自动创建LOG目录
