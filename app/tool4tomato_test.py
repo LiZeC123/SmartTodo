@@ -94,5 +94,13 @@ def test_add_tomato_record():
 
 
 def test_tomato_record_base():
+    itemA = make_base_item(name="ItemA")
+    item_manager.create(itemA)
+
+    itemB = make_base_item(name="ItemB")
+    itemB.parent = itemA.id
+    itemB.used_tomato = 1
+    item_manager.create(itemB)
+
     record_manager.get_time_line_summary(owner)
     record_manager.get_smart_analysis_report(owner)
