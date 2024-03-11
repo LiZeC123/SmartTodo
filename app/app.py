@@ -309,7 +309,7 @@ def is_admin(owner:str):
 
 @app.get("/api/log/log")
 @authority_check("ROLE_ADMIN")
-def get_log():
+def get_log(owner:str):
     with open(Log_File, encoding='utf-8') as f:
         return "".join(f.readlines())
 
