@@ -1,7 +1,5 @@
 from datetime import datetime
 from typing import Optional
-from os import mkdir
-from os.path import exists, join
 
 from sqlalchemy import DateTime, Integer, String, Text, SmallInteger, ForeignKey, create_engine
 from sqlalchemy.orm import DeclarativeBase,Mapped,mapped_column,  scoped_session, sessionmaker

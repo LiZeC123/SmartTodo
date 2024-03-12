@@ -126,8 +126,7 @@ def back_item(owner:str) -> bool:
 @authority_check()
 def remove_item(owner:str):
     iid = get_xid_from_request()
-    parent = try_get_parent_from_request()
-    return item_manager.undo(xid=iid, owner=owner, parent=parent)
+    return item_manager.remove_by_id(xid=iid, owner=owner)
 
 
 @app.post('/api/item/incExpTime')
