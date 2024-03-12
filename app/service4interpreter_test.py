@@ -6,10 +6,9 @@ from server4item_test import make_base_item
 from service4interpreter import *
 from tool4time import now
 
-db_session = init_database('sqlite://')
+db_session = init_database()
 owner = "user"
 item_manager = ItemManager(db_session)
-tomato_manager = TomatoManager(db_session, item_manager=item_manager)
 op = OpInterpreter(item_manager)
 
 

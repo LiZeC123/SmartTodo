@@ -1,3 +1,4 @@
+import shutil
 from typing import Optional
 
 from entity import Item, ItemType, TomatoType
@@ -5,7 +6,6 @@ from exception import IllegalArgumentException, BaseSmartTodoException
 from server4item import ItemManager
 from tool4log import logger
 from tool4time import now_str_fn, the_day_after
-from tool4tomato import TomatoManager
 
 
 class OpInterpreter:
@@ -20,10 +20,9 @@ class OpInterpreter:
             self.item_manager.create(item)
 
     def instance_backup(self, parent: Optional[int], owner: str):
-        import shutil
-        name = f"SmartTodo_Database({now_str_fn()})"
-        n = shutil.make_archive(f"data/filebase/{name}", 'zip', "data/database")
-        item = Item(name=f"{name}.zip", item_type=ItemType.File, owner=owner, parent=parent, url=f"/file/{name}.zip")
+        name = f"SmartTodo_Database({now_str_fn()}).db"
+        shutil.copy("data/data.db", f"data/filebase/{name}")
+        item = Item(name=f"{name}", item_type=ItemType.File, owner=owner, parent=parent, url=f"/file/{name}")
         self.item_manager.base_manager.create(item)
 
     def split_item_with_number(self, name: str, num: int, suffix: str, parent: Optional[int], owner: str):

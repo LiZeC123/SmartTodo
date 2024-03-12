@@ -43,10 +43,11 @@ class ItemManager(BaseManager):
     def create(self, item: Item) -> Item:
         return self.manager[item.item_type].create(item)
 
-    def create_upload_file(self, f, parent: Optional[int], owner: str) -> Item:
+    def create_upload_file(self, f, parent: Optional[int], owner: str) -> bool:
         name, url = self.file_manager.create_upload_file(f)
         item = Item(name=name, item_type=ItemType.File, owner=owner, parent=parent, url=url)
-        return self.base_manager.create(item)
+        self.base_manager.create(item)
+        return True
 
     def select(self, iid: int) -> Optional[Item]:
         return self.db.scalar(sal.select(Item).where(Item.id == iid))
