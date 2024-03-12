@@ -200,7 +200,8 @@ def file_do_upload(owner:str):
     if parent == 0:
         parent = None
 
-    return item_manager.create_upload_file(file, parent, owner)
+    item_manager.create_upload_file(file, parent, owner)
+    return True
 
 
 # ####################### API For Note #######################
