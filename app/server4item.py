@@ -213,7 +213,7 @@ class ItemManager(BaseManager):
             self.manager[item.item_type].remove(item)
             logger.info(f"垃圾回收(无引用的任务): {item.name}")
 
-        self.db.flush()
+        self.db.commit() # 定时器触发任务, 必须commit, 否则操作会被回滚
 
     def reset_daily_task(self):
         stmt = sal.select(Item).where(Item.repeatable == True)
@@ -223,7 +223,7 @@ class ItemManager(BaseManager):
             item.tomato_type = TomatoType.Today
             item.create_time = now()
             logger.info(f"重置可重复任务: {item.name}")
-        self.db.flush()
+        self.db.commit() # 定时器触发任务, 必须commit, 否则操作会被回滚
 
     def reset_today_task(self):
         stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today, Item.repeatable == False,
@@ -232,7 +232,7 @@ class ItemManager(BaseManager):
         for item in items:
             # 使用逻辑回退, 从而保证回退操作的逻辑是一致的
             self._undo(item)
-        self.db.flush()
+        self.db.commit() # 定时器触发任务, 必须commit, 否则操作会被回滚
 
 
 class SingleItemManager(BaseManager):
