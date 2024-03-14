@@ -294,8 +294,9 @@ class FileItemManager(BaseManager):
             os.remove(filename)
             return self.manager.remove(item)
         except FileNotFoundError:
-            # 对于文件没有找到这种情况, 仅打印日志
+            # 对于文件没有找到这种情况, 则删除Item
             logger.warning(f"{FileItemManager.__name__}: File Not Found: {filename}")
+            return self.manager.remove(item)
 
 
 class NoteItemManager(BaseManager):
