@@ -333,6 +333,23 @@ def test_get_tomato_item():
     manager.remove(item1)
     manager.remove(item2)
 
+def test_sub_task():
+    item1 = make_base_item("test_sub_task_g")
+    manager.create(item1)
+    item2 = make_note_item("test_sub_task_note")
+    manager.create(item2)
+
+    item3 = make_base_item("test_sub_task_note_sub")
+    item3.parent = item2.id
+    manager.create(item3)
+    
+    assert manager.get_item_with_sub_task(owner)
+
+    manager.remove(item1)
+    manager.remove(item2)
+    manager.remove(item3)    
+
+
 def test_remove_by_id():
     item = make_base_item("test_remove_by_id")
     manager.create(item)

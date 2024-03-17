@@ -4,7 +4,7 @@
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
     <EventTime :items="eventLineItem"></EventTime>
     <SmartAnalysis :report="smartReport"></SmartAnalysis>
-
+    <ItemGroupedList title="今日任务" :data="tTask"></ItemGroupedList> 
     <h2>今日总结</h2>
     <NoteEditor :init-content="initContent" @save="saveNote"></NoteEditor>
     <Footer :is-admin="false" :config="footerConfig"></Footer>
@@ -21,6 +21,7 @@ import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 import TimeLine from "@/components/timeline/TimeLine.vue"
 import EventTime from '@/components/eventline/EventLine.vue'
 import SmartAnalysis from '@/components/analysis/SmartAnalysis.vue'
+import ItemGroupedList from '@/components/item/ItemGroupedList.vue'
 import NoteEditor from '@/components/editor/NoteEditor.vue'
 import Footer from '@/components/footer/TodoFooter.vue'
 import AlertBox from '@/components/AlertBox.vue'
@@ -29,12 +30,14 @@ import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/type
 import type { EventItem } from '@/components/eventline/types'
 import type {SmartAnalysisReport} from '@/components/analysis/types'
 import type { FooterConfig } from '@/components/footer/types'
+import type { GroupedItem } from '@/components/item/types'
 
 
 onMounted(() => {
   loadTimeLineItems()
   loadEventLineItems()
   loadAnalysisReport()
+  loadItemWithSubTask()
   loadNote()
   document.title = '总结列表'
 })
@@ -77,6 +80,13 @@ function loadAnalysisReport() {
   })
 }
 
+// ========================================================== ItemGroupedList 相关配置 ==========================================================
+
+let tTask: Ref<GroupedItem[]> = ref([])
+
+function loadItemWithSubTask() {
+  axios.post<GroupedItem[]>('/item/getItemWithSubTask').then((res) => { tTask.value = res.data })
+}
 
 // ========================================================== NoteEditor 相关配置 ==========================================================
 let initContent = ref("")

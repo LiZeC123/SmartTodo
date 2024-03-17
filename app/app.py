@@ -161,6 +161,13 @@ def get_title(owner:str):
 def get_tomato_item(owner:str):
     return item_manager.get_tomato_item(owner)
 
+@app.post("/api/item/getItemWithSubTask")
+@authority_check()
+def get_item_with_sub_task(owner:str):
+    return item_manager.get_item_with_sub_task(owner)
+
+
+
 
 def get_xid_from_request() -> int:
     f: Dict = request.get_json()
