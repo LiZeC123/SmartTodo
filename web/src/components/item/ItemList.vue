@@ -1,7 +1,7 @@
 <template>
   <div>
     <div v-if="showList">
-      <h2>{{ title }}</h2>
+      <h2 @mousedown.left="$emit('header-jump')">{{ title }}</h2>
       <ol id="todoList" class="demo-box" @contextmenu.prevent>
         <li v-for="(item, index) in sortedData" :key="item.id" id="li-active"
           :class="[{ done: doneItem(item) }, mapTypeToClass(item)]">
@@ -34,6 +34,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'done', idx: number, id: string): void
   (e: 'jump-to', name: string, url: string): void
+  (e: 'header-jump'): void
 }>()
 
 let showList = computed(() => {

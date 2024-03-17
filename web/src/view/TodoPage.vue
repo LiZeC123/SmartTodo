@@ -3,9 +3,11 @@
 
   <div class="container">
     <!-- 代办事项模块 -->
-    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="(idx, id) => incTime(tTask)(idx, id)" @jump-to="jumpTo">
+    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="(idx, id) => incTime(tTask)(idx, id)" 
+      @jump-to="jumpTo" @header-jump="jumptoTomato">
     </ItemList>
-    <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="(idx, id) => incTime(aTask)(idx, id)" @jump-to="jumpTo">
+    <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="(idx, id) => incTime(aTask)(idx, id)" 
+      @jump-to="jumpTo" >
     </ItemList>
 
     <!-- Note编辑器, 仅对Note类型页面生效  -->
@@ -156,6 +158,11 @@ function jumpTo(_: string, path: string) {
     window.open(path)
   }
 
+}
+
+function jumptoTomato() {
+  const path = 'tomato'
+  router.push({ path })
 }
 
 

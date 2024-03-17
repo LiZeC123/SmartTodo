@@ -42,7 +42,7 @@ function reloadList() {
 // ========================================================== TodoSubmit 相关配置 ==========================================================
 function gotoHome() {
   document.title = '代办事项列表'
-  router.push({ path: '/todo' })
+  window.open("/todo")
 }
 
 
