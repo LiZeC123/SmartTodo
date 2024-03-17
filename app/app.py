@@ -166,7 +166,10 @@ def get_tomato_item(owner:str):
 def get_item_with_sub_task(owner:str):
     return item_manager.get_item_with_sub_task(owner)
 
-
+@app.post("/api/item/getDeadlineItem")
+@authority_check()
+def get_deadline_item(owner:str):
+    return item_manager.get_deadline_item(owner)
 
 
 def get_xid_from_request() -> int:

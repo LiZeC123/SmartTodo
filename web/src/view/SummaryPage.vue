@@ -4,7 +4,8 @@
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
     <EventTime :items="eventLineItem"></EventTime>
     <SmartAnalysis :report="smartReport"></SmartAnalysis>
-    <ItemGroupedList title="今日任务" :data="tTask"></ItemGroupedList> 
+    <ItemGroupedList title="" :data="tTask"></ItemGroupedList> 
+    <ItemList title="临期任务汇总" :data="dlTask" ></ItemList>
     <h2>今日总结</h2>
     <NoteEditor :init-content="initContent" @save="saveNote"></NoteEditor>
     <Footer :is-admin="false" :config="footerConfig"></Footer>
@@ -22,6 +23,7 @@ import TimeLine from "@/components/timeline/TimeLine.vue"
 import EventTime from '@/components/eventline/EventLine.vue'
 import SmartAnalysis from '@/components/analysis/SmartAnalysis.vue'
 import ItemGroupedList from '@/components/item/ItemGroupedList.vue'
+import ItemList from '@/components/item/ItemList.vue'
 import NoteEditor from '@/components/editor/NoteEditor.vue'
 import Footer from '@/components/footer/TodoFooter.vue'
 import AlertBox from '@/components/AlertBox.vue'
@@ -30,7 +32,7 @@ import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/type
 import type { EventItem } from '@/components/eventline/types'
 import type {SmartAnalysisReport} from '@/components/analysis/types'
 import type { FooterConfig } from '@/components/footer/types'
-import type { GroupedItem } from '@/components/item/types'
+import type { GroupedItem, Item } from '@/components/item/types'
 
 
 onMounted(() => {
@@ -38,6 +40,7 @@ onMounted(() => {
   loadEventLineItems()
   loadAnalysisReport()
   loadItemWithSubTask()
+  loadDLItem()
   loadNote()
   document.title = '总结列表'
 })
@@ -87,6 +90,14 @@ let tTask: Ref<GroupedItem[]> = ref([])
 function loadItemWithSubTask() {
   axios.post<GroupedItem[]>('/item/getItemWithSubTask').then((res) => { tTask.value = res.data })
 }
+
+// ========================================================== ItemList 相关配置 ==========================================================
+let dlTask: Ref<Item[]> = ref([])
+
+function loadDLItem() {
+  axios.post<Item[]>('/item/getDeadlineItem').then((res) => { dlTask.value = res.data })
+}
+
 
 // ========================================================== NoteEditor 相关配置 ==========================================================
 let initContent = ref("")

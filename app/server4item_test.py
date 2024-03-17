@@ -350,6 +350,20 @@ def test_sub_task():
     manager.remove(item3)    
 
 
+def test_get_deadline_item():
+    item1 = make_base_item("test_make_deadline")
+    item1.deadline = the_day_after(now(), 2)
+    manager.create(item1)
+
+    item2 = make_base_item("test_make_deadline2")
+    item2.deadline = the_day_after(now(), 12)
+    manager.create(item2)
+
+    assert len(manager.get_deadline_item(owner))  == 1
+
+    manager.remove(item1)
+    manager.remove(item2)
+
 def test_remove_by_id():
     item = make_base_item("test_remove_by_id")
     manager.create(item)

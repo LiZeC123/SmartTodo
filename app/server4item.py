@@ -11,7 +11,7 @@ from entity import Item, TomatoType, ItemType, Note
 from exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
 from tool4event import EventManager
 from tool4log import logger
-from tool4time import now
+from tool4time import now, the_day_after
 from tool4web import extract_title, download
 
 
@@ -187,6 +187,11 @@ class ItemManager(BaseManager):
         
         return groups
 
+    def get_deadline_item(self, owner: str) -> Sequence[Dict]:
+        next_week = the_day_after(now(), 7)
+        stmt = sal.select(Item).where(Item.owner == owner, Item.expected_tomato > Item.used_tomato, Item.deadline != None)
+        items = self.db.execute(stmt).scalars().all()
+        return [i.to_dict() for i in items if i.deadline and i.deadline < next_week]
 
     def get_title(self, xid: int, owner: str) -> str:
         item = self.select_with_authority(xid, owner)
