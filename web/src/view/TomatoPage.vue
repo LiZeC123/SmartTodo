@@ -4,7 +4,7 @@
     <!-- 番茄钟模块 -->
     <TomatoClock :item="tomatoItem" @done-task="doneTomatoTask"></TomatoClock>
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
-    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="doneItem"></ItemList> 
+    <ItemGroupedList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="doneItem"></ItemGroupedList> 
     <Footer :is-admin="false" :config="footerConfig"></Footer>
   </div>
 </template>
@@ -16,13 +16,13 @@ import router from '@/router'
 
 import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 import TomatoClock from '@/components/tomato/TomatoClock.vue'
-import ItemList from '@/components/item/ItemList.vue'
+import ItemGroupedList from '@/components/item/ItemGroupedList.vue'
 import TimeLine from "@/components/timeline/TimeLine.vue"
 import Footer from '@/components/footer/TodoFooter.vue'
 
 import { playNotifacationAudio } from '@/components/tomato/tools'
 import type { TomatoItem, TomatoEventType, TomatoParam } from '@/components/tomato/types'
-import type { Item } from '@/components/item/types'
+import type { GroupedItem, Item } from '@/components/item/types'
 import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/types'
 import type { FooterConfig } from '@/components/footer/types'
 
@@ -72,8 +72,8 @@ function doneTomatoTask(type: TomatoEventType, param: TomatoParam) {
   }
 }
 
-// ========================================================== ItemList 相关配置 ==========================================================
-let tTask: Ref<Item[]> = ref([])
+// ========================================================== ItemGroupedList 相关配置 ==========================================================
+let tTask: Ref<GroupedItem[]> = ref([])
 
 const tCfg = [
   {
@@ -88,11 +88,11 @@ const tCfg = [
 ]
 
 function loadTomatoItems() {
-  axios.post<Item[]>('/item/getTomato').then((res) => { tTask.value = res.data })
+  axios.post<GroupedItem[]>('/item/getTomato').then((res) => { tTask.value = res.data })
 }
 
 function doneItem(index: number, id: string) {
-  axios.post('/item/incUsedTime', { id }).then(() => (tTask.value[index].used_tomato += 1))
+  axios.post('/item/incUsedTime', { id }).then(loadTomatoItems)
 }
 
 // ========================================================== TimeLine 相关配置 ==========================================================

@@ -1,3 +1,4 @@
+from itertools import groupby
 import os
 from collections import defaultdict
 from os.path import join
@@ -164,7 +165,20 @@ class ItemManager(BaseManager):
     def get_tomato_item(self, owner: str)-> List[Dict]:
         stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today, Item.item_type == ItemType.Single, Item.expected_tomato > Item.used_tomato)
         items = self.db.execute(stmt).scalars().all()
-        return [i.to_dict() for i in items]
+                # items = self.item_manager.select_done_item(owner)
+        groups = []
+        globalItem = Item(id=0,name="全局任务", item_type=ItemType.Single, tomato_type=TomatoType.Today, owner=owner)
+        for iid, g in groupby(sorted(items, key=lambda x: x.parent if x.parent is not None else 0), key=lambda x: x.parent):
+            item = None
+            if iid is not None:
+                item = self.select(iid)
+            if item is not None:
+                groups.append({"self": item.to_dict(), "children": [i.to_dict() for i in g]})
+            else:
+                groups.append({"self": globalItem.to_dict(), "children": [i.to_dict() for i in g]})
+        
+        return groups
+
 
     def get_title(self, xid: int, owner: str) -> str:
         item = self.select_with_authority(xid, owner)

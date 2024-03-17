@@ -16,3 +16,8 @@ export interface Item {
   expected_tomato: number
   used_tomato: number
 }
+
+export interface GroupedItem {
+  self: Item
+  children: Item[]
+}
