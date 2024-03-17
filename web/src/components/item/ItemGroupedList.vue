@@ -3,15 +3,18 @@
     <div v-if="showList">
       <h2>{{ title }}</h2>
       <ol @contextmenu.prevent v-for="(gItem, index) in data" :key="gItem.self.id">
-        <ItemLine :item="gItem.self" :index="index"></ItemLine>
-        <ItemLine class="subTask" v-for="(item, subIdx) in sortedData(gItem.children)" :item="item" :index="subIdx" @done="(idx, id) => $emit('done', idx, id)"></ItemLine>
+        <ItemLine :item="gItem.self" :index="index" @mousedown.left="()=> showSubTask = !showSubTask"></ItemLine>
+        <div v-if="showSubTask">
+        <ItemLine class="subTask" v-for="(item, subIdx) in sortedData(gItem.children)" :item="item" :index="subIdx" :btn-cfg="btnCfg"
+        @done="(idx, id) => $emit('done', idx, id)"></ItemLine>
+        </div>
       </ol>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import type { ButtonConfig, GroupedItem, Item } from './types'
 import { compareItem } from './sort';
@@ -37,6 +40,11 @@ let showList = computed(() => {
 function sortedData(items: Item[]): Item[] {
   return items?.sort(compareItem)
 }
+
+
+let showSubTask = ref(true)
+
+
 </script>
 
 
