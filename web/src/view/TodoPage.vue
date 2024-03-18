@@ -161,7 +161,7 @@ function jumpTo(_: string, path: string) {
 }
 
 function jumptoTomato() {
-  const path = 'tomato'
+  const path = '/tomato'
   router.push({ path })
 }
 
