@@ -94,8 +94,14 @@ class ItemManager(BaseManager):
         items = self.get_item_by_name(name, parent, owner)
         if len(items) == 0:
             return None
-        elif len(items) == 1:
+        if len(items) == 1:
             return items[0]
+        
+        # 如果一个任务已经执行了拆分, 那么按照原始的字符串匹配, 就会有多个命中, 导致无法追加新任务
+        # 因此需要特殊处理这种情况
+        kernel_items = [item for item in items if "：" not in item.name]
+        if len(kernel_items) == 1:
+            return kernel_items[0]
 
         item_str = ' '.join(map(str, items))
         raise NotUniqueItemException(f"[{item_str}]均查询条件(name={name}, parent={parent}, owner={owner})")

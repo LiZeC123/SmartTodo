@@ -26,6 +26,16 @@ def test_split():
     op.exec_function(command="sx", data="Item -Ta", parent=None, owner=owner)
     op.exec_function(command="sx", data="XX -Ta", parent=None, owner=owner)
 
+def test_split_sp():
+    base_item = make_base_item("split_sp_item")
+    item_manager.create(base_item)
+    op.exec_function(command="sn", data="split_sp 3", parent=None, owner=owner)
+    op.exec_function(command="sx", data="split -补充任务1 -补充任务2", parent=None, owner=owner)
+    
+    same_item = make_base_item("split_sp_item2")
+    item_manager.create(same_item)
+    op.exec_function(command="sn", data="split_sp 3", parent=None, owner=owner)
+
 
 def test_renew():
     base_item = make_base_item("base_item")
