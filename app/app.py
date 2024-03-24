@@ -118,8 +118,7 @@ def get_activate_item(owner:str):
 @authority_check()
 def back_item(owner:str) -> bool:
     xid = get_xid_from_request()
-    parent = try_get_parent_from_request()
-    return item_manager.undo(xid=xid, owner=owner, parent=parent)
+    return item_manager.undo(xid=xid, owner=owner)
 
 
 @app.post("/api/item/remove")

@@ -275,7 +275,7 @@ def test_undo():
     manager.to_today_task(item.id, owner)
     assert item.tomato_type == TomatoType.Today
 
-    manager.undo(item.id, owner, None)
+    manager.undo(item.id, owner)
     assert item.tomato_type == TomatoType.Activate
 
     manager.remove(item)

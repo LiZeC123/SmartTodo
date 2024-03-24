@@ -133,7 +133,7 @@ class ItemManager(BaseManager):
                                            Item.item_type != ItemType.Note)
         return self.db.execute(stmt).scalars().all()
 
-    def undo(self, xid: int, owner: str, parent: Optional[int] = None):
+    def undo(self, xid: int, owner: str):
         item = self.select_with_authority(xid=xid, owner=owner)
         self._undo(item)
         self.event_manager.add_event(f"回退任务到列表: {item.name}", owner)

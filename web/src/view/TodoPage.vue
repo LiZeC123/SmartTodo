@@ -3,11 +3,10 @@
 
   <div class="container">
     <!-- 代办事项模块 -->
-    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="(idx, id) => incTime(tTask)(idx, id)" 
-      @jump-to="jumpTo" @header-jump="jumptoTomato">
+    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="(idx, id) => incTime(tTask)(idx, id)" @jump-to="jumpTo"
+      @header-jump="jumptoTomato">
     </ItemList>
-    <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="(idx, id) => incTime(aTask)(idx, id)" 
-      @jump-to="jumpTo" >
+    <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="(idx, id) => incTime(aTask)(idx, id)" @jump-to="jumpTo">
     </ItemList>
 
     <!-- Note编辑器, 仅对Note类型页面生效  -->
@@ -80,7 +79,7 @@ const tCfg = [
     name: 'angle-double-down',
     desc: '退回此项目',
     f: (index: number, id: string) => {
-      axios.post<boolean>('/item/back', { id, parent }).then(() => {
+      axios.post<boolean>('/item/back', { id }).then(() => {
         aTask.value.push(...tTask.value.splice(index, 1))
       })
     }

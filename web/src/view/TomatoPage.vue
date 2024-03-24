@@ -4,7 +4,7 @@
     <!-- 番茄钟模块 -->
     <TomatoClock :item="tomatoItem" @done-task="doneTomatoTask"></TomatoClock>
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
-    <ItemGroupedList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="doneItem"></ItemGroupedList> 
+    <ItemGroupedList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="doneItem"></ItemGroupedList>
     <Footer :is-admin="false" :config="footerConfig"></Footer>
   </div>
 </template>
@@ -76,6 +76,15 @@ function doneTomatoTask(type: TomatoEventType, param: TomatoParam) {
 let tTask: Ref<GroupedItem[]> = ref([])
 
 const tCfg = [
+  {
+    name: 'angle-double-down',
+    desc: '退回此项目',
+    f: (_: number, id: string) => {
+      axios.post('/item/back', { id }).then(() => {
+        loadTomatoItems()
+      })
+    }
+  },
   {
     name: 'clock',
     desc: '启动番茄钟',
