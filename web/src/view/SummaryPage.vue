@@ -115,9 +115,7 @@ function saveNote(content: string) {
 
 
 // ========================================================== Footer 相关配置 ==========================================================
-let footerConfig: FooterConfig[] = [
-  { name: '番茄任务', needAdmin: false, f: () => router.push({ path: '/tomato' }) },
-]
+let footerConfig: FooterConfig[] = []
 
 
 // ========================================================== Alert 相关配置 ==========================================================
