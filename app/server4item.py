@@ -87,7 +87,7 @@ class ItemManager(BaseManager):
         if len(items) == 1:
             return items[0]
 
-        item_str = ' '.join(map(str, items))
+        item_str = ' '.join([item.name for item in items])
         raise NotUniqueItemException(f"[{item_str}]均查询条件(name={name}, parent={parent}, owner={owner})")
 
     def get_unique_or_null_item_by_name(self, name: str, parent: Optional[int], owner: str) -> Optional[Item]:
@@ -103,7 +103,7 @@ class ItemManager(BaseManager):
         if len(kernel_items) == 1:
             return kernel_items[0]
 
-        item_str = ' '.join(map(str, items))
+        item_str = ' '.join([item.name for item in items])
         raise NotUniqueItemException(f"[{item_str}]均查询条件(name={name}, parent={parent}, owner={owner})")
 
     def select_summary(self, owner: str):
