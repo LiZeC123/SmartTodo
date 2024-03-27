@@ -1,6 +1,6 @@
 export const OneMinuteMS = 60 * 1000
 
-export type TomatoEventType = 'done' | 'undo'
+export type TomatoEventType = 'done' | 'undo' | 'auto'
 
 export interface TomatoItem {
   itemId: number // 番茄钟对应的Item的ID

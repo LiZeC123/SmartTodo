@@ -2,7 +2,8 @@
   <div v-show="props.item">
     <h2>当前任务</h2>
     <ol>
-      <audio id="notificationAudio" :src="OceanWaves"></audio>
+      <audio id="notificationAudioBase" :src="MusicBase"></audio>
+      <audio id="notificationAudioShort" :src="MusicShort"></audio>
       <li class="FOCUS">
         【{{ displayTimeStr }}】{{ item?.taskName }}
         <a class="function function-1" title="取消任务" @click="finishTask('undo')">
@@ -18,7 +19,8 @@
 </template>
 
 <script setup lang="ts">
-import OceanWaves from './OceanWaves.mp3'
+import MusicBase from './M01.mp3'
+import MusicShort from './S01.mp3'
 import { computed, ref, watch } from 'vue'
 import type { TomatoEventType, TomatoItem, TomatoParam } from './types'
 import { OneMinuteMS } from './types'
@@ -61,7 +63,7 @@ function updateTomato() {
 
   // 倒计时结束, 清除计时器
   if (rs.value < 0) {
-    finishTask('done')
+    finishTask('auto')
   }
 }
 

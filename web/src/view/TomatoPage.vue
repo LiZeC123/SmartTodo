@@ -20,9 +20,9 @@ import ItemGroupedList from '@/components/item/ItemGroupedList.vue'
 import TimeLine from "@/components/timeline/TimeLine.vue"
 import Footer from '@/components/footer/TodoFooter.vue'
 
-import { playNotifacationAudio } from '@/components/tomato/tools'
+import { playNotifacationAudio, playNotifacationAudioShort } from '@/components/tomato/tools'
 import type { TomatoItem, TomatoEventType, TomatoParam } from '@/components/tomato/types'
-import type { GroupedItem, Item } from '@/components/item/types'
+import type { GroupedItem } from '@/components/item/types'
 import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/types'
 import type { FooterConfig } from '@/components/footer/types'
 
@@ -58,13 +58,12 @@ function doneTomatoTask(type: TomatoEventType, param: TomatoParam) {
     const reason = prompt("请输入取消原因")
     if (reason) {
       param.reason = reason
+      axios.post('/tomato/undoTask', param).then(() => tomatoItem.value = undefined)
     }
-
-    axios.post('/tomato/undoTask', param).then(() => tomatoItem.value = undefined)
-  } else if (type === 'done') {
+  } else if (type === 'done' || type === 'auto') {
     axios.post<boolean>('/tomato/finishTask', param).then(res => {
       if (res.data) {
-        playNotifacationAudio()
+        type === 'auto' ? playNotifacationAudio() : playNotifacationAudioShort()
         tomatoItem.value = undefined
         reloadList()
       }

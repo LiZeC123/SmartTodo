@@ -41,6 +41,7 @@ Smart-Todo是一个简单智能的待办事项管理程序. Smart-Todo提供了�
     - [Vue.js](#vuejs)
     - [JavaScript](#javascript)
     - [Font Awesome](#font-awesome)
+    - [音效素材](#音效素材)
 
 
 项目部署
@@ -318,3 +319,7 @@ Note页面内可以继续创建Item, 此页面内创建的Item只在此页面可
 
 - [Font Awesome图标查询](https://fontawesome.com/v5.15/icons?d=gallery&p=2&s=regular,solid&m=free)
 - [Vue中使用Font Awesome](https://github.com/FortAwesome/vue-fontawesome)
+
+### 音效素材
+
+- [站长素材](https://sc.chinaz.com/yinxiao/)
