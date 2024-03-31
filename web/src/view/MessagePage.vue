@@ -29,14 +29,30 @@ onMounted(() => {
   const type = router.currentRoute.value.params.type as string
   switch (type) {
     case 'log':
-      title.value = '系统日志'
-      break
+      return loadSysLog()
+    case 'report':
+      return loadWeeklyReport()
     default:
       console.warn('无效的类型')
   }
   document.title = title.value
   axios.get('/log/' + type).then((rep) => (content.value = rep.data))
 })
+
+
+function loadSysLog() {
+  title.value = '系统日志'
+  document.title = title.value
+  axios.get('/log/log').then((rep) => (content.value = rep.data))
+}
+
+function loadWeeklyReport() {
+  title.value = '日报汇总'
+  document.title = title.value
+  axios.get('/summary/getWeeklySummary').then((rep) => (content.value = rep.data))
+}
+
+
 </script>
 
 <style scoped>

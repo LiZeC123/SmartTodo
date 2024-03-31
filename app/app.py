@@ -16,7 +16,7 @@ from tool4task import TaskManager
 from tool4token import TokenManager
 from tool4tomato import TomatoManager, TomatoRecordManager
 from tool4log import logger
-from tool4time import parse_deadline_timestamp
+from tool4time import parse_deadline_timestamp, this_week_begin
 
 app = Flask(__name__)
 
@@ -294,6 +294,12 @@ def update_summary_note(owner:str):
     content = request.get_json().get("content")
     return report_manager.update_summary(content, owner)
 
+@app.get("/api/summary/getWeeklySummary")
+@authority_check()
+def get_report(owner:str):
+    summarys = report_manager.get_summary_from(this_week_begin())
+    return [s.to_dict() for s in summarys]
+
 @app.post('/api/summary/getSmartReport')
 @authority_check()
 def get_smart_analysis_report(owner:str):
@@ -313,7 +319,6 @@ def is_admin(owner:str):
 def get_log(owner:str):
     with open(Log_File, encoding='utf-8') as f:
         return "".join(f.readlines())
-
 
 
 @app.post("/api/admin/func")

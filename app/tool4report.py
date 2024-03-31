@@ -1,3 +1,5 @@
+import datetime
+from typing import Sequence
 import sqlalchemy as sal
 from sqlalchemy.orm import scoped_session, Session
 
@@ -29,4 +31,6 @@ class ReportManager:
             return ""
         return content
 
-    
+    def get_summary_from(self, date: datetime.datetime) -> Sequence[Summary]:
+        stmt = sal.select(Summary).where(Summary.create_time > date)
+        return self.db.execute(stmt).scalars().all()
