@@ -11,7 +11,7 @@ class ReportManager:
 
     def update_summary(self, content:str, owner: str)-> bool:
         day = today_str()
-        stmt = sal.select(Summary).where(Summary.create_time == day)
+        stmt = sal.select(Summary).where(Summary.owner == owner, Summary.create_time == day)
         summary = self.db.scalar(stmt)
         if summary is None:
             summary = Summary(create_time=day, content=content, owner=owner)
