@@ -46,7 +46,7 @@ def parse_encoding(text: str, apparent_encoding: str) -> str:
     encoding = apparent_encoding
     if match:
         encoding = match.group(1)
-        encoding = encoding.replace('"', "").replace("'", "").strip()
+        encoding = encoding.strip("'\"")
     return encoding
 
 
