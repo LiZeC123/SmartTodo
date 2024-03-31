@@ -1,3 +1,4 @@
+from tool4time import this_week_begin
 from entity import init_database
 from tool4report import *
 
@@ -18,3 +19,4 @@ def test_summary_base():
     
     assert manager.get_today_summary(owner) == "Hello World" 
 
+    assert manager.get_summary_from(this_week_begin())
