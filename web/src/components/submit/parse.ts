@@ -74,7 +74,9 @@ function inferNoteType(name: string): boolean {
     const knowType = ['计划', '规划', '事项', '分析', '笔记'];
 
     for (const type of knowType) {
-        if (name.indexOf(type) !== -1) {
+        // 当前的关键词有可能在标题中作为动词使用, 此时大概率并不期望创建Note
+        // 因此调整为关键词必须结尾出现, 此时相关词汇更大概率为名词
+        if (name.endsWith(type)) {
             return confirm("检测到代办类型包含关键词, 是否按照便签类型进行创建?")
         }
     }
