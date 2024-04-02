@@ -47,14 +47,16 @@ def test_renew():
 
     op.exec_function_with_exception(command="renew", data="deadline_item 5", parent=None, owner=owner)
 
-    with pytest.raises(IllegalArgumentException):
-        op.exec_function_with_exception(command="renew", data="base_item 5", parent=None, owner=owner)
-
     with pytest.raises(NotUniqueItemException):
         op.exec_function_with_exception(command="renew", data="item 5", parent=None, owner=owner)
 
     with pytest.raises(IllegalArgumentException):
         op.exec_function_with_exception(command="renew", data=" ", parent=None, owner=owner)
+
+    # 未指定截止日期, 默认使用当前时间作为截止日期
+    assert base_item.deadline is None
+    op.exec_function_with_exception(command="renew", data="base_item 5", parent=None, owner=owner)
+    assert base_item.deadline is not None
 
 
 def test_parse_sn_data():

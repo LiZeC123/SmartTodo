@@ -407,3 +407,18 @@ def test_garbage_collection():
 
     manager.remove(re_item)
     manager.remove(base_item)
+
+
+def test_renew_sp_task():
+    sp_item1 = make_base_item("test_sp_task01")
+    sp_item1.specific = 7
+    sp_item1.used_tomato = 1
+    manager.create(sp_item1)
+
+    manager.renew_sp_task()
+
+    item = manager.select(sp_item1.id)
+    assert item is not None
+    assert item.deadline is not None
+    assert item.used_tomato == 0
+

@@ -11,7 +11,7 @@ from entity import Item, TomatoType, ItemType, Note
 from exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
 from tool4event import EventManager
 from tool4log import logger
-from tool4time import now, the_day_after
+from tool4time import now, the_day_after, today_begin
 from tool4web import extract_title, download
 
 
@@ -168,6 +168,16 @@ class ItemManager(BaseManager):
         self.db.flush()
         return item is not None
     
+    def renew(self, xid: int, owner: str, renew_day: int):
+        """将给定任务的截止日期续期指定天数"""
+        item = self.select_with_authority(xid, owner)
+        if item.deadline is None:
+            item.deadline = today_begin()
+        item.used_tomato = 0
+        item.deadline = the_day_after(item.deadline, renew_day)
+        self.update(item)
+
+    
     def get_tomato_item(self, owner: str)-> List[Dict]:
         stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today, Item.item_type == ItemType.Single, Item.expected_tomato > Item.used_tomato)
         items = self.db.execute(stmt).scalars().all()
@@ -266,6 +276,13 @@ class ItemManager(BaseManager):
             # 使用逻辑回退, 从而保证回退操作的逻辑是一致的
             self._undo(item)
         self.db.commit() # 定时器触发任务, 必须commit, 否则操作会被回滚
+
+    def renew_sp_task(self):
+        stmt = sal.select(Item).where(Item.specific > 0, Item.item_type != ItemType.Note)
+        items = self.db.execute(stmt).scalars().all()
+        for item in items:
+            self.renew(item.id, item.owner, item.specific)
+        self.db.commit() # 定时器触发任务, 必须commit, 否则操作会被回滚            
 
 
 class SingleItemManager(BaseManager):

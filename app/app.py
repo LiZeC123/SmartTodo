@@ -343,6 +343,7 @@ def init_task_manager():
     task_manager.add_daily_task("垃圾回收", item_manager.garbage_collection, "01:00")
     task_manager.add_daily_task("重置可重复任务", item_manager.reset_daily_task, "01:10")
     task_manager.add_daily_task("重置未完成的今日任务", item_manager.reset_today_task, "01:20")
+    task_manager.add_daily_task("重置已完成的周期性任务", item_manager.renew_sp_task, "01:30")
     task_manager.start()
 
 

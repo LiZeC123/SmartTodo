@@ -40,12 +40,7 @@ class OpInterpreter:
 
     def renew(self, name: str, renew_day: int, parent: Optional[int], owner: str):
         item = self.item_manager.get_unique_item_by_name(name, parent, owner)
-
-        if item.deadline is None:
-            raise IllegalArgumentException("需要renew的Item必须已经指定截止日期")
-
-        item.deadline = the_day_after(item.deadline, renew_day)
-        self.item_manager.update(item)
+        self.item_manager.renew(item.id, item.owner, renew_day)
 
 
     def exec_function(self, command: str, data: str, parent: Optional[int], owner: str):
