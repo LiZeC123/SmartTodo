@@ -5,7 +5,6 @@ import type { Item } from "./types";
 export function mapName(item: Item) {
     const tags = [
         getTomatoCountTag(item),
-        getSpWeekTag(item),
         getDLCounterDownTag(item),
         getDeadlineTag(item),
         getTypeTag(item),
@@ -20,14 +19,6 @@ type Tag = string | undefined
 function getTomatoCountTag(item: Item): Tag {
     if (item.expected_tomato && item.expected_tomato !== 1) {
         return item.used_tomato + '/' + item.expected_tomato
-    }
-}
-
-
-const today = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'] //创建星期数组
-function getSpWeekTag(item: Item): Tag {
-    if (item.specific) {
-        return today[item.specific - 1] //返一周中的某一天，其中1为周一
     }
 }
 

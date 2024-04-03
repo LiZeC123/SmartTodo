@@ -282,6 +282,7 @@ class ItemManager(BaseManager):
         items = self.db.execute(stmt).scalars().all()
         for item in items:
             self.renew(item.id, item.owner, item.specific)
+            logger.info(f'续期周期性任务: {item.name}')
         self.db.commit() # 定时器触发任务, 必须commit, 否则操作会被回滚            
 
 
