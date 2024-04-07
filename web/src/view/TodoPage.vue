@@ -3,10 +3,11 @@
 
   <div class="container">
     <!-- 代办事项模块 -->
-    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="(idx, id) => incTime(tTask)(idx, id)" @item-click="itemClick"
-      @header-click="jumptoTomatoPage">
+    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="(idx, id) => incTime(tTask)(idx, id)"
+      @item-click="itemClick" @header-click="jumptoTomatoPage">
     </ItemList>
-    <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="(idx, id) => incTime(aTask)(idx, id)" @item-click="itemClick">
+    <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="(idx, id) => incTime(aTask)(idx, id)"
+      @item-click="itemClick">
     </ItemList>
 
     <!-- Note编辑器, 仅对Note类型页面生效  -->
@@ -108,7 +109,12 @@ const aCfg = [
     name: 'calculator',
     desc: '增加预计时间',
     f: (index: number, id: string) => {
-      axios.post('/item/incExpTime', { id }).then(() => (aTask.value[index].expected_tomato += 1))
+      const expT = aTask.value[index].expected_tomato
+      if (expT >= 4) {
+        alert("单个任务的番茄钟数量不建议超过4个")
+      } else {
+        axios.post('/item/incExpTime', { id }).then(() => (aTask.value[index].expected_tomato += 1))
+      }
     }
   }
 ]
