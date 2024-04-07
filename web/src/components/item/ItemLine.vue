@@ -2,7 +2,7 @@
     <li :class="['active', { done: doneItem(item) }, mapTypeToClass(item)]">
         <label><input type="checkbox" @change="$emit('done', index, item.id)" :checked="doneItem(item)"
                 :disabled="doneItem(item)" /></label>
-        <p @mousedown.left="$emit('jump-to', item.name, item.url)">{{ mapName(item) }}</p>
+        <p @mousedown="$emit('click', $event, item)">{{ mapName(item) }}</p>
 
         <ButtonGroup :btn-cfg="btnCfg" :index="index" :item="item"></ButtonGroup>
     </li>
@@ -22,7 +22,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: 'done', idx: number, id: string): void
-    (e: 'jump-to', name: string, url?: string): void
+    (e: 'click', event: MouseEvent, item: Item): void
 }>()
 
 

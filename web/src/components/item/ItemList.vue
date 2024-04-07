@@ -4,7 +4,7 @@
       <h2 @mousedown.left="$emit('header-jump')">{{ title }}</h2>
       <ol @contextmenu.prevent>
         <ItemLine v-for="(item, index) in sortedData" :key="item.id" :item="item" :index="index" :btn-cfg="btnCfg"
-          @jump-to="jumpTo" @done="(idx, id) => $emit('done', idx, id)"></ItemLine>
+          @click="(e, i) => $emit('item-click', e, i)" @done="(idx, id) => $emit('done', idx, id)"></ItemLine>
       </ol>
     </div>
   </div>
@@ -26,7 +26,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'done', idx: number, id: string): void
-  (e: 'jump-to', name: string, url: string): void
+  (e: 'item-click', event: MouseEvent, item: Item): void
   (e: 'header-jump'): void
 }>()
 
@@ -37,14 +37,6 @@ let showList = computed(() => {
 let sortedData = computed(() => {
   return props.data?.sort(compareItem)
 })
-
-
-function jumpTo(name: string, url?: string) {
-  if (url) {
-    emit('jump-to', name, url)
-  }
-}
-
 
 </script>
 

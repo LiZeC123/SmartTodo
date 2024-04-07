@@ -3,10 +3,10 @@
 
   <div class="container">
     <!-- 代办事项模块 -->
-    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="(idx, id) => incTime(tTask)(idx, id)" @jump-to="jumpTo"
+    <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="(idx, id) => incTime(tTask)(idx, id)" @item-click="itemClick"
       @header-jump="jumptoTomato">
     </ItemList>
-    <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="(idx, id) => incTime(aTask)(idx, id)" @jump-to="jumpTo">
+    <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="(idx, id) => incTime(aTask)(idx, id)" @item-click="itemClick">
     </ItemList>
 
     <!-- Note编辑器, 仅对Note类型页面生效  -->
@@ -147,7 +147,21 @@ function createFilePlaceHold(name: string) {
   tTask.value.unshift(item)
 }
 
-function jumpTo(_: string, path: string) {
+function itemClick(event: MouseEvent, item: Item) {
+  if (event.button === 0) {
+    jumpTo(item)
+  } else if (event.button === 2) {
+    copyMarkdown(item)
+  }
+}
+
+
+function jumpTo(item: Item) {
+  if (!item.url) {
+    return;
+  }
+
+  let path = item.url;
   if (path.startsWith('note')) {
     // note对应的路径, 路由跳转
     path = "/" + path
@@ -157,6 +171,18 @@ function jumpTo(_: string, path: string) {
     window.open(path)
   }
 
+}
+
+function copyMarkdown(item: Item) {
+  if (!item.url) {
+    return;
+  }
+
+  let text = `[${item.name}](${item.url})`
+  console.log(["Do Copy", text])
+  navigator.clipboard.writeText(text)
+  alertText.value = '链接已复制'
+  setTimeout(() => (alertText.value = undefined), 500)
 }
 
 function jumptoTomato() {
