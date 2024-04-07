@@ -39,10 +39,6 @@ function mapTypeToClass(item: Item): string {
         return 'repeatable'
     }
 
-    if (item.specific) {
-        return 'specific'
-    }
-
     // 如果指定了deadline, 则计算距离deadline的时间并设置不同的颜色
     if (item.deadline) {
         let delta = new Date(item.deadline).getTime() - new Date().getTime()

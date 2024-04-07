@@ -1,12 +1,12 @@
 import type { Item } from "./types";
 
 // 按照指定的顺序添加标记
-// 【番茄量计数】【特定任务提示】【截止时间倒计时】【截止时间】【类型标记】
 export function mapName(item: Item) {
     const tags = [
         getTomatoCountTag(item),
         getDLCounterDownTag(item),
         getDeadlineTag(item),
+        getSpTag(item),
         getTypeTag(item),
     ]
 
@@ -21,7 +21,6 @@ function getTomatoCountTag(item: Item): Tag {
         return item.used_tomato + '/' + item.expected_tomato
     }
 }
-
 
 function getDeadlineTag(item: Item): Tag {
     if (item.deadline) {
@@ -42,6 +41,11 @@ function getDLCounterDownTag(item: Item): Tag {
     }
 }
 
+function getSpTag(item:Item): Tag {
+    if (item.specific > 0) {
+        return "周期"
+    }
+}
 
 function getTypeTag(item: Item): Tag {
     if (item.item_type === 'note') {
