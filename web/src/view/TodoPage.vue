@@ -4,7 +4,7 @@
   <div class="container">
     <!-- 代办事项模块 -->
     <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="(idx, id) => incTime(tTask)(idx, id)" @item-click="itemClick"
-      @header-jump="jumptoTomato">
+      @header-click="jumptoTomatoPage">
     </ItemList>
     <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="(idx, id) => incTime(aTask)(idx, id)" @item-click="itemClick">
     </ItemList>
@@ -185,7 +185,7 @@ function copyMarkdown(item: Item) {
   setTimeout(() => (alertText.value = undefined), 500)
 }
 
-function jumptoTomato() {
+function jumptoTomatoPage() {
   const path = '/tomato'
   router.push({ path })
 }

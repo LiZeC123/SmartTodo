@@ -1,7 +1,7 @@
 <template>
   <div>
     <div v-if="showList">
-      <h2 @mousedown.left="$emit('header-jump')">{{ title }}</h2>
+      <h2 @mousedown.left="$emit('header-click')">{{ title }}</h2>
       <ol @contextmenu.prevent>
         <ItemLine v-for="(item, index) in sortedData" :key="item.id" :item="item" :index="index" :btn-cfg="btnCfg"
           @click="(e, i) => $emit('item-click', e, i)" @done="(idx, id) => $emit('done', idx, id)"></ItemLine>
@@ -27,7 +27,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'done', idx: number, id: string): void
   (e: 'item-click', event: MouseEvent, item: Item): void
-  (e: 'header-jump'): void
+  (e: 'header-click'): void
 }>()
 
 let showList = computed(() => {
