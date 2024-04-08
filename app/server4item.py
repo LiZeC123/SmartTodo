@@ -278,11 +278,11 @@ class ItemManager(BaseManager):
         self.db.commit() # 定时器触发任务, 必须commit, 否则操作会被回滚
 
     def renew_sp_task(self):
-        stmt = sal.select(Item).where(Item.specific > 0, Item.item_type != ItemType.Note)
+        stmt = sal.select(Item).where(Item.specific > 0, Item.item_type != ItemType.Note, Item.used_tomato == Item.expected_tomato)
         items = self.db.execute(stmt).scalars().all()
         for item in items:
             self.renew(item.id, item.owner, item.specific)
-            logger.info(f'续期周期性任务: {item.name}')
+            logger.info(f'续期周期性任务: {item.name} 续期 {item.specific} 天')
         self.db.commit() # 定时器触发任务, 必须commit, 否则操作会被回滚            
 
 

@@ -414,11 +414,20 @@ def test_renew_sp_task():
     sp_item1.specific = 7
     sp_item1.used_tomato = 1
     manager.create(sp_item1)
-
+    
+    # 已完成任务正常续期
     manager.renew_sp_task()
 
     item = manager.select(sp_item1.id)
     assert item is not None
     assert item.deadline is not None
     assert item.used_tomato == 0
+
+    deadline = item.deadline
+
+    # 未完成任务不会续期
+    manager.renew_sp_task()
+    item = manager.select(sp_item1.id)
+    assert item is not None 
+    assert deadline == item.deadline
 
