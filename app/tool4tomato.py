@@ -51,9 +51,13 @@ class TomatoManager:
         
         with self.db.begin(nested=True):
             self.db.delete(status)
-            self.item_manager.increase_used_tomato(xid, owner)
-            self.__insert_record(status)
-            return True
+            # 浏览器端由于内存回收等原因, 可能在番茄钟完成时触发两次完成操作
+            # 当前无法有效区分此情况, 仅通过剩余番茄钟时间进行判断
+            # 如果增加番茄钟操作失败, 则不进行后续操作
+            if self.item_manager.increase_used_tomato(xid, owner):
+                self.__insert_record(status)
+                return True
+            return False
 
 
     def clear_task(self, xid: int, reason: str, owner: str) -> bool:

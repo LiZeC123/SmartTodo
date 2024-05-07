@@ -59,7 +59,6 @@ function updateTomato() {
 
   // 更新剩余时间, 驱动页面刷新
   rs.value = calcRS(props.item)
-  console.log(rs.value)
 
   // 倒计时结束, 清除计时器
   if (rs.value < 0) {

@@ -154,11 +154,13 @@ class ItemManager(BaseManager):
 
     def increase_used_tomato(self, xid: int, owner: str):
         item = self.select_with_authority(xid=xid, owner=owner)
-        if item.used_tomato < item.expected_tomato:
-            item.used_tomato += 1
-            logger.info(f"手动完成任务: {item.name}")
+        if item.used_tomato >= item.expected_tomato:
+            return False
+        
+        item.used_tomato += 1
         self.db.flush()
-        return item is not None
+        logger.info(f"手动完成任务: {item.name}")
+        return True
 
     def to_today_task(self, xid: int, owner: str):
         item = self.select_with_authority(xid=xid, owner=owner)
