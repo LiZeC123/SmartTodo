@@ -2,7 +2,7 @@
     <li :class="['active', { done: doneItem(item) }, mapTypeToClass(item)]">
         <label><input type="checkbox" @change="$emit('done', index, item.id)" :checked="doneItem(item)"
                 :disabled="doneItem(item)" /></label>
-        <p @mousedown="$emit('click', $event, item)">{{ mapName(item) }}</p>
+        <p @mousedown="clickItem(item, $event)">{{ mapName(item) }}</p>
 
         <ButtonGroup :btn-cfg="btnCfg" :index="index" :item="item"></ButtonGroup>
     </li>
@@ -13,6 +13,7 @@ import type { ButtonConfig, Item } from './types'
 import { mapName } from './mapper'
 
 import ButtonGroup from "./ButtonGroup.vue";
+import router from '@/router'
 
 const props = defineProps<{
     item: Item
@@ -55,8 +56,45 @@ function mapTypeToClass(item: Item): string {
     return 'single'
 }
 
-// TODO: 鼠标事件可明确区分左右键,
+function clickItem(item: Item, event: MouseEvent): void {
+  // 执行组件默认行为
+  if (event.button === 0) {
+    jumpTo(item)
+  } else if (event.button === 2) {
+    copyMarkdown(item)
+  }
 
+  // 向上传递事件, 上层组件可执行其他操作
+  emit('click', event, item)
+}
+
+
+function jumpTo(item: Item) {
+  if (!item.url) {
+    return;
+  }
+
+  let path = item.url;
+  if (path.startsWith('note')) {
+    // note对应的路径, 路由跳转
+    path = "/" + path
+    router.push({ path })
+  } else {
+    // 外部URL, 文件URL等直接打开
+    window.open(path)
+  }
+
+}
+
+function copyMarkdown(item: Item) {
+  if (!item.url) {
+    return;
+  }
+
+  let text = `[${item.name}](${item.url})`
+  console.log(["Do Copy", text])
+  navigator.clipboard.writeText(text)
+}
 
 
 </script>

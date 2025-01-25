@@ -154,41 +154,10 @@ function createFilePlaceHold(name: string) {
 }
 
 function itemClick(event: MouseEvent, item: Item) {
-  if (event.button === 0) {
-    jumpTo(item)
-  } else if (event.button === 2) {
-    copyMarkdown(item)
+  if (event.button === 2) {
+    alertText.value = '链接已复制'
+    setTimeout(() => (alertText.value = undefined), 500)
   }
-}
-
-
-function jumpTo(item: Item) {
-  if (!item.url) {
-    return;
-  }
-
-  let path = item.url;
-  if (path.startsWith('note')) {
-    // note对应的路径, 路由跳转
-    path = "/" + path
-    router.push({ path })
-  } else {
-    // 外部URL, 文件URL等直接打开
-    window.open(path)
-  }
-
-}
-
-function copyMarkdown(item: Item) {
-  if (!item.url) {
-    return;
-  }
-
-  let text = `[${item.name}](${item.url})`
-  console.log(["Do Copy", text])
-  navigator.clipboard.writeText(text)
-  alertText.value = '链接已复制'
-  setTimeout(() => (alertText.value = undefined), 500)
 }
 
 function jumptoTomatoPage() {
