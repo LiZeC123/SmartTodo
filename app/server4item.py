@@ -153,13 +153,30 @@ class ItemManager(BaseManager):
         return item is not None
 
     def increase_used_tomato(self, xid: int, owner: str):
+        """已使用番茄钟计数增加1, 用于番茄钟完成后更新状态场景"""
         item = self.select_with_authority(xid=xid, owner=owner)
         if item.used_tomato >= item.expected_tomato:
             return False
         
         item.used_tomato += 1
         self.db.flush()
-        logger.info(f"手动完成任务: {item.name}")
+        logger.info(f"完成任务: {item.name}")
+        return True
+
+    def finish_used_tomato(self, xid: int, owner: str):
+        item = self.select_with_authority(xid=xid, owner=owner)
+        if item.used_tomato >= item.expected_tomato:
+            return False
+
+        if item.expected_tomato == 1:
+            # 如果当前是一个普通的任务, 即不需要消耗多个番茄钟, 则设置为完成状态
+            item.used_tomato = 1
+        else:
+            # 否则收缩预期的番茄钟数量为当前值, 例如已经消耗2个番茄钟, 而预期消耗4个番茄钟
+            # 此时完成任务, 则将预期番茄钟数量调整为2
+            item.expected_tomato = item.used_tomato
+        self.db.flush()
+        logger.info(f"全部完成任务: {item.name}")
         return True
 
     def to_today_task(self, xid: int, owner: str):

@@ -139,7 +139,7 @@ def increase_expected_tomato(owner:str) -> bool:
 @authority_check()
 def increase_used_tomato(owner:str) -> bool:
     xid = get_xid_from_request()
-    return item_manager.increase_used_tomato(xid=xid, owner=owner)
+    return item_manager.finish_used_tomato(xid=xid, owner=owner)
 
 
 @app.post('/api/item/toTodayTask')

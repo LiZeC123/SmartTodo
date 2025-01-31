@@ -22,17 +22,18 @@ class TomatoManager:
         # self.event_manager = EventManager(db)
 
     def start_task(self, xid: int, owner: str) -> str:
-        # Step1: 查询Item状态是否符合预期
-        item = self.item_manager.select_with_authority(xid, owner)
-        if item.used_tomato == item.expected_tomato:
-            return '启动失败: 当前任务已完成全部番茄钟'
-        
-        # Step2: 检查当前用户是否已经开启其他番茄钟
+        # 检查当前用户是否已经开启其他番茄钟
         status = self.query_task(owner)
         if status:
             return '启动失败: 当前存在正在执行的番茄钟'
-        
-        # Step3: 确认无误, 开启番茄钟
+
+        # 查询Item状态是否符合预期
+        item = self.item_manager.select_with_authority(xid, owner)
+        if item.used_tomato == item.expected_tomato:
+            # 如果当前已完成全部番茄钟, 则自动增加一个预期番茄钟
+            # TODO: 预期时间变更操作落库, 后续进行分析
+            self.item_manager.increase_expected_tomato(xid, owner)
+
         # 针对owner字段设置了唯一索引, 避免一个用户同时提交多个番茄钟请求, 导致状态异常
         status = TomatoStatus(item_id=item.id, name=item.name, owner=owner)
         self.db.add(status)
