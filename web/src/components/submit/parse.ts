@@ -1,60 +1,54 @@
-import type { TodoType, CreateItem } from "./types";
+import type { TodoType, CreateItem, TodoPriority } from './types'
 
 // 解析输入的代办事项文本, 根据文本内容附带必要的属性
-export function parseTitleToData(todoContent: string, todoType: TodoType) {
-    const values = todoContent.split(" ");
+export function parseTitleToData(todoContent: string, priority: TodoPriority) {
+  const values = todoContent.split(' ')
 
-    // 分析类型
-    const data: CreateItem = {
-        itemType: todoType,
-        name: todoContent
-    };
+  // 分析任务名称
+  let name = todoContent
+  if (values.length > 1) {
+    name = values[0]
+  }
 
+  // 分析类型
+  const data: CreateItem = {
+    name: name,
+    itemType: inferType(name),
+    repeatable: inferRepeatable(name),
+    deadline: parsePriority(priority),
+  }
 
-    // 分析任务名称
-    if (values.length > 1) {
-        data.name = values[0];
+  // 分析参数
+  for (let i = 1; i < values.length; i++) {
+    if (values[i].charAt(0) !== '-') {
+      data.name += ' ' + values[i]
+    } else if (values[i] === '-dl' && i + 1 < values.length) {
+      data.deadline = parseDeadline(values[i + 1])
+      i++
+    } else if (values[i] === '-sp' && i + 1 < values.length) {
+      data.specific = values[i + 1]
+      i++
     }
+  }
 
-    // 更新任务名称重新分析任务类型
-    data.itemType = inferType(data.name, data.itemType);
-    data.repeatable = inferRepeatable(data.name)
-
-    // 分析参数
-    for (let i = 1; i < values.length; i++) {
-        if (values[i].charAt(0) !== "-") {
-            data.name += " " + values[i];
-        } else if (values[i] === "-dl" && i + 1 < values.length) {
-            data.deadline = parseDeadline(values[i + 1]);
-            i++;
-        } else if (values[i] === "-re") {
-            data.repeatable = true;
-        } else if (values[i] === "-sp" && i + 1 < values.length) {
-            data.specific = values[i + 1];
-            i++;
-        }
-    }
-
-    return data;
+  return data
 }
 
-function inferType(name:string, itemType:TodoType): TodoType {
-    if (itemType !== "single") {
-        return itemType;
-    }
+function inferType(name: string): TodoType {
+  if (inferFileType(name)) {
+    return 'file'
+  }
 
-    if (inferFileType(name)) {
-        return "file";
-    } else if (inferNoteType(name)) {
-        return 'note'
-    } else {
-        return "single"
-    }
+  if (inferNoteType(name)) {
+    return 'note'
+  }
+
+  return 'single'
 }
 
 function inferFileType(name: string): boolean {
-    const dot = name.lastIndexOf(".");
-    const fileType = name.substring(dot + 1);
+  const dot = name.lastIndexOf('.')
+  const fileType = name.substring(dot + 1)
 
     const knowTypes = [
         "zip", "rar", "tar", "gz", "7z",
@@ -63,54 +57,68 @@ function inferFileType(name: string): boolean {
         "pdf", "xls", "xlsx", "doc", "docx", "ppt", "txt"
     ];
 
-    if (knowTypes.indexOf(fileType) !== -1 && name.indexOf("http") !== -1) {
-        return confirm("检测到链接类型为文件, 是否按照文件类型进行下载?");
-    }
+  if (knowTypes.indexOf(fileType) !== -1 && name.indexOf('http') !== -1) {
+    return confirm('检测到链接类型为文件, 是否按照文件类型进行下载?')
+  }
 
-    return false;
+  return false
 }
 
 function inferNoteType(name: string): boolean {
-    const knowType = ['计划', '规划', '事项', '分析', '笔记'];
+  const knowType = ['计划', '规划', '事项', '分析', '笔记']
 
-    for (const type of knowType) {
-        // 当前的关键词有可能在标题中作为动词使用, 此时大概率并不期望创建Note
-        // 因此调整为关键词必须结尾出现, 此时相关词汇更大概率为名词
-        if (name.endsWith(type)) {
-            return confirm("检测到代办类型包含关键词, 是否按照便签类型进行创建?")
-        }
+  for (const type of knowType) {
+    // 当前的关键词有可能在标题中作为动词使用, 此时大概率并不期望创建Note
+    // 因此调整为关键词必须结尾出现, 此时相关词汇更大概率为名词
+    if (name.endsWith(type)) {
+      return confirm('检测到代办类型包含关键词, 是否按照便签类型进行创建?')
     }
+  }
 
-    return false;
+  return false
 }
 
 function inferRepeatable(name: string): boolean {
-    const knowType = ['每日', '今日'];
+  const knowType = ['每日']
 
-    for (const type of knowType) {
-        if (name.indexOf(type) !== -1) {
-            return confirm("检测到关键词, 是否添加可重复属性?")
-        }
+  for (const type of knowType) {
+    if (name.indexOf(type) !== -1) {
+      return confirm('检测到关键词, 是否添加可重复属性?')
     }
+  }
 
-    return false;
+  return false
+}
+
+const DayMillisecond = 24 * 60 * 60 * 1000
+
+function parsePriority(priority: TodoPriority) {
+  const time = new Date()
+  switch (priority) {
+    case 'p0':
+      return time.getTime() + 2 * DayMillisecond
+    case 'p1':
+      return time.getTime() + 4 * DayMillisecond
+    case 'p2':
+      return time.getTime() + 7 * DayMillisecond
+  }
 }
 
 function parseDeadline(deadline: string) {
-    let data = /(\d+)\.(\d+)(:(\d+))?/.exec(deadline)
-    if (data) {
-        const month = data[1]
-        const day = data[2]
-        const hour = data[4] === undefined ? '10' : data[4]
-        return parseDate(month, day, hour, '0', '0');
-    } 
-    
-    data = /[Ww](\d+)/.exec(deadline)
-    if(data) {
-        return parseWeek(parseInt(data[1], 10))
-    }
+  let data = /(\d+)\.(\d+)(:(\d+))?/.exec(deadline)
+  if (data) {
+    const month = data[1]
+    const day = data[2]
+    const hour = data[4] === undefined ? '10' : data[4]
+    return parseDate(month, day, hour, '0', '0')
+  }
 
-    confirm(`截止日期解析异常: ${deadline}`)
+  data = /[Ww](\d+)/.exec(deadline)
+  if (data) {
+    return parseWeek(parseInt(data[1], 10))
+  }
+
+  confirm(`截止日期解析异常: ${deadline}`)
 }
 
 function parseDate(tMonth: string, tDay: string, tHour: string, tMin: string, tSec: string): number {
@@ -125,15 +133,14 @@ function parseDate(tMonth: string, tDay: string, tHour: string, tMin: string, tS
 }
 
 function parseWeek(weekDay: number) {
-    const dayMillisecond = 24 * 60 * 60 * 1000;
-    const time = new Date();
-    const today = time.getDay();
-    weekDay = weekDay % 7;
-    let diffDay = weekDay - today;
-    if (diffDay <= 0) {
-        diffDay = 7 + diffDay;
-    }
-    const diffTime = diffDay * dayMillisecond;
-    const curTime = time.getTime();
-    return curTime + diffTime;
+  const time = new Date()
+  const today = time.getDay()
+  weekDay = weekDay % 7
+  let diffDay = weekDay - today
+  if (diffDay <= 0) {
+    diffDay = 7 + diffDay
+  }
+  const diffTime = diffDay * DayMillisecond
+  const curTime = time.getTime()
+  return curTime + diffTime
 }

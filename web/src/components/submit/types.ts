@@ -6,6 +6,8 @@ export interface FuncData {
 
 export type TodoType = "single" | "file" | "note"
 
+export type TodoPriority = "p2" | "p1" | "p0"
+
 export interface CreateItem {
     itemType: TodoType
     name: string

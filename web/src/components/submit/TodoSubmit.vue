@@ -5,10 +5,10 @@
         <label for="title" @mousedown.left="$emit('logo')">SmartTodo</label>
         <div v-show="enableSubmit" style="float: right; width: 60%">
           <label for="itemType"></label>
-          <select id="itemType" v-model="todoType">
-            <option value="single">创建待办</option>
-            <option value="file">下载文件</option>
-            <option value="note">创建便签</option>
+          <select id="itemType" v-model="priority">
+            <option value="p2">低优任务</option>
+            <option value="p1">普通任务</option>
+            <option value="p0">高优任务</option>
           </select>
           <input
             type="text"
@@ -26,7 +26,7 @@
 <script setup lang="ts">
 import { ref, type Ref } from 'vue'
 import { parseTitleToData } from './parse'
-import type { CreateItem, CreateType, FuncData, TodoType } from './types'
+import type { CreateItem, CreateType, FuncData, TodoPriority } from './types'
 
 const props = defineProps<{
   enableSubmit?: boolean
@@ -39,7 +39,7 @@ const emit = defineEmits<{
 }>()
 
 let todoContent = ref('')
-let todoType: Ref<TodoType> = ref('single')
+let priority: Ref<TodoPriority> = ref("p2")
 
 function commitTodo() {
   const content = todoContent.value.trim()
@@ -53,7 +53,7 @@ function commitTodo() {
     const data: FuncData = { cmd: match[1], data: match[2] }
     emit('commit', 'func', data)
   } else {
-    const data = parseTitleToData(todoContent.value, todoType.value)
+    const data = parseTitleToData(todoContent.value, priority.value)
     if (data.itemType === 'file') {
       emit('commit', 'file', data)
     } else {
@@ -63,7 +63,6 @@ function commitTodo() {
 
   // 提交请求后直接清空内容, 而不必等待请求返回, 提高响应速度, 避免重复提交
   todoContent.value = ''
-  todoType.value = 'single'
 }
 </script>
 
