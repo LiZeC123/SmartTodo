@@ -100,7 +100,7 @@ function parsePriority(priority: TodoPriority) {
     case 'p1':
       return time.getTime() + 4 * DayMillisecond
     case 'p2':
-      return time.getTime() + 7 * DayMillisecond
+      return time.getTime() + 8 * DayMillisecond
   }
 }
 

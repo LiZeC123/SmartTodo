@@ -3,7 +3,7 @@
     <div v-if="showList">
       <h2 @mousedown.left="$emit('header-click')">{{ title }}</h2>
       <ol @contextmenu.prevent>
-        <ItemLine v-for="(item, index) in sortedData" :key="item.id" :item="item" :index="index" :btn-cfg="btnCfg"
+        <ItemLine v-for="(item, index) in props.data" :key="item.id" :item="item" :index="index" :btn-cfg="btnCfg"
           @click="(e, i) => $emit('item-click', e, i)" @done="(idx, id) => $emit('done', idx, id)"></ItemLine>
       </ol>
     </div>
@@ -14,7 +14,6 @@
 import { computed } from 'vue'
 
 import type { ButtonConfig, Item } from './types'
-import { compareItem } from './sort';
 
 import ItemLine from "./ItemLine.vue";
 
@@ -32,10 +31,6 @@ const emit = defineEmits<{
 
 let showList = computed(() => {
   return props.data && props.data.length > 0
-})
-
-let sortedData = computed(() => {
-  return props.data?.sort(compareItem)
 })
 
 </script>

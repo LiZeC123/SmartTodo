@@ -6,6 +6,7 @@
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
     <ItemGroupedList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="doneItem"></ItemGroupedList>
     <Footer :is-admin="false" :config="footerConfig"></Footer>
+    <AlertBox :text="alertText"></AlertBox>
   </div>
 </template>
 
@@ -25,6 +26,7 @@ import type { TomatoItem, TomatoEventType, TomatoParam } from '@/components/toma
 import type { GroupedItem } from '@/components/item/types'
 import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/types'
 import type { FooterConfig } from '@/components/footer/types'
+import AlertBox from '@/components/AlertBox.vue'
 
 onMounted(() => {
   loadTomato()
@@ -134,6 +136,11 @@ function addRecord() {
 
   axios.post('/tomato/addRecord', { name, startTime }).then(reloadList)
 }
+
+
+// ========================================================== Alert 相关配置 ==========================================================
+let alertText: Ref<string | undefined> = ref('')
+
 
 </script>
 

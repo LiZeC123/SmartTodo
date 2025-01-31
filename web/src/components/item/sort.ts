@@ -2,7 +2,7 @@ import type { Item } from "./types";
 
 // 排序比较函数, 此函数期望在返回a<b, 并且按照升序排列数据
 // Item需要按照从大到小的顺序排列, 因此这里对结果取反
-export function compareItem(a: Item, b: Item): number {
+export function byCalcValue(a: Item, b: Item): number {
     const va = calcValue(a)
     const vb = calcValue(b)
 
@@ -31,4 +31,11 @@ function calcValue(item: Item): number {
     }
 
     return base
+}
+
+export function byUpdateTime(a: Item, b: Item): number {
+    const tA = new Date(a.update_time).getTime()
+    const tB = new Date(b.update_time).getTime()
+
+    return tA - tB
 }

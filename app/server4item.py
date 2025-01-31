@@ -141,7 +141,7 @@ class ItemManager(BaseManager):
         # return self.select_activate(owner, parent=parent)
 
     def _undo(self, item: Item):
-        item.create_time = now()
+        item.update_time = now()
         item.tomato_type = TomatoType.Activate
         self.db.flush()
 
@@ -181,7 +181,7 @@ class ItemManager(BaseManager):
 
     def to_today_task(self, xid: int, owner: str):
         item = self.select_with_authority(xid=xid, owner=owner)
-        item.create_time = now()
+        item.update_time = now()
         item.tomato_type = TomatoType.Today
         logger.info(f"添加任务到今日任务列表: {item.name}")
         self.db.flush()
@@ -283,7 +283,7 @@ class ItemManager(BaseManager):
         for item in items:
             item.used_tomato = 0
             item.tomato_type = TomatoType.Today
-            item.create_time = now()
+            item.update_time = now()
             logger.info(f"重置可重复任务: {item.name}")
         self.db.commit() # 定时器触发任务, 必须commit, 否则操作会被回滚
 

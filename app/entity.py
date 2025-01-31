@@ -40,6 +40,7 @@ class Item(Base):
     owner: Mapped[str]      = mapped_column(String(15), nullable=False)
 
     create_time: Mapped[datetime]           = mapped_column(DateTime, nullable=False, default=now)
+    update_time: Mapped[datetime]           = mapped_column(DateTime, nullable=False, default=now)
     deadline: Mapped[Optional[datetime]]    = mapped_column(DateTime, default=None)
     url: Mapped[Optional[str]]              = mapped_column(Text, default=None)
 

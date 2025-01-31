@@ -4,7 +4,7 @@
   <div class="container">
     <!-- 代办事项模块 -->
     <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="(idx, id) => incTime(tTask)(idx, id)"
-      @item-click="itemClick" @header-click="jumptoTomatoPage">
+      @item-click="itemClick" @header-click="jumpTomatoPage">
     </ItemList>
     <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="(idx, id) => incTime(aTask)(idx, id)"
       @item-click="itemClick">
@@ -35,6 +35,7 @@ import type { CreateType, CreateItem, FuncData } from '@/components/submit/types
 import type { Item } from '@/components/item/types'
 import type { FooterConfig } from '@/components/footer/types'
 import { selectFile } from '@/components/footer/tools'
+import { byCalcValue, byUpdateTime } from '@/components/item/sort'
 
 const $router = useRoute()
 // 父Item的Id, 对于主界面, 此属性为undefined, 对于Note页面, 此属性为父Item的ID
@@ -82,7 +83,20 @@ const tCfg = [
     f: (index: number, id: string) => {
       axios.post<boolean>('/item/back', { id }).then(() => {
         aTask.value.push(...tTask.value.splice(index, 1))
+        aTask.value.sort(byCalcValue)
       })
+    }
+  },
+  {
+    name: 'calculator',
+    desc: '增加预计时间',
+    f: (index: number, id: string) => {
+      const expT = tTask.value[index].expected_tomato
+      if (expT >= 4) {
+        alert("单个任务的番茄钟数量不建议超过4个")
+      } else {
+        axios.post('/item/incExpTime', { id }).then(() => (tTask.value[index].expected_tomato += 1))
+      }
     }
   }
 ]
@@ -100,21 +114,9 @@ const aCfg = [
     desc: '转为今日任务',
     f: (index: number, id: string) => {
       axios.post('/item/toTodayTask', { id }).then(() => {
-        aTask.value[index].create_time = new Date().toISOString()
+        // aTask.value[index].create_time = new Date().toISOString()
         tTask.value.push(...aTask.value.splice(index, 1))
       })
-    }
-  },
-  {
-    name: 'calculator',
-    desc: '增加预计时间',
-    f: (index: number, id: string) => {
-      const expT = aTask.value[index].expected_tomato
-      if (expT >= 4) {
-        alert("单个任务的番茄钟数量不建议超过4个")
-      } else {
-        axios.post('/item/incExpTime', { id }).then(() => (aTask.value[index].expected_tomato += 1))
-      }
     }
   }
 ]
@@ -127,7 +129,11 @@ interface AllData {
 function loadItem() {
   axios.post<AllData>('/item/getAll', { parent }).then((res) => {
     tTask.value = res.data.todayTask
+    // 今日任务按照添加顺序排序
+    tTask.value.sort(byUpdateTime)
     aTask.value = res.data.activeTask
+    // 活动清单需要按照重要程度进行排序
+    aTask.value.sort(byCalcValue)
   })
 }
 
@@ -145,6 +151,7 @@ function createFilePlaceHold(name: string) {
     name,
     item_type: 'file',
     create_time: new Date().toISOString(),
+    update_time: new Date().toISOString(),
     repeatable: false,
     specific: 0,
     expected_tomato: 1,
@@ -160,7 +167,7 @@ function itemClick(event: MouseEvent, item: Item) {
   }
 }
 
-function jumptoTomatoPage() {
+function jumpTomatoPage() {
   const path = '/tomato'
   router.push({ path })
 }

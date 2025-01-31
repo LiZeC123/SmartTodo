@@ -18,7 +18,7 @@
 import { computed, ref, type Ref } from 'vue'
 
 import type { ButtonConfig, GroupedItem, Item } from './types'
-import { compareItem } from './sort';
+import { byCalcValue } from './sort';
 
 import ItemLine from './ItemLine.vue';
 
@@ -39,7 +39,7 @@ let showList = computed(() => {
 
 
 function sortedData(items: Item[]): Item[] {
-  return items?.sort(compareItem)
+  return items?.sort(byCalcValue)
 }
 
 
