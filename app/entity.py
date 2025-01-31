@@ -15,7 +15,7 @@ class Base(DeclarativeBase):
                 d[c.name] = v.strftime("%Y-%m-%d %H:%M:%S")
             else:
                 d[c.name] = v
-        return d       
+        return d
 
 
 class ItemType:
@@ -74,15 +74,16 @@ class TomatoTaskRecord(Base):
     owner: Mapped[str]              = mapped_column(String(15), nullable=False)
     name: Mapped[str]               = mapped_column(Text, nullable=False)
 
-class TomatoEvent(Base):
-    """番茄任务事件库: 记录番茄任务相关的事件, 例如任务取消, 任务预计时间变更等"""
-    __tablename__ = "tomato_event"
+# 相关数据已废弃, 先移除相关代码, 后续移除数据库表
+# class TomatoEvent(Base):
+#     """番茄任务事件库: 记录番茄任务相关的事件, 例如任务取消, 任务预计时间变更等"""
+#     __tablename__ = "tomato_event"
+#
+#     id: Mapped[int]         = mapped_column(Integer, primary_key=True, autoincrement=True)
+#     time: Mapped[datetime]  = mapped_column(DateTime, nullable=False)
+#     content: Mapped[str]    = mapped_column(Text, nullable=False)
+#     owner: Mapped[str]      = mapped_column(String(15), nullable=False)
 
-    id: Mapped[int]         = mapped_column(Integer, primary_key=True, autoincrement=True)
-    time: Mapped[datetime]  = mapped_column(DateTime, nullable=False)
-    content: Mapped[str]    = mapped_column(Text, nullable=False)
-    owner: Mapped[str]      = mapped_column(String(15), nullable=False)
-    
 
 class Note(Base):
     """便签数据库: 存储创建的便签文本"""
@@ -92,14 +93,15 @@ class Note(Base):
     content: Mapped[str]    = mapped_column(Text, nullable=False)
     owner: Mapped[str]      = mapped_column(String(15), nullable=False)
 
-class Summary(Base):
-    """总结记录库: 存储每日总结的文本"""
-    __tablename__ = "summary"
-
-    id: Mapped[int]               = mapped_column(Integer, primary_key=True, autoincrement=True)
-    create_time: Mapped[datetime] = mapped_column(String(10), nullable=False)
-    content: Mapped[str]          = mapped_column(Text, nullable=False)
-    owner: Mapped[str]            = mapped_column(String(15), nullable=False)
+# 相关数据已废弃, 先移除相关代码, 后续移除数据库表
+# class Summary(Base):
+#     """总结记录库: 存储每日总结的文本"""
+#     __tablename__ = "summary"
+#
+#     id: Mapped[int]               = mapped_column(Integer, primary_key=True, autoincrement=True)
+#     create_time: Mapped[datetime] = mapped_column(String(10), nullable=False)
+#     content: Mapped[str]          = mapped_column(Text, nullable=False)
+#     owner: Mapped[str]            = mapped_column(String(15), nullable=False)
 
 
 def init_database(url: str= 'sqlite:///data/data.db'):

@@ -9,7 +9,7 @@ from sqlalchemy.orm import scoped_session, Session
 
 from entity import Item, TomatoType, ItemType, Note
 from exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
-from tool4event import EventManager
+# from tool4event import EventManager
 from tool4log import logger
 from tool4time import now, the_day_after, today_begin
 from tool4web import extract_title, download
@@ -32,7 +32,7 @@ class ItemManager(BaseManager):
         self.base_manager = SingleItemManager(db)
         self.file_manager = FileItemManager(self.base_manager)
         self.note_manager = NoteItemManager(self.base_manager, db=db)
-        self.event_manager = EventManager(db)
+        # self.event_manager = EventManager(db)
 
         self.manager: Dict[str, BaseManager] = {
             ItemType.Single: self.base_manager,
@@ -136,7 +136,7 @@ class ItemManager(BaseManager):
     def undo(self, xid: int, owner: str):
         item = self.select_with_authority(xid=xid, owner=owner)
         self._undo(item)
-        self.event_manager.add_event(f"回退任务到列表: {item.name}", owner)
+        # self.event_manager.add_event(f"回退任务到列表: {item.name}", owner)
         return True
         # return self.select_activate(owner, parent=parent)
 
@@ -148,7 +148,7 @@ class ItemManager(BaseManager):
     def increase_expected_tomato(self, xid: int, owner: str):
         item = self.select_with_authority(xid=xid, owner=owner)
         item.expected_tomato += 1
-        self.event_manager.add_event(f"增加预计的时间: {item.name}", owner)
+        # self.event_manager.add_event(f"增加预计的时间: {item.name}", owner)
         self.db.flush()
         return item is not None
 

@@ -8,7 +8,7 @@ from sqlalchemy.orm import scoped_session, Session
 
 from server4item import ItemManager
 from entity import Item, ItemType, TomatoStatus, TomatoTaskRecord, TomatoType
-from tool4event import EventManager
+# from tool4event import EventManager
 from tool4log import logger
 from tool4time import get_hour_str_from, now, parse_time, today_begin
 
@@ -19,7 +19,7 @@ class TomatoManager:
     def __init__(self, db: scoped_session[Session], item_manager: ItemManager):
         self.db = db
         self.item_manager = item_manager
-        self.event_manager = EventManager(db)
+        # self.event_manager = EventManager(db)
 
     def start_task(self, xid: int, owner: str) -> str:
         # Step1: 查询Item状态是否符合预期
@@ -69,7 +69,7 @@ class TomatoManager:
             logger.error(f"清除番茄钟失败: 用户{owner}当前任务的Id不匹配, 期望为 { status.item_id } 实际为 {xid}")
             return False
         
-        self.event_manager.add_event(f"由于 {reason} 取消番茄钟 {status.name}", owner)
+        # self.event_manager.add_event(f"由于 {reason} 取消番茄钟 {status.name}", owner)
         self.db.delete(instance=status)
         self.db.flush()
         return True

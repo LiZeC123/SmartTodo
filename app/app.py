@@ -9,8 +9,8 @@ from exception import IllegalArgumentException, UnauthorizedException
 from service4config import ConfigManager
 from service4interpreter import OpInterpreter
 from tool4log import Log_File
-from tool4event import EventManager
-from tool4report import ReportManager
+# from tool4event import EventManager
+# from tool4report import ReportManager
 from server4item import ItemManager
 from tool4task import TaskManager
 from tool4token import TokenManager
@@ -23,8 +23,8 @@ app = Flask(__name__)
 
 db_session = init_database()
 config_manager = ConfigManager()
-event_manager = EventManager(db_session)
-report_manager = ReportManager(db_session)
+# event_manager = EventManager(db_session)
+# report_manager = ReportManager(db_session)
 item_manager = ItemManager(db_session)
 task_manager = TaskManager()
 token_manager = TokenManager()
@@ -275,30 +275,30 @@ def add_record(owner:str):
 @authority_check()
 def get_summary_items(owner:str):
     return tomato_record_manager.get_time_line_summary(owner)
-
-@app.post('/api/summary/getEventLine')
-@authority_check()
-def get_summary_event_line(owner:str):
-    rst = event_manager.get_today_event(owner)
-    return [i.to_dict() for i in rst]
-
-
-@app.post('/api/summary/getNote')
-@authority_check()
-def get_summary_note(owner:str):
-    return report_manager.get_today_summary(owner)
-
-@app.post('/api/summary/updateNode')
-@authority_check()
-def update_summary_note(owner:str):
-    content = request.get_json().get("content")
-    return report_manager.update_summary(content, owner)
-
-@app.get("/api/summary/getWeeklySummary")
-@authority_check()
-def get_report(owner:str):
-    summarys = report_manager.get_summary_from(this_week_begin())
-    return [s.to_dict() for s in summarys]
+#
+# @app.post('/api/summary/getEventLine')
+# @authority_check()
+# def get_summary_event_line(owner:str):
+#     rst = event_manager.get_today_event(owner)
+#     return [i.to_dict() for i in rst]
+#
+#
+# @app.post('/api/summary/getNote')
+# @authority_check()
+# def get_summary_note(owner:str):
+#     return report_manager.get_today_summary(owner)
+#
+# @app.post('/api/summary/updateNode')
+# @authority_check()
+# def update_summary_note(owner:str):
+#     content = request.get_json().get("content")
+#     return report_manager.update_summary(content, owner)
+#
+# @app.get("/api/summary/getWeeklySummary")
+# @authority_check()
+# def get_report(owner:str):
+#     summarys = report_manager.get_summary_from(this_week_begin())
+#     return [s.to_dict() for s in summarys]
 
 @app.post('/api/summary/getSmartReport')
 @authority_check()
