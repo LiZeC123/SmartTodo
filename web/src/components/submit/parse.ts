@@ -14,9 +14,12 @@ export function parseTitleToData(todoContent: string, priority: TodoPriority) {
   const data: CreateItem = {
     name: name,
     itemType: inferType(name),
+    priority: priority,
     repeatable: inferRepeatable(name),
     deadline: parsePriority(priority),
+    tags: [],
   }
+
 
   // 分析参数
   for (let i = 1; i < values.length; i++) {
@@ -27,6 +30,9 @@ export function parseTitleToData(todoContent: string, priority: TodoPriority) {
       i++
     } else if (values[i] === '-sp' && i + 1 < values.length) {
       data.specific = values[i + 1]
+      i++
+    } else if (values[i] === '-tag' && i + 1 < values.length) {
+      data.tags.push(values[i + 1])
       i++
     }
   }

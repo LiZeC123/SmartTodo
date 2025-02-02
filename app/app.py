@@ -97,6 +97,9 @@ def create_item(owner:str):
     if "parent" in f:
         item.parent = int(f["parent"])
 
+    if "tags" in f:
+        item.tags = ",".join(f["tags"])
+
     item_manager.create(item)
 
 

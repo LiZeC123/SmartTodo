@@ -42,6 +42,9 @@ class OpInterpreter:
         item = self.item_manager.get_unique_item_by_name(name, parent, owner)
         self.item_manager.renew(item.id, item.owner, renew_day)
 
+    def set_tag(self, name: str, tag: str, parent: Optional[int], owner: str):
+        item = self.item_manager.get_unique_item_by_name(name, parent, owner)
+        item.tags = tag if item.tags == "" else f"{item.tags},{tag}"
 
     def exec_function(self, command: str, data: str, parent: Optional[int], owner: str):
         logger.info(f"执行指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
@@ -66,6 +69,9 @@ class OpInterpreter:
         elif command == "renew":
             name, renew_day = parse_renew_data(data)
             self.renew(name, renew_day, parent, owner)
+        elif command == "tag":
+            name, tag = parse_tag_data(data)
+            self.set_tag(name, tag, parent, owner)
         else:
             raise IllegalArgumentException(f"未知的指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
 
@@ -107,7 +113,6 @@ def parse_sx_data(data):
         raise IllegalArgumentException("解析sx指令数据失败: 参数数量不匹配")
 
 
-
 def parse_renew_data(data):
     try:
         elem = list(filter(not_empty, data.split(" ")))
@@ -117,3 +122,12 @@ def parse_renew_data(data):
     except (ValueError, IndexError):
         raise IllegalArgumentException("解析renew指令数据失败")
 
+
+def parse_tag_data(data):
+    try:
+        elem = list(filter(not_empty, data.split(" ")))
+        name = elem[0]
+        tag = elem[1]
+        return name, tag
+    except (ValueError, IndexError):
+        raise IllegalArgumentException("解析tag指令数据失败")

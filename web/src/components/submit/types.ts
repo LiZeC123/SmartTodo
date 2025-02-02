@@ -11,10 +11,12 @@ export type TodoPriority = "p2" | "p1" | "p0"
 export interface CreateItem {
     itemType: TodoType
     name: string
+    priority: string
     repeatable?: boolean
     parent?: string
     deadline?: number
     specific?: string
+    tags: string[]
 }
 
 export type CreateType = "func" | 'file' | 'create'
