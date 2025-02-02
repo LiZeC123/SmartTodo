@@ -43,8 +43,8 @@ function reloadList() {
 
 // ========================================================== TodoSubmit 相关配置 ==========================================================
 function gotoHome() {
-  document.title = '代办事项列表'
-  window.open("/todo")
+  const path = "/todo"
+  router.push({ path })
 }
 
 
@@ -119,7 +119,7 @@ function loadTimeLineItems() {
 // ========================================================== Footer 相关配置 ==========================================================
 let footerConfig: FooterConfig[] = [
   { name: '新增记录', needAdmin: false, f: addRecord },
-  { name: '总结列表', needAdmin: false, f: () => router.push({ path: '/summary' }) },
+  { name: '总结列表', needAdmin: false, f: () => window.open('/summary') },
 ]
 
 

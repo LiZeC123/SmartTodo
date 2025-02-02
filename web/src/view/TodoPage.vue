@@ -4,7 +4,7 @@
   <div class="container">
     <!-- 代办事项模块 -->
     <ItemList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="(idx, id) => incTime(tTask)(idx, id)"
-      @item-click="itemClick" @header-click="jumpTomatoPage">
+      @item-click="itemClick" @header-click="openTomatoPage">
     </ItemList>
     <ItemList title="活动清单" :btnCfg="aCfg" :data="aTask" @done="(idx, id) => incTime(aTask)(idx, id)"
       @item-click="itemClick">
@@ -167,9 +167,8 @@ function itemClick(event: MouseEvent, item: Item) {
   }
 }
 
-function jumpTomatoPage() {
-  const path = '/tomato'
-  router.push({ path })
+function openTomatoPage() {
+  window.open('/tomato')
 }
 
 
