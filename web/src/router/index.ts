@@ -4,6 +4,9 @@ import Todo from '@/view/TodoPage.vue'
 import Message from '@/view/MessagePage.vue'
 import TomatoPage from '@/view/TomatoPage.vue'
 import SummaryPage from '@/view/SummaryPage.vue'
+import CreditsPage from '@/view/me/CreditsPage.vue'
+import WeightRecord from '@/view/me/WeightRecord.vue'
+import PomodoroTimer from '@/view/me/PomodoroTimer.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -15,6 +18,9 @@ const router = createRouter({
     { path: '/log/:type', component: Message },
     { path: '/tomato', component: TomatoPage },
     { path: '/summary', component: SummaryPage },
+    { path: '/me/credits', component: CreditsPage },
+    { path: '/me/weight', component: WeightRecord },
+    { path: '/me/tomato', component: PomodoroTimer },
   ]
 })
 

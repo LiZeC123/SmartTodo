@@ -4,7 +4,12 @@
     <!-- 番茄钟模块 -->
     <TomatoClock :item="tomatoItem" @done-task="doneTomatoTask"></TomatoClock>
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
-    <ItemGroupedList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="doneItem"></ItemGroupedList>
+    <ItemGroupedList
+      title="今日任务"
+      :btnCfg="tCfg"
+      :data="tTask"
+      @done="doneItem"
+    ></ItemGroupedList>
     <Footer :is-admin="false" :config="footerConfig"></Footer>
     <AlertBox :text="alertText"></AlertBox>
   </div>
@@ -12,19 +17,19 @@
 
 <script setup lang="ts">
 import axios from 'axios'
-import { type Ref, ref, onMounted } from 'vue'
+import { onMounted, ref, type Ref } from 'vue'
 import router from '@/router'
 
 import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 import TomatoClock from '@/components/tomato/TomatoClock.vue'
 import ItemGroupedList from '@/components/item/ItemGroupedList.vue'
-import TimeLine from "@/components/timeline/TimeLine.vue"
+import TimeLine from '@/components/timeline/TimeLine.vue'
 import Footer from '@/components/footer/TodoFooter.vue'
 
 import { playNotifacationAudio, playNotifacationAudioShort } from '@/components/tomato/tools'
-import type { TomatoItem, TomatoEventType, TomatoParam } from '@/components/tomato/types'
+import type { TomatoEventType, TomatoItem, TomatoParam } from '@/components/tomato/types'
 import type { GroupedItem } from '@/components/item/types'
-import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/types'
+import type { CountInfo, Report, TimeLineItem } from '@/components/timeline/types'
 import type { FooterConfig } from '@/components/footer/types'
 import AlertBox from '@/components/AlertBox.vue'
 
@@ -43,27 +48,28 @@ function reloadList() {
 
 // ========================================================== TodoSubmit 相关配置 ==========================================================
 function gotoHome() {
-  const path = "/todo"
+  const path = '/todo'
   router.push({ path })
 }
-
 
 // ========================================================== TomatoClock 相关配置 ==========================================================
 let tomatoItem: Ref<TomatoItem | undefined> = ref()
 
 function loadTomato() {
-  axios.get<TomatoItem>('/tomato/getTask').then((res) => { tomatoItem.value = res.data })
+  axios.get<TomatoItem>('/tomato/getTask').then((res) => {
+    tomatoItem.value = res.data
+  })
 }
 
 function doneTomatoTask(type: TomatoEventType, param: TomatoParam) {
   if (type === 'undo') {
-    const reason = prompt("请输入取消原因")
+    const reason = prompt('请输入取消原因')
     if (reason) {
       param.reason = reason
-      axios.post('/tomato/undoTask', param).then(() => tomatoItem.value = undefined)
+      axios.post('/tomato/undoTask', param).then(() => (tomatoItem.value = undefined))
     }
   } else if (type === 'done' || type === 'auto') {
-    axios.post<boolean>('/tomato/finishTask', param).then(res => {
+    axios.post<boolean>('/tomato/finishTask', param).then((res) => {
       if (res.data) {
         type === 'auto' ? playNotifacationAudio() : playNotifacationAudioShort()
         tomatoItem.value = undefined
@@ -94,11 +100,13 @@ const tCfg = [
         loadTomato()
       })
     }
-  },
+  }
 ]
 
 function loadTomatoItems() {
-  axios.post<GroupedItem[]>('/item/getTomato').then((res) => { tTask.value = res.data })
+  axios.post<GroupedItem[]>('/item/getTomato').then((res) => {
+    tTask.value = res.data
+  })
 }
 
 function doneItem(index: number, id: string) {
@@ -110,7 +118,7 @@ let timeLineItem = ref<TimeLineItem[]>([])
 let countInfo = ref<CountInfo>({ tomatoCounts: 0, totalMinutes: 0 })
 
 function loadTimeLineItems() {
-  axios.post<Report>("/summary/getReport").then(res => {
+  axios.post<Report>('/summary/getReport').then((res) => {
     timeLineItem.value = res.data.items
     countInfo.value = res.data.counter
   })
@@ -119,9 +127,8 @@ function loadTimeLineItems() {
 // ========================================================== Footer 相关配置 ==========================================================
 let footerConfig: FooterConfig[] = [
   { name: '新增记录', needAdmin: false, f: addRecord },
-  { name: '总结列表', needAdmin: false, f: () => window.open('/summary') },
+  { name: '总结列表', needAdmin: false, f: () => window.open('/summary') }
 ]
-
 
 function addRecord() {
   const name = prompt('请输入记录名称')
@@ -137,11 +144,8 @@ function addRecord() {
   axios.post('/tomato/addRecord', { name, startTime }).then(reloadList)
 }
 
-
 // ========================================================== Alert 相关配置 ==========================================================
 let alertText: Ref<string | undefined> = ref('')
-
-
 </script>
 
 <style scoped>
