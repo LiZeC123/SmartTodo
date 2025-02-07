@@ -81,7 +81,9 @@ def test_start_twice():
     
     assert tomato_manager.finish_task(items[0].id, owner)
 
-    assert tomato_manager.start_task(items[0].id, owner) == '启动失败: 当前任务已完成全部番茄钟'
+    # 可以启动已经完成的番茄钟, 自动扩展预计时间
+    assert tomato_manager.start_task(items[0].id, owner) == ''
+    assert items[0].expected_tomato == 2
 
 def test_add_tomato_record():
     assert tomato_manager.add_tomato_record("测试手动添加任务", "10:00", owner=owner)
