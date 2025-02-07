@@ -39,10 +39,13 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, watchEffect } from 'vue'
 import { Chart } from 'chart.js/auto'
 import dayjs from 'dayjs'
+
+
+
 
 // 静态测试数据
 const weightHistory = ref([
@@ -55,11 +58,11 @@ const weightHistory = ref([
 ])
 
 const newWeight = ref('')
-const chart = ref(null)
-let chartInstance = null
+const chart: any = ref(null)
+let chartInstance: Chart|null = null
 
 // 日期格式化
-const formatDate = (dateStr) => {
+const formatDate = (dateStr: string) => {
   return dayjs(dateStr).format('MM/DD')
 }
 
@@ -77,7 +80,7 @@ const addWeight = () => {
 }
 
 // 删除记录
-const deleteEntry = (id) => {
+const deleteEntry = (id:number) => {
   weightHistory.value = weightHistory.value.filter(entry => entry.id !== id)
 }
 

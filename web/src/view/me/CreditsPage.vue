@@ -100,7 +100,7 @@ const pointRecords = reactive([
 ])
 
 // 兑换处理
-const handleExchange = (item) => {
+const handleExchange = (item: any) => {
   if(currentPoints.value >= item.points) {
     currentPoints.value -= item.points
     pointRecords.unshift({

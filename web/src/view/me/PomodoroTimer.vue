@@ -32,7 +32,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 
 
@@ -53,7 +53,7 @@ const circumference = 2 * Math.PI * radius
 // 响应式数据
 const timeLeft = ref(WORK_DURATION)
 const showAlert = ref(false)
-let timer = null
+let timer: number = 0
 
 // 自动开始计时
 onMounted(startTimer)
