@@ -40,6 +40,16 @@ def create_app():
 
     # 导入并注册蓝图
     from app.views.file import file_bp
+    from app.views.item import item_bp
+    from app.views.login import login_bp
+    from app.views.meta import meta_bp
+    from app.views.note import note_bp
+    from app.views.tomato import tomato_bp
     app.register_blueprint(file_bp)
+    app.register_blueprint(item_bp)
+    app.register_blueprint(login_bp)
+    app.register_blueprint(meta_bp)
+    app.register_blueprint(note_bp)
+    app.register_blueprint(tomato_bp)
 
     return app

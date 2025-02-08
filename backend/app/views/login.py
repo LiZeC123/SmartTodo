@@ -1,15 +1,11 @@
 from flask import Blueprint, request, jsonify
 
-from app.services.config_manager import ConfigManager
-from app.services.token_manager import TokenManager
+from app import config_manager, token_manager
 from app.tools.logger import logger
 from app.views.authority import authority_check
 
 
 login_bp = Blueprint('login', __name__)
-
-config_manager = ConfigManager()
-token_manager = TokenManager()
 
 
 @login_bp.post('/api/login')

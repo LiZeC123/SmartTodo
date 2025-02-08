@@ -36,14 +36,7 @@
 
 
 # TODO: Task
-# @app.teardown_appcontext
-# def remove_session(exception=None):
-#     if exception is None:
-#         db_session.commit()
-#     else:
-#         logger.exception(f"清理Session: 此Session中存在异常 {exception}")
-#     # remove操作默认回滚, 如果之前未进行commit, 则本次会话所有操作均回滚
-#     db_session.remove()
+
         
 
 # def init_task_manager():
@@ -52,10 +45,23 @@
 #     task_manager.add_daily_task("重置未完成的今日任务", item_manager.reset_today_task, "01:20")
 #     task_manager.add_daily_task("重置已完成的周期性任务", item_manager.renew_sp_task, "01:30")
 #     task_manager.start()
-from app import create_app
+
+from app import create_app, db
+from app.tools.logger import logger
+
+app = create_app()
+
+@app.teardown_appcontext
+def remove_session(exception=None):
+    if exception is None:
+        db.commit()
+    else:
+        logger.exception(f"清理Session: 此Session中存在异常 {exception}")
+    # remove操作默认回滚, 如果之前未进行commit, 则本次会话所有操作均回滚
+    db.remove()
+
 
 
 if __name__ == '__main__':
-    app = create_app()
-    # init_task_manager()
+        # init_task_manager()
     app.run("localhost", 4231, threaded=True)

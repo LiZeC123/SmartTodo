@@ -3,11 +3,11 @@ import functools
 from typing import Any
 from flask import jsonify, request, abort
 
-from app.services.token_manager import TokenManager
+from app import token_manager
 from app.tools.exception import UnauthorizedException
 from app.tools.logger import logger
 
-token_manager = TokenManager()
+
 
 class authority_check:
     def __init__(self, role='ROLE_USER') -> None:
