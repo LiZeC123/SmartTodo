@@ -2,7 +2,7 @@ import json
 from os.path import exists, join
 from typing import List
 
-from tool4log import logger
+from app.tools.logger import logger
 
 
 class ConfigManager:

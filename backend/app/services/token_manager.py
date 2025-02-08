@@ -2,7 +2,7 @@ import string
 import random
 from typing import List, Optional
 
-from exception import UnauthorizedException
+from app.tools.exception import UnauthorizedException
 
 def generate_token_str():
     return ''.join(random.sample(string.ascii_letters + string.digits, 16))

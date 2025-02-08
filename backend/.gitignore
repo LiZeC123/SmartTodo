@@ -1,0 +1,13 @@
+# User Config and Data
+data/*
+config/*
+
+
+# App File
+__pycache__/
+.pytest_cache
+
+# Unit test / coverage reports
+htmlcov/
+.coverage
+.coverage.*

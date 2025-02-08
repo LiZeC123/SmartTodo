@@ -1,4 +1,4 @@
-from service4config import *
+from app.services.config_manager import *
 
 
 def test_base():

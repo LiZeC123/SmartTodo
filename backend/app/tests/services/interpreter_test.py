@@ -1,14 +1,14 @@
 import pytest
 
-from entity import init_database
-from exception import NotUniqueItemException
-from server4item_test import make_base_item
-from service4interpreter import *
-from tool4time import now
+from app.tests.services.server4item_test import make_base_item
+from app.services.interpreter import *
+from app.tests.services.make_db import make_new_db
+from app.tools.exception import NotUniqueItemException
+from app.tools.time import now, the_day_after
 
-db_session = init_database()
+
 owner = "user"
-item_manager = ItemManager(db_session)
+item_manager = ItemManager(make_new_db())
 op = OpInterpreter(item_manager)
 
 

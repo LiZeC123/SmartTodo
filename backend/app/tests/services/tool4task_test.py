@@ -1,5 +1,5 @@
 from time import sleep
-from tool4task import *
+from app.services.task_manager import *
 
 
 def task1():

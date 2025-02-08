@@ -1,12 +1,15 @@
 from datetime import timedelta
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
 
-from entity import init_database
-from server4item import *
 
-db_session = init_database('sqlite://')
-manager = ItemManager(db_session)
+from app.services.item_manager import *
+from app.tests.services.make_db import make_new_db
+
+
+manager = ItemManager(make_new_db())
 owner = "user"
 
 

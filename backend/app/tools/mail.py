@@ -1,8 +1,8 @@
 import yagmail
 import requests
 
-from service4config import ConfigManager
-from tool4log import logger
+from app.services.config_manager import ConfigManager
+from app.tools.logger import logger
 
 config = ConfigManager()
 

@@ -1,5 +1,5 @@
 import pytest
-from tool4token import *
+from app.services.token_manager import *
 
 info = {"username": "user", "role": "admin"}
 fake_token = "fake_token_abcdedf"

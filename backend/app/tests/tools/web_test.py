@@ -1,6 +1,6 @@
 import pytest
 
-from tool4web import *
+from app.tools.web import *
 
 
 def test_extract_host():

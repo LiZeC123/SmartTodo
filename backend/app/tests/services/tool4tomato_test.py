@@ -1,10 +1,7 @@
-from entity import init_database
-from tool4tomato import *
+from app.services.tomato_manager import *
+from app.tests.services.make_db import make_new_db
 
-
-db = init_database('sqlite://')
-
-
+db = make_new_db()
 item_manager = ItemManager(db=db)
 tomato_manager = TomatoManager(db, item_manager)
 record_manager = TomatoRecordManager(db, item_manager)
