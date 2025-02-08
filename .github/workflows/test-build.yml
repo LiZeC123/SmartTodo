@@ -21,8 +21,8 @@ jobs:
 
     - name: Generate coverage report
       run: |
-        cp -r config app/config
-        cd app
+        cp -r config backend/config
+        cd backend
         mkdir data
         pip install -r requirements.txt
         pip install pytest pytest-cov   

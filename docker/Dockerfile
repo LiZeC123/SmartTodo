@@ -17,7 +17,7 @@ ENV TZ Asia/Shanghai
 WORKDIR /app
 
 # 先执行依赖安装操作，后续如果依赖不变可以复用这一层
-COPY app/requirements.txt /app/requirements.txt
+COPY backend/requirements.txt /app/requirements.txt
 
 # 必须安装了这个软件配置才会生效
 RUN apk update && \
@@ -32,13 +32,13 @@ COPY --from=build-stage /app/dist /web
 COPY docker/nginx.conf /etc/nginx/
 
 # 复制项目代码到容器的app目录
-COPY app .
+COPY backend .
 
 VOLUME [ "/app/config", "/app/data"]
 
 EXPOSE 80
 
-CMD [ "sh", "-c", "nginx && python3 app.py" ]
+CMD [ "sh", "-c", "nginx && python3 run.py" ]
 
 
 
