@@ -7,6 +7,7 @@ import SummaryPage from '@/view/SummaryPage.vue'
 import CreditsPage from '@/view/me/CreditsPage.vue'
 import WeightRecord from '@/view/me/WeightRecord.vue'
 import PomodoroTimer from '@/view/me/PomodoroTimer.vue'
+import WelfarePage from '@/view/me/WelfarePage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -21,6 +22,7 @@ const router = createRouter({
     { path: '/me/credits', component: CreditsPage },
     { path: '/me/weight', component: WeightRecord },
     { path: '/me/tomato', component: PomodoroTimer },
+    { path: '/me/welfare', component: WelfarePage },
   ]
 })
 

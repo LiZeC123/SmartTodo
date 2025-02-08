@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, Text
+from sqlalchemy import DateTime, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -25,3 +25,9 @@ class CreditLog(Base):
     reason: Mapped[str]           = mapped_column(Text, nullable=False)
     credit: Mapped[int]           = mapped_column(Integer, nullable=False)
     balance: Mapped[int]          = mapped_column(Integer, nullable=False)
+
+    # 定义联合索引
+    __table_args__ = (
+        # 查询单个用户的积分变更记录
+        Index('idx_owner_time', 'owner', 'create_time'),
+    )
