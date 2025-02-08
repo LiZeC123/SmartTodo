@@ -6,9 +6,9 @@
         <div v-show="enableSubmit" style="float: right; width: 60%">
           <label for="itemType"></label>
           <select id="itemType" v-model="priority">
-            <option value="p2">低优任务</option>
-            <option value="p1">普通任务</option>
             <option value="p0">高优任务</option>
+            <option value="p1">普通任务</option>
+            <option value="p2">低优任务</option>
           </select>
           <input
             type="text"
@@ -39,7 +39,7 @@ const emit = defineEmits<{
 }>()
 
 let todoContent = ref('')
-let priority: Ref<TodoPriority> = ref("p2")
+let priority: Ref<TodoPriority> = ref("p1")
 
 function commitTodo() {
   const content = todoContent.value.trim()
