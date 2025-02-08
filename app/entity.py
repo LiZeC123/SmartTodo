@@ -88,7 +88,7 @@ class TomatoTaskRecord(Base):
 
 
 class Note(Base):
-    """便签数据库: 存储创建的便签文本"""
+    """便签数据表: 存储创建的便签文本"""
     __tablename__ = "note"
 
     id: Mapped[int]         = mapped_column(Integer, primary_key=True)
@@ -106,13 +106,35 @@ class Note(Base):
 #     owner: Mapped[str]            = mapped_column(String(15), nullable=False)
 
 
+class Credit(Base):
+    """积分数据表, 记录用户的积分状态"""
+    __tablename__ = "credit"
+
+    owner: Mapped[str]    = mapped_column(String(15), primary_key=True)
+    credit: Mapped[int]   = mapped_column(Integer, nullable=False)
+
+
+
+class CreditLog(Base):
+    """积分记录表, 记录所有积分变动明细"""
+    __tablename__ = "credit_log"
+
+    owner: Mapped[str]            = mapped_column(String(15), primary_key=True)
+    create_time: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now)
+    reason: Mapped[str]           = mapped_column(Text, nullable=False)
+    credit: Mapped[int]           = mapped_column(Integer, nullable=False)
+    balance: Mapped[int]          = mapped_column(Integer, nullable=False)
+
+
+
 def init_database(url: str= 'sqlite:///data/data.db'):
     engine = create_engine(url=url, echo=True, future=True)
 
     # 初始化所有的表
     Base.metadata.create_all(engine)
 
-    # 定义一个基于线程的Session
-    # https://docs.sqlalchemy.org/en/20/orm/contextual.html
+    # 定义一个基于线程的Session: https://docs.sqlalchemy.org/en/20/orm/contextual.html
+    # scoped_session内部使用线程局部变量对每个线程维护一个独立的Session对象. 通常将scoped_session的返回值视为一个函数, 通过函数调用获得内部维护的属于当前线程的Session对象
+    # 但scoped_session的返回值本身也进行了代理操作, 可以直接视为一个Session对象
     return scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 

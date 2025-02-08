@@ -337,10 +337,13 @@ def exec_function(owner:str):
 
 @app.teardown_appcontext
 def remove_session(exception=None):
-    db_session.commit()
-    db_session.remove()
-    if exception:
+    if exception is None:
+        db_session.commit()
+    else:
         logger.exception(f"清理Session: 此Session中存在异常 {exception}")
+    # remove操作默认回滚, 如果之前未进行commit, 则本次会话所有操作均回滚
+    db_session.remove()
+        
 
 def init_task_manager():
     task_manager.add_daily_task("垃圾回收", item_manager.garbage_collection, "01:00")
