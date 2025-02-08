@@ -8,7 +8,6 @@ from app.tools.exception import UnauthorizedException
 from app.tools.logger import logger
 
 
-
 class authority_check:
     def __init__(self, role='ROLE_USER') -> None:
         self.role = role
@@ -25,6 +24,6 @@ class authority_check:
                 return jsonify(func(*args, **kwargs, owner=owner))
             except UnauthorizedException as e:
                 logger.warning(e)
-                abort(401)  
+                abort(401)
 
         return wrapped_function

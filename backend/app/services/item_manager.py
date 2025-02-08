@@ -42,7 +42,6 @@ class ItemManager(BaseManager):
             ItemType.Note: self.note_manager
         }
 
-
     def create(self, item: Item) -> Item:
         return self.manager[item.item_type].create(item)
 
@@ -53,8 +52,8 @@ class ItemManager(BaseManager):
 
     def select(self, iid: int) -> Optional[Item]:
         return self.db.scalar(sal.select(Item).where(Item.id == iid))
-    
-    def select_with_authority(self, xid: int, owner:str) -> Item:
+
+    def select_with_authority(self, xid: int, owner: str) -> Item:
         stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
         item = self.db.scalar(stmt)
         if item is None:
@@ -98,7 +97,7 @@ class ItemManager(BaseManager):
             return None
         if len(items) == 1:
             return items[0]
-        
+
         # 如果一个任务已经执行了拆分, 那么按照原始的字符串匹配, 就会有多个命中, 导致无法追加新任务
         # 因此需要特殊处理这种情况
         kernel_items = [item for item in items if "：" not in item.name]
@@ -123,7 +122,6 @@ class ItemManager(BaseManager):
             lists.insert(0, self.select(parent))
             ans[parent] = [i.to_dict() for i in lists]
         return ans
-
 
     def select_done_item(self, owner: str) -> Sequence[Item]:
         stmt = sal.select(Item).where(Item.owner == owner, Item.expected_tomato == Item.used_tomato)
@@ -159,7 +157,7 @@ class ItemManager(BaseManager):
         item = self.select_with_authority(xid=xid, owner=owner)
         if item.used_tomato >= item.expected_tomato:
             return False
-        
+
         item.used_tomato += 1
         self.db.flush()
         logger.info(f"完成任务: {item.name}")
@@ -188,7 +186,7 @@ class ItemManager(BaseManager):
         logger.info(f"添加任务到今日任务列表: {item.name}")
         self.db.flush()
         return item is not None
-    
+
     def renew(self, xid: int, owner: str, renew_day: int):
         """将给定任务的截止日期续期指定天数"""
         item = self.select_with_authority(xid, owner)
@@ -198,22 +196,23 @@ class ItemManager(BaseManager):
         item.deadline = the_day_after(item.deadline, renew_day)
         self.update(item)
 
-    
-    def get_tomato_item(self, owner: str)-> List[Dict]:
-        stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today, Item.item_type == ItemType.Single, Item.expected_tomato > Item.used_tomato)
+    def get_tomato_item(self, owner: str) -> List[Dict]:
+        stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today,
+                                      Item.item_type == ItemType.Single, Item.expected_tomato > Item.used_tomato)
         items = self.db.execute(stmt).scalars().all()
         return self.__group_sub_task(items, owner)
 
-
-    def get_item_with_sub_task(self, owner: str)-> List[Dict]:
-        stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today, Item.item_type == ItemType.Single)
+    def get_item_with_sub_task(self, owner: str) -> List[Dict]:
+        stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today,
+                                      Item.item_type == ItemType.Single)
         items = self.db.execute(stmt).scalars().all()
         return self.__group_sub_task(items, owner)
 
     def __group_sub_task(self, items: Sequence[Item], owner):
         groups = []
-        globalItem = Item(id=0,name="全局任务", item_type=ItemType.Single, tomato_type=TomatoType.Today, owner=owner)
-        for iid, g in groupby(sorted(items, key=lambda x: x.parent if x.parent is not None else 0), key=lambda x: x.parent):
+        globalItem = Item(id=0, name="全局任务", item_type=ItemType.Single, tomato_type=TomatoType.Today, owner=owner)
+        for iid, g in groupby(sorted(items, key=lambda x: x.parent if x.parent is not None else 0),
+                              key=lambda x: x.parent):
             item = None
             if iid is not None:
                 item = self.select(iid)
@@ -221,12 +220,13 @@ class ItemManager(BaseManager):
                 groups.append({"self": item.to_dict(), "children": [i.to_dict() for i in g]})
             else:
                 groups.append({"self": globalItem.to_dict(), "children": [i.to_dict() for i in g]})
-        
+
         return groups
 
     def get_deadline_item(self, owner: str) -> Sequence[Dict]:
         next_week = the_day_after(now(), 7)
-        stmt = sal.select(Item).where(Item.owner == owner, Item.expected_tomato > Item.used_tomato, Item.deadline != None)
+        stmt = sal.select(Item).where(Item.owner == owner, Item.expected_tomato > Item.used_tomato,
+                                      Item.deadline != None)
         items = self.db.execute(stmt).scalars().all()
         return [i.to_dict() for i in items if i.deadline and i.deadline < next_week]
 
@@ -277,7 +277,7 @@ class ItemManager(BaseManager):
             self.manager[item.item_type].remove(item)
             logger.info(f"垃圾回收(无引用的任务): {item.name}")
 
-        self.db.commit() # 定时器触发任务, 必须commit, 否则操作会被回滚
+        self.db.commit()  # 定时器触发任务, 必须commit, 否则操作会被回滚
 
     def reset_daily_task(self):
         stmt = sal.select(Item).where(Item.repeatable == True)
@@ -287,7 +287,7 @@ class ItemManager(BaseManager):
             item.tomato_type = TomatoType.Today
             item.update_time = now()
             logger.info(f"重置可重复任务: {item.name}")
-        self.db.commit() # 定时器触发任务, 必须commit, 否则操作会被回滚
+        self.db.commit()  # 定时器触发任务, 必须commit, 否则操作会被回滚
 
     def reset_today_task(self):
         stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today, Item.repeatable == False,
@@ -296,15 +296,16 @@ class ItemManager(BaseManager):
         for item in items:
             # 使用逻辑回退, 从而保证回退操作的逻辑是一致的
             self._undo(item)
-        self.db.commit() # 定时器触发任务, 必须commit, 否则操作会被回滚
+        self.db.commit()  # 定时器触发任务, 必须commit, 否则操作会被回滚
 
     def renew_sp_task(self):
-        stmt = sal.select(Item).where(Item.specific > 0, Item.item_type != ItemType.Note, Item.used_tomato == Item.expected_tomato)
+        stmt = sal.select(Item).where(Item.specific > 0, Item.item_type != ItemType.Note,
+                                      Item.used_tomato == Item.expected_tomato)
         items = self.db.execute(stmt).scalars().all()
         for item in items:
             self.renew(item.id, item.owner, item.specific)
             logger.info(f'续期周期性任务: {item.name} 续期 {item.specific} 天')
-        self.db.commit() # 定时器触发任务, 必须commit, 否则操作会被回滚            
+        self.db.commit()  # 定时器触发任务, 必须commit, 否则操作会被回滚
 
 
 class SingleItemManager(BaseManager):
@@ -360,7 +361,7 @@ class FileItemManager(BaseManager):
         if item.url is None:
             logger.warning(f"{FileItemManager.__name__}: url Not Found: {item.name}")
             return self.manager.remove(item)
-        
+
         filename = item.url.replace("/file", FileItemManager._FILE_FOLDER)
         try:
             os.remove(filename)
@@ -394,13 +395,13 @@ class NoteItemManager(BaseManager):
         return self.manager.remove(item)
 
     def get_note(self, nid: int) -> str:
-        note = self.must_get_note(nid)        
+        note = self.must_get_note(nid)
         return note.content
 
-    def update_note(self, nid: int, content: str, owner:str) -> bool:
+    def update_note(self, nid: int, content: str, owner: str) -> bool:
         note = self.must_get_note(nid)
         note.content = content
-        
+
         self.db.add(note)
         self.db.flush()
         return True
@@ -412,11 +413,10 @@ class NoteItemManager(BaseManager):
             raise UnmatchedException(f"{NoteItemManager.__name__}: Note Not Found: {nid}")
         return note
 
-    def __write_init_content(self, item:Item):
+    def __write_init_content(self, item: Item):
         content = f"<h1>{item.name}</h1>" \
-            f"<div>====================</div>" \
-            f"<div><br></div><div><br></div><div><br></div><div><br></div>"
+                  f"<div>====================</div>" \
+                  f"<div><br></div><div><br></div><div><br></div><div><br></div>"
         note = Note(id=item.id, content=content, owner=item.owner)
         self.db.add(note)
         self.db.flush()
-

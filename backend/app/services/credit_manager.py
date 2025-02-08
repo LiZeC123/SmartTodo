@@ -21,11 +21,11 @@ class CreditManager():
             account.credit += credit
             log = CreditLog(owner=owner, create_time=now(), credit=credit, reason=reason, balance=account.credit)
             self.db.add(log)
-        
+
         self.db.flush()
-        
+
     # 查询当前剩余积分
-    def query_credit(self, owner:str)-> int:
+    def query_credit(self, owner: str) -> int:
         account = self.db.query(Credit).where(Credit.owner == owner).first()
         if account is None:
             return 0
@@ -33,13 +33,10 @@ class CreditManager():
 
     # 查询积分变动情况
 
-
     # 查询积分变动记录
-    def query_credit_list(self, owner:str) -> List[CreditLog]:
-        return self.db.query(CreditLog).where(Credit.owner == owner).order_by(CreditLog.create_time.desc()).limit(15).all()
-    
-
-
+    def query_credit_list(self, owner: str) -> List[CreditLog]:
+        return self.db.query(CreditLog).where(Credit.owner == owner).order_by(CreditLog.create_time.desc()).limit(
+            15).all()
 
 # 兑换项目管理
 # 获取兑换项目列表

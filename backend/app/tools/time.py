@@ -16,6 +16,7 @@ def now_str_fn() -> str:
 def today() -> date:
     return now().date()
 
+
 def today_str() -> str:
     return now().strftime("%Y-%m-%d")
 
@@ -55,8 +56,10 @@ def last_month() -> datetime:
 def the_day_after(day: datetime, after_day: int):
     return day + timedelta(days=after_day)
 
+
 def get_hour_str_from(t: datetime) -> str:
     return datetime.strftime(t, '%H:%M')
+
 
 # ################################# API For Server ################################# #
 
