@@ -11,3 +11,7 @@ __pycache__/
 htmlcov/
 .coverage
 .coverage.*
+
+
+# IDE 
+.idea
