@@ -26,5 +26,5 @@ def delete_file_from_url(url: str) -> bool:
         return True
     except FileNotFoundError:
         # 对于文件没有找到这种情况, 视为删除成功
-        logger.warnning(f"File Not Found: {filename}")
+        logger.warning(f"File Not Found: {filename}")
         return True

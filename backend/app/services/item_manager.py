@@ -44,14 +44,12 @@ def create_note_handler(db: DataBase, item: Item):
                   f"<div><br></div><div><br></div><div><br></div><div><br></div>"
         note = Note(id=item.id, content=content, owner=item.owner)
         db.add(note)
-        db.flush()
         item.url = f"note/{item.id}"
 
 def remove_note_handler(db: DataBase, item: Item):
     if item.item_type == ItemType.Note:
         stmt = sal.delete(Note).where(Note.id == item.id)
         db.execute(stmt)
-        db.flush()
 
 class ItemManager:
     def __init__(self, db: scoped_session[Session]):

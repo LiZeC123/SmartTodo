@@ -147,7 +147,7 @@ def test_update_not_note():
     test_content = "Test For Note."
     item = make_base_item("test_update_not_note")
     manager.create(item)
-    with pytest.raises(UnauthorizedException):
+    with pytest.raises(UnmatchedException):
         manager.update_note(item.id, owner, test_content)
     manager.remove(item)
 
