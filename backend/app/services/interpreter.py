@@ -24,7 +24,7 @@ class OpInterpreter:
         name = f"SmartTodo_Database({now_str_fn()}).db"
         shutil.copy("data/data.db", f"data/filebase/{name}")
         item = Item(name=f"{name}", item_type=ItemType.File, owner=owner, parent=parent, url=f"/file/{name}")
-        self.item_manager.base_manager.create(item)
+        self.item_manager.create(item)
 
     def split_item_with_number(self, name: str, num: int, suffix: str, parent: Optional[int], owner: str):
         subtasks = [f"第{i + 1}{suffix}" for i in range(num)]

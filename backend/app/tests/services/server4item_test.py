@@ -1,29 +1,13 @@
 from datetime import timedelta
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
-
 
 from app.services.item_manager import *
 from app.tests.services.make_db import make_new_db
 
-
 manager = ItemManager(make_new_db())
 owner = "user"
 
-
-def test_base_manager():
-    m = BaseManager()
-
-    with pytest.raises(NotImplementedError):
-        m.create(Item())
-
-    with pytest.raises(NotImplementedError):
-        m.update(Item())
-
-    with pytest.raises(NotImplementedError):
-        m.remove(Item())
 
 
 def make_base_item(name):
@@ -119,9 +103,9 @@ def test_file():
     item.repeatable = True
     manager.update(item)
 
-    manager.file_manager.remove(item)
+    manager.remove(item)
     # 再次删除, 触发异常分支
-    manager.file_manager.remove(item)
+    manager.remove(item)
 
 
 def test_file_no_url():
@@ -156,7 +140,7 @@ def test_note():
 def test_note_no_exists():
     fake_id = 65535
     with pytest.raises(UnmatchedException):
-        manager.note_manager.must_get_note(fake_id)
+        manager.must_get_note(fake_id)
 
 
 def test_update_not_note():
