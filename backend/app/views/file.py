@@ -1,12 +1,9 @@
 from flask import Blueprint, request
 
-from app import db
-from app.services.item_manager import ItemManager
+from app import item_manager
 from app.views.authority import authority_check
 
 file_bp = Blueprint('file', __name__)
-
-item_manager = ItemManager(db)
 
 
 @file_bp.post("/api/file/upload")

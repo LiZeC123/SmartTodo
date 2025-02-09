@@ -5,11 +5,20 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 
 from app.services.config_manager import ConfigManager
 from app.models.base import Base
+from app.services.interpreter import OpInterpreter
+from app.services.item_manager import ItemManager
+from app.services.task_manager import TaskManager
+from app.services.tomato_manager import TomatoManager
 from app.tools.token import generate_token_str
 
 
 def create_db(url: str= 'sqlite:///data/data.db'):
+    # 初始化数据库对象
     engine = create_engine(url=url, echo=True, future=True)
+
+    # 初始化所有的表
+    Base.metadata.create_all(engine)
+
     # 定义一个基于线程的Session: https://docs.sqlalchemy.org/en/20/orm/contextual.html
     # scoped_session内部使用线程局部变量对每个线程维护一个独立的Session对象. 通常将scoped_session的返回值视为一个函数, 通过函数调用获得内部维护的属于当前线程的Session对象
     # 但scoped_session的返回值本身也进行了代理操作, 可以直接视为一个Session对象
@@ -18,24 +27,24 @@ def create_db(url: str= 'sqlite:///data/data.db'):
 
 
 
-# 初始化数据库对象
-engine = create_engine(url='sqlite:///data/data.db', echo=True, future=True)
+
 db = create_db()
+config_manager = ConfigManager()
+item_manager = ItemManager(db)
+op_interpreter = OpInterpreter(item_manager)
+tomato_manager = TomatoManager(db, item_manager)
 
-config_manager = ConfigManager() 
+task_manager = TaskManager()
+task_manager.add_daily_task("垃圾回收", item_manager.garbage_collection, "01:00")
+task_manager.add_daily_task("重置可重复任务", item_manager.reset_daily_task, "01:10")
+task_manager.add_daily_task("重置未完成的今日任务", item_manager.reset_today_task, "01:20")
+task_manager.add_daily_task("重置已完成的周期性任务", item_manager.renew_sp_task, "01:30")
 
-# 初始化所有的表
-Base.metadata.create_all(engine)
 
 def create_app():
     # 创建Flask应用实例
     app = Flask(__name__)
     app.secret_key = generate_token_str()
-    # 加载配置
-    # app.config.from_object(Config)
-
-    # 初始化数据库
-    # db.init_app(app)
 
     # 导入并注册蓝图
     from app.views.file import file_bp
@@ -50,5 +59,8 @@ def create_app():
     app.register_blueprint(meta_bp)
     app.register_blueprint(note_bp)
     app.register_blueprint(tomato_bp)
+
+    # 启动定时任务
+    task_manager.start()
 
     return app

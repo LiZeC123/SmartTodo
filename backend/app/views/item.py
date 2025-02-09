@@ -2,19 +2,16 @@ from typing import Dict, Sequence
 
 from flask import Blueprint, request
 
-from app import db
+from app import item_manager
 from app.models.item import Item
-from app.services.item_manager import ItemManager
 from app.tools.exception import IllegalArgumentException
 from app.tools.time import parse_deadline_timestamp
 from app.views.authority import authority_check
 from app.views.tool import get_xid_from_request, try_get_parent_from_request
 
 item_bp = Blueprint('item', __name__)
-item_manager = ItemManager(db)
 
 
-# ####################### API For Item #######################
 @item_bp.post("/api/item/create")
 @authority_check()
 def create_item(owner: str):

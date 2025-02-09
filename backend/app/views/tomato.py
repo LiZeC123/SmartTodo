@@ -2,16 +2,11 @@ from typing import Dict
 
 from flask import Blueprint, request
 
-from app import db
-from app.services.item_manager import ItemManager
-from app.services.tomato_manager import TomatoManager
+from app import tomato_manager
 from app.views.authority import authority_check
 from app.views.tool import get_xid_from_request
 
 tomato_bp = Blueprint('tomato', __name__)
-
-item_manager = ItemManager(db)
-tomato_manager = TomatoManager(db, item_manager)
 
 
 @tomato_bp.post('/api/tomato/setTask')

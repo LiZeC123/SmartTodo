@@ -1,12 +1,10 @@
 from flask import Blueprint, request
 
-from app import db
-from app.services.item_manager import ItemManager
+from app import item_manager
 from app.views.authority import authority_check
 from app.views.tool import get_xid_from_request
 
 note_bp = Blueprint('note', __name__)
-item_manager = ItemManager(db)
 
 
 @note_bp.post('/api/note/content')
