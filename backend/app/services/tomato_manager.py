@@ -9,7 +9,7 @@ from app.models.base import ItemType, TomatoType
 from app.models.item import Item
 from app.models.tomato import TomatoStatus, TomatoTaskRecord
 from app.services.item_manager import ItemManager
-from app.tools.logger import logger
+from app.tools.log import logger
 from app.tools.time import get_hour_str_from, now, parse_time, today_begin
 
 # 定义番茄钟完成事件, 入参为当前完成的番茄钟对象和完成类型

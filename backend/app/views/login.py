@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, session
 
 from app import config_manager
-from app.tools.logger import logger
+from app.tools.log import logger
 from app.views.authority import authority_check
 
 login_bp = Blueprint('login', __name__)

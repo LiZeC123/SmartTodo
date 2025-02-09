@@ -2,7 +2,7 @@ import yagmail
 import requests
 
 from app.services.config_manager import ConfigManager
-from app.tools.logger import logger
+from app.tools.log import logger
 
 config = ConfigManager()
 

@@ -1,6 +1,6 @@
 import pytest
 
-from app.tests.services.server4item_test import make_base_item
+from app.tests.services.item_test import make_base_item
 from app.services.interpreter import *
 from app.tests.services.make_db import make_new_db
 from app.tools.exception import NotUniqueItemException

@@ -1,8 +1,7 @@
 import os
 from os.path import join
 
-from app.models.item import Item
-from app.tools.logger import logger
+from app.tools.log import logger
 from app.tools.web import download
 
 FILE_FOLDER = "data/filebase"

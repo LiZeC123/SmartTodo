@@ -47,7 +47,7 @@
 #     task_manager.start()
 
 from app import create_app, db
-from app.tools.logger import logger
+from app.tools.log import logger
 
 app = create_app()
 

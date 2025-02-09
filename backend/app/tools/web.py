@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 import requests
 import wget
 
-from app.tools.logger import logger
+from app.tools.log import logger
 
 timeout = 3
 headers = {"User-Agent": "Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN; rv:1.9.1.6) ",

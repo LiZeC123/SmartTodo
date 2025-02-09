@@ -10,7 +10,7 @@ from app.models.item import Item
 from app.models.note import Note
 from app.tools.exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
 from app.tools.file import create_download_file, delete_file_from_url, create_upload_file
-from app.tools.logger import logger
+from app.tools.log import logger
 from app.tools.time import now, the_day_after, today_begin
 from app.tools.web import extract_title
 

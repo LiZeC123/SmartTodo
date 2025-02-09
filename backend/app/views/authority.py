@@ -5,7 +5,7 @@ from typing import Any
 from flask import jsonify, request, abort, session
 
 from app.tools.exception import UnauthorizedException
-from app.tools.logger import logger
+from app.tools.log import logger
 
 
 class authority_check:

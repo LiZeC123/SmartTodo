@@ -5,7 +5,7 @@ from typing import Callable
 
 import schedule
 
-from app.tools.logger import logger
+from app.tools.log import logger
 
 
 def make_task(name: str, task: Callable) -> Callable:

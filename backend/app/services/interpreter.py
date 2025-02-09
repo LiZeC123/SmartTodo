@@ -5,7 +5,7 @@ from app.models.base import ItemType, TomatoType
 from app.models.item import Item
 from app.tools.exception import IllegalArgumentException, BaseSmartTodoException
 from app.services.item_manager import ItemManager
-from app.tools.logger import logger
+from app.tools.log import logger
 from app.tools.time import now_str_fn
 
 
