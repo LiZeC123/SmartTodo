@@ -8,6 +8,7 @@ from sqlalchemy.orm import scoped_session, Session
 from app.models.base import ItemType, TomatoType
 from app.models.item import Item
 from app.models.note import Note
+from app.services.credit_manager import update_credit
 from app.tools.exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
 from app.tools.file import create_download_file, delete_file_from_url, create_upload_file
 from app.tools.log import logger
@@ -51,13 +52,18 @@ def remove_note_handler(db: DataBase, item: Item):
         stmt = sal.delete(Note).where(Note.id == item.id)
         db.execute(stmt)
 
+
+def done_item_handler(db: DataBase, item: Item):
+    if item.repeatable:
+        update_credit(db, 1, f"完成任务 {item.name}")
+
 class ItemManager:
     def __init__(self, db: scoped_session[Session]):
         self.db = db
 
         self.before_create_event: List[ItemEvent] = [http_url_handler, download_file_handler]
         self.after_create_event: List[ItemEvent] = [create_note_handler]
-        self.on_done_event: List[ItemEvent] = []
+        self.on_done_event: List[ItemEvent] = [done_item_handler]
         self.on_delete_event: List[ItemEvent] = [remove_file_handler, remove_note_handler]
 
     def create(self, item: Item) -> Item:
@@ -218,6 +224,10 @@ class ItemManager:
             # 此时完成任务, 则将预期番茄钟数量调整为2
             item.expected_tomato = item.used_tomato
         self.db.flush()
+
+        for f in self.on_done_event:
+            f(self.db, item)
+
         logger.info(f"全部完成任务: {item.name}")
         return True
 

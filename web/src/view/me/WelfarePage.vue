@@ -1,101 +1,133 @@
 <template>
   <div class="welfare-management">
-    <h1>福利兑换管理</h1>
     <!-- 添加兑换项目的表单 -->
-    <div class="form-container">
+    <div class="form-card">
       <h2>添加兑换项目</h2>
       <form @submit.prevent="addItem">
         <div class="form-group">
           <label for="name">项目名称</label>
-          <input type="text" id="name" v-model.trim="newItem.name" required />
+          <input type="text" id="name" v-model="newItem.name" placeholder="请输入项目名称" required />
         </div>
         <div class="form-group">
           <label for="basePrice">基础价格</label>
-          <input type="number" id="basePrice" v-model.number="newItem.basePrice" required />
+          <input type="number" id="basePrice" v-model.number="newItem.basePrice" placeholder="请输入基础价格" min="0" required />
         </div>
         <div class="form-group">
-          <label for="period">周期（天）</label>
-          <input type="number" id="period" v-model.number="newItem.period" required />
+          <label for="cycle">周期</label>
+          <input type="number" id="cycle" v-model.number="newItem.cycle" placeholder="请输入周期" min="1" required />
         </div>
         <div class="form-group">
           <label for="priceFactor">价格因子</label>
-          <input type="number" id="priceFactor" v-model.number="newItem.priceFactor" required />
+          <input type="number" id="priceFactor" v-model.number="newItem.priceFactor" placeholder="请输入价格因子" min="0" required />
         </div>
-        <button type="submit">添加项目</button>
+        <button type="submit" class="add-button">添加项目</button>
       </form>
     </div>
-    <!-- 展示已创建的项目列表 -->
-    <div class="list-container">
-      <h2>已创建的项目</h2>
-      <div v-if="items.length === 0" class="empty-message">暂无项目，请添加！</div>
-      <div class="item-list" v-else>
-        <div v-for="(item, index) in items" :key="item.name" class="item-card">
-          <div class="item-info">
-            <div class="item-name">{{ item.name }}</div>
-            <div class="item-details">
-              <span>基础价格：{{ item.basePrice }}</span>
-              <span>周期：{{ item.period }} 天</span>
-              <span>价格因子：{{ item.priceFactor }}</span>
-            </div>
-          </div>
-          <button class="delete-button" @click="deleteItem(index)">删除</button>
-        </div>
-      </div>
+
+    <!-- 兑换项目列表 -->
+    <div class="list-card">
+      <h2>兑换项目列表</h2>
+      <table class="item-table">
+        <thead>
+        <tr>
+          <th>项目名称</th>
+          <th>基础价格</th>
+          <th>周期</th>
+          <th>价格因子</th>
+          <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="item in items" :key="item.id">
+          <td>{{ item.name }}</td>
+          <td>{{ item.basePrice }}</td>
+          <td>{{ item.cycle }}</td>
+          <td>{{ item.priceFactor }}</td>
+          <td><button class="delete-button" @click="deleteItem(item)">删除</button></td>
+        </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>
 
+
+
 <script setup lang="ts">
-import { ref } from 'vue';
+import { reactive, ref } from 'vue';
 
 interface WelfareItem {
+  id: number;
   name: string;
   basePrice: number;
-  period: number;
+  cycle: number;
   priceFactor: number;
 }
 
-const newItem = ref<WelfareItem>({
+// 定义新项目的初始状态，使用 reactive 创建响应式对象
+const newItem = reactive<WelfareItem>({
+  id: 0,
   name: '',
   basePrice: 150,
-  period: 7,
+  cycle: 7,
   priceFactor: 1,
 });
 
+// 定义项目列表，使用 ref 创建响应式数组
 const items = ref<WelfareItem[]>([]);
 
+// 自增的 ID，用于为每个新项目生成唯一 ID
+let nextId = 1;
+
+// 添加项目的方法
 const addItem = () => {
-  if (!newItem.value.name) return;
-  items.value.push({ ...newItem.value });
-  newItem.value = { name: '', basePrice: 0, period: 0, priceFactor: 0 };
+  // 校验表单输入是否有效
+  if (!newItem.name || newItem.basePrice <= 0 || newItem.cycle <= 0 || newItem.priceFactor < 0) {
+    alert('请填写所有字段并确保数值有效');
+    return;
+  }
+
+  // 将新项目添加到列表中
+  items.value.push({
+    id: nextId++,
+    name: newItem.name,
+    basePrice: newItem.basePrice,
+    cycle: newItem.cycle,
+    priceFactor: newItem.priceFactor,
+  });
+
+  // 清空表单
+  newItem.name = '';
+  newItem.basePrice = 0;
+  newItem.cycle = 1;
+  newItem.priceFactor = 0;
 };
 
-const deleteItem = (index: number) => {
-  items.value.splice(index, 1);
+// 删除项目的方法
+const deleteItem = (item: WelfareItem) => {
+  // 使用 filter 方法从列表中移除指定项目
+  items.value = items.value.filter((i) => i.id !== item.id);
 };
 </script>
 
+
 <style scoped>
+/* 基本样式 */
 .welfare-management {
-  max-width: 800px;
-  margin: 0 auto;
   padding: 20px;
   font-family: Arial, sans-serif;
 }
 
-h1,
-h2 {
-  text-align: center;
-  color: #333;
+.form-card, .list-card {
+  margin-bottom: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
 }
 
-.form-container,
-.list-container {
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+h2 {
+  margin-top: 0;
 }
 
 .form-group {
@@ -106,109 +138,66 @@ h2 {
   display: block;
   margin-bottom: 5px;
   font-weight: bold;
-  color: #555;
 }
 
 .form-group input {
-  width: 98%;
-  padding: 10px;
+  width: 100%;
+  padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 14px;
+  box-sizing: border-box;
 }
 
-.form-group input:focus {
-  border-color: #007bff;
-  outline: none;
-}
-
-button {
-  padding: 10px 15px;
-  border: none;
-  border-radius: 4px;
-  background-color: #007bff;
+.add-button {
+  background-color: #4caf50;
   color: white;
-  font-size: 14px;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
 }
 
-button:hover {
-  background-color: #0056b3;
+.add-button:hover {
+  background-color: #45a049;
 }
 
-.empty-message {
+.item-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.item-table th, .item-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
   text-align: center;
-  color: #888;
 }
 
-.item-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.item-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  background-color: #f9f9f9;
-  border: 1px solid #eee;
-  border-radius: 6px;
-  transition: box-shadow 0.3s ease;
-}
-
-.item-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.item-info {
-  flex: 1;
-}
-
-.item-name {
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 5px;
-}
-
-.item-details {
-  display: flex;
-  gap: 15px;
-  font-size: 14px;
-  color: #666;
+.item-table th {
+  background-color: #f2f2f2;
 }
 
 .delete-button {
-  background-color: #dc3545;
-  padding: 8px 12px;
-  font-size: 12px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .delete-button:hover {
-  background-color: #c82333;
+  background-color: #d32f2f;
 }
 
-@media (max-width: 600px) {
-  .welfare-management {
-    padding: 10px;
-  }
-
-  .form-container,
-  .list-container {
-    padding: 15px;
-  }
-
-  .item-card {
+/* 移动端样式调整 */
+@media (max-width: 768px) {
+  .form-group {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
   }
 
-  .delete-button {
-    width: 100%;
+  .item-table th, .item-table td {
+    font-size: 14px;
   }
 }
 </style>
