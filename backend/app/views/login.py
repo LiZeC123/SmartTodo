@@ -1,6 +1,6 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 
-from app import config_manager, token_manager
+from app import config_manager
 from app.tools.logger import logger
 from app.views.authority import authority_check
 
@@ -14,7 +14,10 @@ def login():
     password = data.get('password')
 
     if config_manager.try_login(username, password):
-        return token_manager.create_token({"username": username, "role": config_manager.get_roles(username)})
+        # 启用持久化存储, 默认情况保存31天
+        session.permanent = True
+        session["username"] = username
+        session["role"] = config_manager.get_roles(username)
     else:
         real_ip = request.headers.get("X-Real-IP")
         logger.warning(f"已拒绝来自{real_ip}的请求, 此请求尝试以'{password}'为密码登录账号'{username}'")
@@ -24,8 +27,5 @@ def login():
 @login_bp.post('/api/logout')
 @authority_check()
 def logout():
-    token = request.form.get('token')
-    if token is None:
-        return jsonify(False)
-    token_manager.remove_token(token)
+    session.clear()
     return jsonify(True)

@@ -1,6 +1,6 @@
 from datetime import timedelta
 from itertools import groupby
-from typing import Dict, Optional, Sequence
+from typing import Dict, Optional, Sequence, Callable, List
 
 import sqlalchemy as sal
 from sqlalchemy.orm import scoped_session, Session
@@ -12,12 +12,19 @@ from app.services.item_manager import ItemManager
 from app.tools.logger import logger
 from app.tools.time import get_hour_str_from, now, parse_time, today_begin
 
+# 定义番茄钟完成事件, 入参为当前完成的番茄钟对象和完成类型
+# 其中完成类型可选值: auto 自动完成;
+OnTomatoFinished = Callable[[TomatoStatus, str], None]
+
 
 class TomatoManager:
     def __init__(self, db: scoped_session[Session], item_manager: ItemManager):
         self.db = db
         self.item_manager = item_manager
-        # self.event_manager = EventManager(db)
+        self.tomato_finished_event: List[OnTomatoFinished] = []
+
+    def on_tomato_finished(self, callback: OnTomatoFinished):
+        self.tomato_finished_event.append(callback)
 
     def start_task(self, xid: int, owner: str) -> str:
         # 检查当前用户是否已经开启其他番茄钟

@@ -1,8 +1,6 @@
-from itertools import groupby
-import os
 from collections import defaultdict
-from os.path import join
-from typing import Optional, Dict, List, Sequence
+from itertools import groupby
+from typing import Optional, Dict, List, Sequence, Callable
 
 import sqlalchemy as sal
 from sqlalchemy.orm import scoped_session, Session
@@ -11,49 +9,94 @@ from app.models.base import ItemType, TomatoType
 from app.models.item import Item
 from app.models.note import Note
 from app.tools.exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
-# from tool4event import EventManager
+from app.tools.file import create_download_file, delete_file_from_url, create_upload_file
 from app.tools.logger import logger
 from app.tools.time import now, the_day_after, today_begin
-from app.tools.web import extract_title, download
+from app.tools.web import extract_title
+
+DataBase = scoped_session[Session]
+
+ItemEvent = Callable[[DataBase, Item], None]
 
 
-class BaseManager:
-    def create(self, item: Item) -> Item:
-        raise NotImplementedError()
-
-    def update(self, item: Item) -> Item:
-        raise NotImplementedError
-
-    def remove(self, item: Item) -> bool:
-        raise NotImplementedError()
+def http_url_handler(_: DataBase, item: Item):
+    if item.name.startswith("http") and item.item_type == ItemType.Single:
+        title = extract_title(item.name)
+        item.url = item.name
+        item.name = title
 
 
-class ItemManager(BaseManager):
+def download_file_handler(_: DataBase,item: Item):
+    # 区分文件上传的场景, 上传文件时有URL, 而指定下载时无URL
+    if item.item_type == ItemType.File and item.url is None:
+        item.url = create_download_file(item.name)
+
+
+def remove_file_handler(_: DataBase,item: Item):
+    if item.item_type == ItemType.File:
+        delete_file_from_url(item.url)
+
+
+def create_note_handler(db: DataBase, item: Item):
+    if item.item_type == ItemType.Note:
+        content = f"<h1>{item.name}</h1>" \
+                  f"<div>====================</div>" \
+                  f"<div><br></div><div><br></div><div><br></div><div><br></div>"
+        note = Note(id=item.id, content=content, owner=item.owner)
+        db.add(note)
+        item.url = f"note/{item.id}"
+
+def remove_note_handler(db: DataBase, item: Item):
+    if item.item_type == ItemType.Note:
+        stmt = sal.delete(Note).where(Note.id == item.id)
+        db.execute(stmt)
+
+
+class ItemManager:
     def __init__(self, db: scoped_session[Session]):
         self.db = db
-        self.base_manager = SingleItemManager(db)
-        self.file_manager = FileItemManager(self.base_manager)
-        self.note_manager = NoteItemManager(self.base_manager, db=db)
-        # self.event_manager = EventManager(db)
 
-        self.manager: Dict[str, BaseManager] = {
-            ItemType.Single: self.base_manager,
-            ItemType.File: self.file_manager,
-            ItemType.Note: self.note_manager
-        }
+        self.before_create_event: List[ItemEvent] = [http_url_handler, download_file_handler]
+        self.after_create_event: List[ItemEvent] = [create_note_handler]
+        self.on_done_event: List[ItemEvent] = []
+        self.on_delete_event: List[ItemEvent] = [remove_file_handler, remove_note_handler]
 
     def create(self, item: Item) -> Item:
-        return self.manager[item.item_type].create(item)
+        for f in self.before_create_event:
+            f(self.db, item)
+
+        self.db.add(item)
+
+        for g in self.after_create_event:
+            g(self.db, item)
+
+        self.db.flush()
+
+        return item
+
+    def update(self, item: Item) -> Item:
+        self.db.flush()
+        return item
+
+    def remove(self, item: Item):
+        self.db.delete(item)
+
+        for f in self.on_delete_event:
+            f(self.db, item)
+
+        self.db.flush()
+
 
     def create_upload_file(self, f, parent: Optional[int], owner: str) -> Item:
-        name, url = self.file_manager.create_upload_file(f)
+        name, url = create_upload_file(f)
         item = Item(name=name, item_type=ItemType.File, owner=owner, parent=parent, url=url)
-        return self.base_manager.create(item)
+        return self.create(item)
 
     def select(self, iid: int) -> Optional[Item]:
         return self.db.scalar(sal.select(Item).where(Item.id == iid))
 
     def select_with_authority(self, xid: int, owner: str) -> Item:
+        """查询指定Item并检查用户信息是否匹配, 不匹配时抛出异常"""
         stmt = sal.select(Item).where(Item.id == xid, Item.owner == owner)
         item = self.db.scalar(stmt)
         if item is None:
@@ -234,29 +277,29 @@ class ItemManager(BaseManager):
         item = self.select_with_authority(xid, owner)
         return item.name
 
+    def must_get_note(self, nid: int) -> Note:
+        stmt = sal.select(Note).where(Note.id == nid)
+        note = self.db.scalar(stmt)
+        if note is None:
+            raise UnmatchedException(f"Note Not Found: {nid}")
+        return note
+
+
     def get_note(self, nid: int, owner: str) -> str:
-        item = self.select_with_authority(nid, owner)
-        return self.note_manager.get_note(item.id)
+        self.select_with_authority(nid, owner)
+        note = self.must_get_note(nid)
+        return note.content
 
     def update_note(self, nid: int, owner: str, content: str):
-        item = self.select(nid)
-        if not item or item.owner != owner:
-            raise UnauthorizedException(f"User {owner} dose not have authority For nID {nid}")
+        self.select_with_authority(nid, owner)
+        note = self.must_get_note(nid)
+        note.content = content
+        self.db.flush()
 
-        if item.item_type != ItemType.Note:
-            raise UnauthorizedException(f"Item {nid} isn't a note, and can't be updated")
-
-        self.note_manager.update_note(nid, content, owner)
-
-    def update(self, item: Item) -> Item:
-        return self.manager[item.item_type].update(item)
-
-    def remove(self, item: Item):
-        return self.manager[item.item_type].remove(item)
 
     def remove_by_id(self, xid: int, owner: str) -> bool:
         item = self.select_with_authority(xid, owner)
-        self.manager[item.item_type].remove(item)
+        self.remove(item)
         return True
 
     def garbage_collection(self):
@@ -266,7 +309,7 @@ class ItemManager(BaseManager):
                                       Item.used_tomato == Item.expected_tomato)
         items = self.db.execute(stmt).scalars().all()
         for item in items:
-            self.manager[item.item_type].remove(item)
+            self.remove(item)
             logger.info(f"垃圾回收(已过期的任务): {item.name}")
 
         stmt = sal.select(Item.id)
@@ -274,7 +317,7 @@ class ItemManager(BaseManager):
         stmt = sal.select(Item).where(Item.parent.not_in(ids))
         unreferenced = self.db.execute(stmt).scalars().all()
         for item in unreferenced:
-            self.manager[item.item_type].remove(item)
+            self.remove(item)
             logger.info(f"垃圾回收(无引用的任务): {item.name}")
 
         self.db.commit()  # 定时器触发任务, 必须commit, 否则操作会被回滚
@@ -308,115 +351,3 @@ class ItemManager(BaseManager):
         self.db.commit()  # 定时器触发任务, 必须commit, 否则操作会被回滚
 
 
-class SingleItemManager(BaseManager):
-    def __init__(self, db):
-        self.db = db
-
-    def create(self, item: Item) -> Item:
-        if item.name.startswith("http") and item.item_type == ItemType.Single:
-            title = extract_title(item.name)
-            item.url = item.name
-            item.name = title
-        self.db.add(item)
-        self.db.flush()
-        return item
-
-    def update(self, item: Item) -> Item:
-        self.db.flush()
-        return item
-
-    def remove(self, item: Item):
-        self.db.delete(item)
-        self.db.flush()
-        return True
-
-
-class FileItemManager(BaseManager):
-    _FILE_FOLDER = "data/filebase"
-
-    def __init__(self, m: BaseManager):
-        self.manager = m
-        if not os.path.exists(self._FILE_FOLDER):
-            os.mkdir(self._FILE_FOLDER)
-
-    def create(self, item: Item) -> Item:
-        """从指定的URL下载文件到服务器"""
-        remote_url = item.name
-        path = download(remote_url, FileItemManager._FILE_FOLDER)
-        item.url = path.replace(FileItemManager._FILE_FOLDER, '/file').replace("\\", "/")
-        return self.manager.create(item)
-
-    @staticmethod
-    def create_upload_file(f):
-        """将上传的文件保存到服务器"""
-        path = join(FileItemManager._FILE_FOLDER, f.filename)
-        f.save(path)
-        url = path.replace("\\", "/").replace(FileItemManager._FILE_FOLDER, '/file')
-        return f.filename, url
-
-    def update(self, item: Item) -> Item:
-        return self.manager.update(item)
-
-    def remove(self, item: Item):
-        if item.url is None:
-            logger.warning(f"{FileItemManager.__name__}: url Not Found: {item.name}")
-            return self.manager.remove(item)
-
-        filename = item.url.replace("/file", FileItemManager._FILE_FOLDER)
-        try:
-            os.remove(filename)
-            return self.manager.remove(item)
-        except FileNotFoundError:
-            # 对于文件没有找到这种情况, 则删除Item
-            logger.warning(f"{FileItemManager.__name__}: File Not Found: {filename}")
-            return self.manager.remove(item)
-
-
-class NoteItemManager(BaseManager):
-    _NOTE_FOLDER = "data/notebase"
-
-    def __init__(self, m: BaseManager, db: scoped_session[Session]):
-        self.manager = m
-        self.db = db
-
-    def create(self, item: Item) -> Item:
-        item = self.manager.create(item)
-        self.__write_init_content(item)
-        item.url = f"note/{item.id}"
-        return self.manager.update(item)
-
-    def update(self, item: Item) -> Item:
-        return self.manager.update(item)
-
-    def remove(self, item: Item):
-        note = self.must_get_note(item.id)
-        self.db.delete(note)
-        self.db.flush()
-        return self.manager.remove(item)
-
-    def get_note(self, nid: int) -> str:
-        note = self.must_get_note(nid)
-        return note.content
-
-    def update_note(self, nid: int, content: str, owner: str) -> bool:
-        note = self.must_get_note(nid)
-        note.content = content
-
-        self.db.add(note)
-        self.db.flush()
-        return True
-
-    def must_get_note(self, nid: int) -> Note:
-        stmt = sal.select(Note).where(Note.id == nid)
-        note = self.db.scalar(stmt)
-        if note is None:
-            raise UnmatchedException(f"{NoteItemManager.__name__}: Note Not Found: {nid}")
-        return note
-
-    def __write_init_content(self, item: Item):
-        content = f"<h1>{item.name}</h1>" \
-                  f"<div>====================</div>" \
-                  f"<div><br></div><div><br></div><div><br></div><div><br></div>"
-        note = Note(id=item.id, content=content, owner=item.owner)
-        self.db.add(note)
-        self.db.flush()

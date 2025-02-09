@@ -4,9 +4,8 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 
 
 from app.services.config_manager import ConfigManager
-from app.services.token_manager import TokenManager
 from app.models.base import Base
-
+from app.tools.token import generate_token_str
 
 
 def create_db(url: str= 'sqlite:///data/data.db'):
@@ -24,7 +23,6 @@ engine = create_engine(url='sqlite:///data/data.db', echo=True, future=True)
 db = create_db()
 
 config_manager = ConfigManager() 
-token_manager = TokenManager()
 
 # 初始化所有的表
 Base.metadata.create_all(engine)
@@ -32,6 +30,7 @@ Base.metadata.create_all(engine)
 def create_app():
     # 创建Flask应用实例
     app = Flask(__name__)
+    app.secret_key = generate_token_str()
     # 加载配置
     # app.config.from_object(Config)
 
