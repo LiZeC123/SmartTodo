@@ -55,7 +55,7 @@ def remove_note_handler(db: DataBase, item: Item):
 
 def done_item_handler(db: DataBase, item: Item):
     if item.repeatable:
-        update_credit(db, 1, f"完成任务 {item.name}")
+        update_credit(db, item.owner, 1, f"完成任务 {item.name}")
 
 class ItemManager:
     def __init__(self, db: scoped_session[Session]):

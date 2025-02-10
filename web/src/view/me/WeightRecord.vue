@@ -40,22 +40,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watchEffect } from 'vue'
+import axios from 'axios'
+import { ref, onMounted, watchEffect, type Ref } from 'vue'
 import { Chart } from 'chart.js/auto'
 import dayjs from 'dayjs'
 
+interface WeightLog {
+  id: number
+  weight: number
+  date: string
+}
 
 
-
-// 静态测试数据
-const weightHistory = ref([
-  { id: 1, weight: 68, date: '2024-02-01' },
-  { id: 2, weight: 67.5, date: '2024-02-05' },
-  { id: 3, weight: 67.2, date: '2024-02-10' },
-  { id: 4, weight: 67.2, date: '2024-02-10' },
-  { id: 5, weight: 64.2, date: '2024-02-13' },
-  { id: 6, weight: 62.2, date: '2024-02-15' },
-])
+// 体重历史数据
+const weightHistory: Ref<WeightLog[]>= ref([])
 
 const newWeight = ref('')
 const chart: any = ref(null)
@@ -70,22 +68,32 @@ const formatDate = (dateStr: string) => {
 const addWeight = () => {
   if (!newWeight.value) return
 
-  weightHistory.value.push({
-    id: Date.now(),
-    weight: parseFloat(newWeight.value),
-    date: dayjs().format('YYYY-MM-DD')
+  axios.post('/', {}).then(_ => {
+    weightHistory.value.push({
+      id: Date.now(),
+      weight: parseFloat(newWeight.value),
+      date: dayjs().format('YYYY-MM-DD')
+    })
+    newWeight.value = ''
   })
 
-  newWeight.value = ''
 }
 
 // 删除记录
 const deleteEntry = (id:number) => {
-  weightHistory.value = weightHistory.value.filter(entry => entry.id !== id)
+  axios.post('/', {}).then(_ => {
+    weightHistory.value = weightHistory.value.filter(entry => entry.id !== id)
+  })
 }
+
+function loadData() {
+  axios.post<WeightLog[]>('/', {}).then(res => weightHistory.value = res.data)
+}
+
 
 // 初始化图表
 onMounted(() => {
+  loadData();
   chartInstance = new Chart(chart.value, {
     type: 'line',
     data: {
