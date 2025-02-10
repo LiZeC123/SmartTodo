@@ -7,3 +7,8 @@ def make_new_db():
     engine = create_engine(url='sqlite://', echo=True, future=True)
     Base.metadata.create_all(engine)
     return scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+
+def make_new_file_db():
+    engine = create_engine(url='sqlite:///data/data.db', echo=True, future=True)
+    Base.metadata.create_all(engine)
+    return scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))

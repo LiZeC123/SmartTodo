@@ -2,13 +2,13 @@ import pytest
 
 from app.tests.services.item_test import make_base_item
 from app.services.interpreter import *
-from app.tests.services.make_db import make_new_db
+from app.tests.services.make_db import make_new_file_db
 from app.tools.exception import NotUniqueItemException
 from app.tools.time import now, the_day_after
 
 
 owner = "user"
-item_manager = ItemManager(make_new_db())
+item_manager = ItemManager(make_new_file_db())
 op = OpInterpreter(item_manager)
 
 
