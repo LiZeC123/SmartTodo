@@ -30,7 +30,7 @@
       <h2>历史记录</h2>
       <ul>
         <li v-for="entry in weightHistory" :key="entry.id">
-          <span class="date">{{ formatDate(entry.date) }}</span>
+          <span class="date">{{ formatDate(entry.create_time) }}</span>
           <span class="weight">{{ entry.weight }} kg</span>
           <button @click="deleteEntry(entry.id)" class="delete-btn">×</button>
         </li>
@@ -41,14 +41,14 @@
 
 <script setup lang="ts">
 import axios from 'axios'
-import { ref, onMounted, watchEffect, type Ref } from 'vue'
+import { ref, onMounted, watchEffect, type Ref, watch } from 'vue'
 import { Chart } from 'chart.js/auto'
 import dayjs from 'dayjs'
 
 interface WeightLog {
   id: number
   weight: number
-  date: string
+  create_time: string
 }
 
 
@@ -68,64 +68,67 @@ const formatDate = (dateStr: string) => {
 const addWeight = () => {
   if (!newWeight.value) return
 
-  axios.post('/', {}).then(_ => {
+  axios.post('/me/weight/add', {'weight':newWeight.value }).then(() => {
     weightHistory.value.push({
       id: Date.now(),
       weight: parseFloat(newWeight.value),
-      date: dayjs().format('YYYY-MM-DD')
+      create_time: dayjs().format('YYYY-MM-DD')
     })
     newWeight.value = ''
+    reloadChart()
   })
 
 }
 
 // 删除记录
 const deleteEntry = (id:number) => {
-  axios.post('/', {}).then(_ => {
+  axios.post('/me/weight/remove', {'id': id}).then(() => {
     weightHistory.value = weightHistory.value.filter(entry => entry.id !== id)
+    reloadChart()
   })
 }
 
-function loadData() {
-  axios.post<WeightLog[]>('/', {}).then(res => weightHistory.value = res.data)
-}
-
-
 // 初始化图表
-onMounted(() => {
-  loadData();
-  chartInstance = new Chart(chart.value, {
-    type: 'line',
-    data: {
-      labels: weightHistory.value.map(entry => formatDate(entry.date)),
-      datasets: [{
-        label: '体重变化 (kg)',
-        data: weightHistory.value.map(entry => entry.weight),
-        borderColor: '#42b983',
-        tension: 0.4,
-        fill: false
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: {
-          beginAtZero: false
+onMounted( () => {
+  axios.post<WeightLog[]>('/me/weight/query', {}).then(res => {
+    weightHistory.value = res.data
+    chartInstance = new Chart(chart.value, {
+      type: 'line',
+      data: {
+        labels: weightHistory.value.map(entry => formatDate(entry.create_time)),
+        datasets: [{
+          label: '体重变化 (kg)',
+          data: weightHistory.value.map(entry => entry.weight),
+          borderColor: '#42b983',
+          tension: 0.4,
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: false
+          }
         }
       }
-    }
+    })
   })
 })
 
-// 监听数据变化更新图表
-watchEffect(() => {
+function reloadChart() {
   if (chartInstance) {
-    chartInstance.data.labels = weightHistory.value.map(entry => formatDate(entry.date))
+    chartInstance.data.labels = weightHistory.value.map(entry => formatDate(entry.create_time))
     chartInstance.data.datasets[0].data = weightHistory.value.map(entry => entry.weight)
     chartInstance.update()
   }
-})
+}
+
+
+
+
+
 </script>
 
 <style scoped>

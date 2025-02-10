@@ -11,13 +11,13 @@ from app.views.tool import try_get_parent_from_request
 weight_bp = Blueprint('weight', __name__)
 
 
-@weight_bp.get("/api/me/weight/query")
+@weight_bp.post("/api/me/weight/query")
 @authority_check()
 def query(owner: str):
     return query_log(db, owner)
 
 
-@weight_bp.get("/api/me/weight/add")
+@weight_bp.post("/api/me/weight/add")
 @authority_check()
 def add(owner: str):
     data: Dict = request.get_json()
@@ -25,7 +25,7 @@ def add(owner: str):
     return add_log(db, owner, weight)
 
 
-@weight_bp.get("/api/me/weight/add")
+@weight_bp.post("/api/me/weight/remove")
 @authority_check()
 def remove(owner: str):
     data = request.get_json()
