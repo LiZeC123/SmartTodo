@@ -202,7 +202,7 @@ let footerConfig: FooterConfig[] = [
     name: '退出登录',
     needAdmin: false,
     f: () => {
-      localStorage.removeItem('token')
+      axios.post("/logout")
       router.push({ path: '/login' })
     }
   }

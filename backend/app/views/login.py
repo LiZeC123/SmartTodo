@@ -2,7 +2,6 @@ from flask import Blueprint, request, jsonify, session
 
 from app import config_manager
 from app.tools.log import logger
-from app.views.authority import authority_check
 
 login_bp = Blueprint('login', __name__)
 
@@ -18,14 +17,14 @@ def login():
         session.permanent = True
         session["username"] = username
         session["role"] = config_manager.get_roles(username)
+        return "True"
     else:
         real_ip = request.headers.get("X-Real-IP")
         logger.warning(f"已拒绝来自{real_ip}的请求, 此请求尝试以'{password}'为密码登录账号'{username}'")
-        return ""
+        return "False"
 
 
 @login_bp.post('/api/logout')
-@authority_check()
 def logout():
     session.clear()
     return jsonify(True)

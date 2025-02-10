@@ -56,9 +56,7 @@ async function submit() {
   })
 
   if (response.data !== "") {
-    const token = response.data;
-    localStorage.token = token
-    router.push('/todo');
+    await router.push('/todo')
   } else {
     alert("用户名或密码错误, 请检查后重新输入");
   }
