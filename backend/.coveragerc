@@ -1,2 +1,2 @@
 [run]
-omit = app.py, server.py, service4config.py, tool4mail.py
+omit = app/views/* run.py
