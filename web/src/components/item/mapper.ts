@@ -24,8 +24,12 @@ function getTomatoCountTag(item: Item): Tag {
 
 function getDeadlineTag(item: Item): Tag {
     if (item.deadline) {
-        // 截止日期只展示日期部分
-        return item.deadline.split(' ')[0]
+        // 先获取年月日部分
+        const dateString = item.deadline.split(' ')[0]
+
+        // 再截取月和日
+        const [year, month, day] = dateString.split('-');        
+        return `${month}-${day}`
     }
 }
 
@@ -35,7 +39,7 @@ function getDLCounterDownTag(item: Item): Tag {
         const hour = parseFloat((dd / (1000 * 60 * 60)).toFixed(1))
 
         // 非常接近的任务则显示具体的剩余时间
-        if (hour < 100) {
+        if (hour < 50) {
             return '剩余' + hour + '小时'
         }
     }
