@@ -44,20 +44,13 @@
     <div class="details-section">
       <h3>积分明细</h3>
       <div class="detail-list">
-        <div
-          class="detail-item"
-          v-for="(record, index) in pointRecords"
-          :key="index"
-        >
+        <div class="detail-item" v-for="(record, index) in pointRecords" :key="index">
           <div class="detail-left">
-            <div class="detail-type">{{ record.type }}</div>
-            <div class="detail-time">{{ record.time }}</div>
+            <div class="detail-type">{{ record.reason }}</div>
+            <div class="detail-time">{{ record.create_time }}</div>
           </div>
-          <div
-            class="detail-points"
-            :class="record.points > 0 ? 'positive' : 'negative'"
-          >
-            {{ record.points > 0 ? '+' : '' }}{{ record.points }}
+          <div class="detail-points" :class="record.credits > 0 ? 'positive' : 'negative'">
+            {{ record.credits > 0 ? '+' : '' }}{{ record.credits }}
           </div>
           <div class="detail-balance">余额: {{ record.balance }}</div>
         </div>
@@ -68,14 +61,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, type Ref } from 'vue'
 import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 import Footer from '@/components/footer/TodoFooter.vue'
+import axios from 'axios'
+
+interface TotalCount {
+  all: number,
+  earned: number,
+  used: number
+}
+
+interface CreditLog {
+  create_time: string
+  reason: string
+  credits: number
+  balance: number
+}
+
 
 // 静态数据
-const currentPoints = ref(1580)
-const weeklyEarned = ref(300)
-const weeklyUsed = ref(80)
+const currentPoints = ref(0)
+const weeklyEarned = ref(0)
+const weeklyUsed = ref(0)
 
 const exchangeItems = reactive([
   { id: 1, name: '50元优惠券', points: 500 },
@@ -83,35 +91,34 @@ const exchangeItems = reactive([
   { id: 3, name: '定制礼品', points: 1500 }
 ])
 
-const pointRecords = reactive([
-  {
-    type: '签到奖励',
-    time: '2023-07-20 08:30',
-    points: +10,
-    balance: 1580
-  },
-  {
-    type: '商品兑换',
-    time: '2023-07-19 15:20',
-    points: -500,
-    balance: 1570
-  },
-  // 更多记录...
-])
+const pointRecords: Ref<CreditLog[]> = ref([])
 
 // 兑换处理
 const handleExchange = (item: any) => {
-  if(currentPoints.value >= item.points) {
+  if (currentPoints.value >= item.points) {
     currentPoints.value -= item.points
-    pointRecords.unshift({
-      type: `兑换: ${item.name}`,
-      time: new Date().toLocaleString(),
-      points: -item.points,
+    pointRecords.value.unshift({
+      reason: `兑换: ${item.name}`,
+      create_time: new Date().toLocaleString(),
+      credits: -item.points,
       balance: currentPoints.value
     })
     alert(`成功兑换 ${item.name}`)
   }
 }
+
+onMounted(() => {
+  axios.post<CreditLog[]>('credit/get_detail_list', {}).then(res => {
+    pointRecords.value = res.data
+  })
+
+  axios.post<TotalCount>('credit/get_credit', {}).then(res => {
+    currentPoints.value = res.data.all
+    weeklyEarned.value = res.data.earned
+    weeklyUsed.value = res.data.used
+  })
+
+})
 </script>
 
 <style scoped>
@@ -149,7 +156,7 @@ const handleExchange = (item: any) => {
   background: #fff;
   padding: 1rem;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   text-align: center;
 }
 
@@ -165,7 +172,7 @@ const handleExchange = (item: any) => {
   background: #fff;
   margin-bottom: 0.8rem;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .exchange-btn {
@@ -190,11 +197,16 @@ const handleExchange = (item: any) => {
   background: #fff;
   margin-bottom: 0.8rem;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.positive { color: #4caf50; }
-.negative { color: #f44336; }
+.positive {
+  color: #4caf50;
+}
+
+.negative {
+  color: #f44336;
+}
 
 /* 移动端适配 */
 @media (max-width: 480px) {

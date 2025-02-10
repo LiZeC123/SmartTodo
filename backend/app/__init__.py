@@ -46,6 +46,7 @@ def create_app():
     from app.views.note import note_bp
     from app.views.tomato import tomato_bp
     from app.views.weight import weight_bp
+    from app.views.credit import credit_bp
     app.register_blueprint(file_bp)
     app.register_blueprint(item_bp)
     app.register_blueprint(login_bp)
@@ -53,6 +54,7 @@ def create_app():
     app.register_blueprint(note_bp)
     app.register_blueprint(tomato_bp)
     app.register_blueprint(weight_bp)
+    app.register_blueprint(credit_bp)
 
     # 初始化所有的表
     Base.metadata.create_all(engine)
