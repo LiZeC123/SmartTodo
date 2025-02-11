@@ -11,13 +11,19 @@ export function parseTitleToData(todoContent: string, priority: TodoPriority) {
   }
 
   // 分析类型
-  const data: CreateItem = {
+  let data: CreateItem = {
     name: name,
     itemType: inferType(name),
     priority: priority,
     repeatable: inferRepeatable(name),
     deadline: parsePriority(priority),
     tags: [],
+  }
+
+  // 解决一些冲突情况
+  // 每日任务没有截止日期
+  if (data.repeatable) {
+    data.deadline = undefined
   }
 
 
