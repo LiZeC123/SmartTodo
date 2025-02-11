@@ -49,8 +49,8 @@
             <div class="detail-type">{{ record.reason }}</div>
             <div class="detail-time">{{ record.create_time }}</div>
           </div>
-          <div class="detail-points" :class="record.credits > 0 ? 'positive' : 'negative'">
-            {{ record.credits > 0 ? '+' : '' }}{{ record.credits }}
+          <div class="detail-points" :class="record.credit > 0 ? 'positive' : 'negative'">
+            {{ record.credit > 0 ? '+' : '' }}{{ record.credit }}
           </div>
           <div class="detail-balance">余额: {{ record.balance }}</div>
         </div>
@@ -75,7 +75,7 @@ interface TotalCount {
 interface CreditLog {
   create_time: string
   reason: string
-  credits: number
+  credit: number
   balance: number
 }
 
@@ -100,7 +100,7 @@ const handleExchange = (item: any) => {
     pointRecords.value.unshift({
       reason: `兑换: ${item.name}`,
       create_time: new Date().toLocaleString(),
-      credits: -item.points,
+      credit: -item.points,
       balance: currentPoints.value
     })
     alert(`成功兑换 ${item.name}`)
