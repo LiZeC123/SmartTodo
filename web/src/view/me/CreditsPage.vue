@@ -49,10 +49,7 @@
             <div class="detail-type">{{ record.reason }}</div>
             <div class="detail-time">{{ record.create_time }}</div>
           </div>
-          <div class="detail-points" :class="record.credit > 0 ? 'positive' : 'negative'">
-            {{ record.credit > 0 ? '+' : '' }}{{ record.credit }}
-          </div>
-          <div class="detail-balance">余额: {{ record.balance }}</div>
+          <div class="detail-balance">余额: {{ record.balance }} <div :class="record.credit > 0 ? 'positive' : 'negative'"> ({{ record.credit > 0 ? '+' : '' }}{{ record.credit }})</div></div>
         </div>
       </div>
     </div>
