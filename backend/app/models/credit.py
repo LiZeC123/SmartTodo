@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Index, Integer, String, Text
+from sqlalchemy import DateTime, Float, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -32,3 +32,13 @@ class CreditLog(Base):
         # 查询单个用户的积分变更记录
         Index('idx_owner_time', "owner", "create_time"),
     )
+
+class ExchangeItem(Base):
+    """积分兑换项目表, 记录可兑换的积分项目"""
+    __tablename__ = "exchange_item"
+
+    id: Mapped[int]       = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str]     = mapped_column(String(15), nullable=False)
+    price: Mapped[float]  = mapped_column(Float, nullable=False)
+    cycle: Mapped[int]    = mapped_column(Integer, nullable=False)
+    factor: Mapped[float] = mapped_column(Float, nullable=False)

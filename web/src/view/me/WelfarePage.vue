@@ -10,7 +10,7 @@
         </div>
         <div class="form-group">
           <label for="basePrice">基础价格</label>
-          <input type="number" id="basePrice" v-model.number="newItem.basePrice" placeholder="请输入基础价格" min="0" required />
+          <input type="number" id="basePrice" v-model.number="newItem.price" placeholder="请输入基础价格" min="0" required />
         </div>
         <div class="form-group">
           <label for="cycle">周期</label>
@@ -18,7 +18,7 @@
         </div>
         <div class="form-group">
           <label for="priceFactor">价格因子</label>
-          <input type="number" id="priceFactor" v-model.number="newItem.priceFactor" placeholder="请输入价格因子" min="0" required />
+          <input type="number" id="priceFactor" v-model.number="newItem.factor" placeholder="请输入价格因子" min="0" required />
         </div>
         <button type="submit" class="add-button">添加项目</button>
       </form>
@@ -40,9 +40,9 @@
         <tbody>
         <tr v-for="item in items" :key="item.id">
           <td>{{ item.name }}</td>
-          <td>{{ item.basePrice }}</td>
+          <td>{{ item.price }}</td>
           <td>{{ item.cycle }}</td>
-          <td>{{ item.priceFactor }}</td>
+          <td>{{ item.factor }}</td>
           <td><button class="delete-button" @click="deleteItem(item)">删除</button></td>
         </tr>
         </tbody>
@@ -59,18 +59,18 @@ import { reactive, ref } from 'vue';
 interface WelfareItem {
   id: number;
   name: string;
-  basePrice: number;
+  price: number;
   cycle: number;
-  priceFactor: number;
+  factor: number;
 }
 
 // 定义新项目的初始状态，使用 reactive 创建响应式对象
 const newItem = reactive<WelfareItem>({
   id: 0,
   name: '',
-  basePrice: 150,
+  price: 150,
   cycle: 7,
-  priceFactor: 1,
+  factor: 1,
 });
 
 // 定义项目列表，使用 ref 创建响应式数组
@@ -82,7 +82,7 @@ let nextId = 1;
 // 添加项目的方法
 const addItem = () => {
   // 校验表单输入是否有效
-  if (!newItem.name || newItem.basePrice <= 0 || newItem.cycle <= 0 || newItem.priceFactor < 0) {
+  if (!newItem.name || newItem.price <= 0 || newItem.cycle <= 0 || newItem.factor < 0) {
     alert('请填写所有字段并确保数值有效');
     return;
   }
@@ -91,16 +91,16 @@ const addItem = () => {
   items.value.push({
     id: nextId++,
     name: newItem.name,
-    basePrice: newItem.basePrice,
+    price: newItem.price,
     cycle: newItem.cycle,
-    priceFactor: newItem.priceFactor,
+    factor: newItem.factor,
   });
 
   // 清空表单
   newItem.name = '';
-  newItem.basePrice = 0;
+  newItem.price = 0;
   newItem.cycle = 1;
-  newItem.priceFactor = 0;
+  newItem.factor = 0;
 };
 
 // 删除项目的方法
