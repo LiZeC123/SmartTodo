@@ -1,5 +1,5 @@
 <template>
-  <TodoSubmit :enableSubmit="true" @commit="doCommitTodo" @logo="gotoHome"></TodoSubmit>
+  <TodoSubmit :enableSubmit="true" @commit="doCommitTodo"></TodoSubmit>
 
   <div class="container">
     <!-- 代办事项模块 -->
@@ -64,11 +64,6 @@ function doCommitTodo(type: CreateType, data: FuncData | CreateItem) {
   } else {
     throw new Error('未知的Create类型')
   }
-}
-
-function gotoHome() {
-  document.title = '代办事项列表'
-  router.push({ path: '/todo' })
 }
 
 

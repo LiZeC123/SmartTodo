@@ -1,5 +1,5 @@
 <template>
-    <TodoSubmit @logo="gotoHome"></TodoSubmit>
+    <TodoSubmit></TodoSubmit>
 
     <Footer :is-admin="false" :config="footerConfig"></Footer>
 </template>
@@ -15,11 +15,7 @@ import Footer from '@/components/footer/TodoFooter.vue'
 
 import type { FooterConfig } from '@/components/footer/types'
 
-// ========================================================== TodoSubmit 相关配置 ==========================================================
-function gotoHome() {
-  document.title = '代办事项列表'
-  router.push({ path: '/todo' })
-}
+
 
 
 // ========================================================== Footer 相关配置 ==========================================================

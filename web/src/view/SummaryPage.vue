@@ -1,5 +1,5 @@
 <template>
-  <TodoSubmit @logo="gotoHome"></TodoSubmit>
+  <TodoSubmit></TodoSubmit>
   <div class="container">
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
     <EventTime :items="eventLineItem"></EventTime>
@@ -45,11 +45,6 @@ onMounted(() => {
   document.title = '总结列表'
 })
 
-// ========================================================== TodoSubmit 相关配置 ==========================================================
-function gotoHome() {
-  document.title = '代办事项列表'
-  router.push({ path: '/todo' })
-}
 
 
 // ========================================================== TimeLine 相关配置 ==========================================================

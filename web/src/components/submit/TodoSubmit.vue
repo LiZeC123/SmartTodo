@@ -2,7 +2,7 @@
   <div class="header">
     <div class="box">
       <div id="form" @keyup.enter="commitTodo">
-        <label for="title" @mousedown.left="$emit('logo')">SmartTodo</label>
+        <label for="title" @mousedown.left="gotoHome">SmartTodo</label>
         <div v-show="enableSubmit" style="float: right; width: 60%">
           <label for="itemType"></label>
           <select id="itemType" v-model="priority">
@@ -27,6 +27,7 @@
 import { ref, type Ref } from 'vue'
 import { parseTitleToData } from './parse'
 import type { CreateItem, CreateType, FuncData, TodoPriority } from './types'
+import router from '@/router'
 
 const props = defineProps<{
   enableSubmit?: boolean
@@ -35,8 +36,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'commit', type: CreateType, data: FuncData | CreateItem): void
-  (e: 'logo'): void
 }>()
+
+function gotoHome() {
+  document.title = '代办事项列表'
+  router.push({ path: '/todo' })
+}
 
 let todoContent = ref('')
 let priority: Ref<TodoPriority> = ref("p1")

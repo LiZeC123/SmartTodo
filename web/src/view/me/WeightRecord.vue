@@ -1,4 +1,5 @@
 <template>
+  <TodoSubmit></TodoSubmit>
   <div class="container">
     <!-- 体重输入表单 -->
     <div class="input-section">
@@ -44,6 +45,7 @@ import axios from 'axios'
 import { ref, onMounted, watchEffect, type Ref, watch } from 'vue'
 import { Chart } from 'chart.js/auto'
 import dayjs from 'dayjs'
+import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 
 interface WeightLog {
   id: number

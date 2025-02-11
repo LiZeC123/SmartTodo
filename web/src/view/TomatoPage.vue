@@ -1,5 +1,5 @@
 <template>
-  <TodoSubmit @logo="gotoHome"></TodoSubmit>
+  <TodoSubmit></TodoSubmit>
   <div class="container">
     <!-- 番茄钟模块 -->
     <TomatoClock :item="tomatoItem" @done-task="doneTomatoTask"></TomatoClock>
@@ -44,12 +44,6 @@ onMounted(() => {
 function reloadList() {
   loadTomatoItems()
   loadTimeLineItems()
-}
-
-// ========================================================== TodoSubmit 相关配置 ==========================================================
-function gotoHome() {
-  const path = '/todo'
-  router.push({ path })
 }
 
 // ========================================================== TomatoClock 相关配置 ==========================================================

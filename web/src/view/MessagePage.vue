@@ -1,5 +1,5 @@
 <template>
-  <TodoSubmit @logo="gotoHome"></TodoSubmit>
+  <TodoSubmit></TodoSubmit>
   <div class="container">
     <MessageBox :title="title" :message="content"></MessageBox>
     <Footer :is-admin="false" :config='[]'></Footer>
@@ -15,11 +15,6 @@ import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 import MessageBox from '@/components/MessageBox.vue'
 import Footer from '@/components/footer/TodoFooter.vue'
 
-// ========================================================== TodoSubmit 相关配置 ==========================================================
-function gotoHome() {
-  document.title = '代办事项列表'
-  router.push({ path: '/todo' })
-}
 
 // ========================================================== MessageBox 相关配置 ==========================================================
 let title = ref('数据')

@@ -1,4 +1,5 @@
 <template>
+  <TodoSubmit></TodoSubmit>
   <div class="welfare-management">
     <!-- 添加兑换项目的表单 -->
     <div class="form-card">
@@ -55,6 +56,7 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
+import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 
 interface WelfareItem {
   id: number;
