@@ -48,7 +48,7 @@ def query_credit_week(db: Database, owner: str) -> Tuple[int, int]:
 
 # 查询积分变动记录
 def query_credit_list(db: Database, owner: str) -> List:
-    stmt = sal.select(CreditLog).where(CreditLog.owner == owner).order_by(CreditLog.create_time.desc()).limit(15)
+    stmt = sal.select(CreditLog).where(CreditLog.owner == owner).order_by(CreditLog.create_time.desc()).limit(25)
     logs = db.execute(stmt).scalars().all()
     return [log.to_dict() for log in logs]
 
