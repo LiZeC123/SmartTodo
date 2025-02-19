@@ -58,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, type Ref } from 'vue'
+import { ref, onMounted, type Ref } from 'vue'
 import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 import Footer from '@/components/footer/TodoFooter.vue'
 import axios from 'axios'
@@ -76,45 +76,56 @@ interface CreditLog {
   balance: number
 }
 
+interface ExchangeItem {
+  id: number
+  name: string
+  points: number
+}
 
 // 静态数据
 const currentPoints = ref(0)
 const weeklyEarned = ref(0)
 const weeklyUsed = ref(0)
 
-const exchangeItems = reactive([
-  { id: 1, name: '50元优惠券', points: 500 },
-  { id: 2, name: '会员月卡', points: 1000 },
-  { id: 3, name: '定制礼品', points: 1500 }
-])
+const exchangeItems: Ref<ExchangeItem[]> = ref([])
 
 const pointRecords: Ref<CreditLog[]> = ref([])
 
 // 兑换处理
-const handleExchange = (item: any) => {
+const handleExchange = (item: ExchangeItem) => {
   if (currentPoints.value >= item.points) {
-    currentPoints.value -= item.points
-    pointRecords.value.unshift({
-      reason: `兑换: ${item.name}`,
-      create_time: new Date().toLocaleString(),
-      credit: -item.points,
-      balance: currentPoints.value
+    axios.post('credit/exchange_item', {'item_id': item.id}).then(() => {
+      reloadLog()
+      reloadExchangeItems()
+      reloadPoints()
     })
-    alert(`成功兑换 ${item.name}`)
   }
 }
 
-onMounted(() => {
+function reloadLog() {
   axios.post<CreditLog[]>('credit/get_detail_list', {}).then(res => {
     pointRecords.value = res.data
   })
+}
 
+function reloadExchangeItems() {
+  axios.post<ExchangeItem[]>('credit/get_exchange_list', {}).then(res => {
+    exchangeItems.value = res.data
+  })
+}
+
+function reloadPoints() {
   axios.post<TotalCount>('credit/get_credit', {}).then(res => {
     currentPoints.value = res.data.all
     weeklyEarned.value = res.data.earned
     weeklyUsed.value = res.data.used
   })
+}
 
+onMounted(() => {
+  reloadLog()
+  reloadExchangeItems()
+  reloadPoints()
 })
 </script>
 

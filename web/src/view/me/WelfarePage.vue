@@ -19,7 +19,8 @@
         </div>
         <div class="form-group">
           <label for="priceFactor">价格因子</label>
-          <input type="number" id="priceFactor" v-model.number="newItem.factor" placeholder="请输入价格因子" min="0" required />
+          <input type="number" id="priceFactor" v-model.number="newItem.factor" placeholder="请输入价格因子" min="0"
+            required />
         </div>
         <button type="submit" class="add-button">添加项目</button>
       </form>
@@ -30,22 +31,22 @@
       <h2>兑换项目列表</h2>
       <table class="item-table">
         <thead>
-        <tr>
-          <th>项目名称</th>
-          <th>基础价格</th>
-          <th>周期</th>
-          <th>价格因子</th>
-          <th>操作</th>
-        </tr>
+          <tr>
+            <th>项目名称</th>
+            <th>基础价格</th>
+            <th>周期</th>
+            <th>价格因子</th>
+            <th>操作</th>
+          </tr>
         </thead>
         <tbody>
-        <tr v-for="item in items" :key="item.id">
-          <td>{{ item.name }}</td>
-          <td>{{ item.price }}</td>
-          <td>{{ item.cycle }}</td>
-          <td>{{ item.factor }}</td>
-          <td><button class="delete-button" @click="deleteItem(item)">删除</button></td>
-        </tr>
+          <tr v-for="item in items" :key="item.id">
+            <td>{{ item.name }}</td>
+            <td>{{ item.price }}</td>
+            <td>{{ item.cycle }}</td>
+            <td>{{ item.factor }}</td>
+            <td><button class="delete-button" @click="deleteItem(item)">删除</button></td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -55,8 +56,9 @@
 
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import TodoSubmit from '@/components/submit/TodoSubmit.vue'
+import axios from 'axios'
 
 interface WelfareItem {
   id: number;
@@ -75,8 +77,21 @@ const newItem = reactive<WelfareItem>({
   factor: 1,
 });
 
+function resetNewItem() {
+  newItem.name = '';
+  newItem.price = 150;
+  newItem.cycle = 7;
+  newItem.factor = 1;
+}
+
 // 定义项目列表，使用 ref 创建响应式数组
 const items = ref<WelfareItem[]>([]);
+
+function loadItems() {
+  axios.post<WelfareItem[]>('credit/get_welfare_list', {}).then(res => {
+    items.value = res.data
+  })
+}
 
 // 自增的 ID，用于为每个新项目生成唯一 ID
 let nextId = 1;
@@ -89,27 +104,25 @@ const addItem = () => {
     return;
   }
 
-  // 将新项目添加到列表中
-  items.value.push({
-    id: nextId++,
-    name: newItem.name,
-    price: newItem.price,
-    cycle: newItem.cycle,
-    factor: newItem.factor,
-  });
-
-  // 清空表单
-  newItem.name = '';
-  newItem.price = 0;
-  newItem.cycle = 1;
-  newItem.factor = 0;
+  const data = { 'name': newItem.name, 'price': newItem.price, 'cycle': newItem.cycle, 'factor': newItem.factor }
+  axios.post('credit/add_exchange_item', data).then(loadItems);
+  resetNewItem()
 };
 
 // 删除项目的方法
 const deleteItem = (item: WelfareItem) => {
-  // 使用 filter 方法从列表中移除指定项目
-  items.value = items.value.filter((i) => i.id !== item.id);
+  axios.post('credit/remove_exchange_item', { 'item_id': item.id }).then(res => {
+    // 使用 filter 方法从列表中移除指定项目
+    items.value = items.value.filter((i) => i.id !== item.id);
+  })
 };
+
+
+onMounted(() => {
+  resetNewItem()
+  loadItems()
+})
+
 </script>
 
 
@@ -120,7 +133,8 @@ const deleteItem = (item: WelfareItem) => {
   font-family: Arial, sans-serif;
 }
 
-.form-card, .list-card {
+.form-card,
+.list-card {
   margin-bottom: 20px;
   background-color: #f9f9f9;
   border-radius: 8px;
@@ -169,7 +183,8 @@ h2 {
   margin-top: 10px;
 }
 
-.item-table th, .item-table td {
+.item-table th,
+.item-table td {
   border: 1px solid #ddd;
   padding: 8px;
   text-align: center;
@@ -198,7 +213,8 @@ h2 {
     flex-direction: column;
   }
 
-  .item-table th, .item-table td {
+  .item-table th,
+  .item-table td {
     font-size: 14px;
   }
 }

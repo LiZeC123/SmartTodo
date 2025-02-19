@@ -38,7 +38,23 @@ class ExchangeItem(Base):
     __tablename__ = "exchange_item"
 
     id: Mapped[int]       = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str]     = mapped_column(String(15), nullable=False)
+    name: Mapped[str]     = mapped_column(String(30), nullable=False)
     price: Mapped[float]  = mapped_column(Float, nullable=False)
     cycle: Mapped[int]    = mapped_column(Integer, nullable=False)
     factor: Mapped[float] = mapped_column(Float, nullable=False)
+
+class ExchangeLog(Base):
+    """积分兑换记录表, 记录用户的兑换历史"""
+    __tablename__ = "exchange_log"
+
+    id: Mapped[int]               = mapped_column(Integer, primary_key=True, autoincrement=True)
+    item_id: Mapped[int]          = mapped_column(Integer, nullable=False)
+    name: Mapped[str]             = mapped_column(String(30), nullable=False)
+    owner: Mapped[str]            = mapped_column(String(15), nullable=False)
+    create_time: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now)
+
+        # 定义联合索引
+    __table_args__ = (
+        # 查询单个用户的积分变更记录
+        Index('idx_id_owner_time', "item_id", "owner", "create_time"),
+    )
