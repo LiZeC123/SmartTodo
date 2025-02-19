@@ -71,6 +71,7 @@ class ItemManager:
             f(self.db, item)
 
         self.db.add(item)
+        self.db.flush()
 
         for g in self.after_create_event:
             g(self.db, item)
