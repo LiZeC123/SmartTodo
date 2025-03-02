@@ -22,7 +22,7 @@
           <input type="number" id="priceFactor" v-model.number="newItem.factor" placeholder="请输入价格因子" min="0"
             required />
         </div>
-        <button type="submit" class="add-button">添加项目</button>
+        <button type="submit" class="add-button">添加或修改项目</button>
       </form>
     </div>
 

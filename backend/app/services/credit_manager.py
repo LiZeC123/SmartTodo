@@ -89,11 +89,11 @@ def exchange(db: Database, id: int, owner: str) -> str:
     if not ok:
         return "余额不足"
     
-    add_echange_item_log(db, item, owner)
+    add_exchange_item_log(db, item, owner)
     return ""
 
 
-def add_echange_item_log(db: Database, item: ExchangeItem, owner: str)-> bool:
+def add_exchange_item_log(db: Database, item: ExchangeItem, owner: str)-> bool:
     log = ExchangeLog(item_id=item.id, name=item.name, owner=owner)
     db.add(log)
     db.flush()
@@ -101,9 +101,16 @@ def add_echange_item_log(db: Database, item: ExchangeItem, owner: str)-> bool:
 
 
 def add_exchange_item(db: Database, name: str, price:float, cycle: int, factor: float) -> bool:
-    """添加项目, 注意进行权限检查, 仅管理员可操作"""
-    item = ExchangeItem(name=name, price=price, cycle=cycle, factor=factor)
-    db.add(item)
+    """添加或修改项目, 注意进行权限检查, 仅管理员可操作"""
+    stmt = sal.select(ExchangeItem).where(ExchangeItem.name == name)
+    item = db.scalar(stmt)
+    if item:
+        item.price = price
+        item.cycle = cycle
+        item.factor = factor
+    else:
+        item = ExchangeItem(name=name, price=price, cycle=cycle, factor=factor)
+        db.add(item)
     db.flush()
     return True
 
