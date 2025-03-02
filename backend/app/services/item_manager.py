@@ -54,7 +54,7 @@ def remove_note_handler(db: DataBase, item: Item):
 
 
 def done_item_handler(db: DataBase, item: Item):
-    if item.repeatable:
+    if item.repeatable or item.url is None:
         update_credit(db, item.owner, 1, f"完成任务 {item.name}")
 
 class ItemManager:
@@ -229,7 +229,7 @@ class ItemManager:
         for f in self.on_done_event:
             f(self.db, item)
 
-        logger.info(f"全部完成任务: {item.name}")
+        logger.info(f"完成任务: {item.name}")
         return True
 
     def to_today_task(self, xid: int, owner: str):

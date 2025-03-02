@@ -62,7 +62,7 @@ class TomatoManager:
             # 如果增加番茄钟操作失败, 则不进行后续操作
             if self.item_manager.increase_used_tomato(xid, owner):
                 self.__insert_record(status)
-                update_credit(self.db, owner, 1, f"完成番茄钟 {status.name}")
+                update_credit(self.db, owner, 2, f"完成番茄钟 {status.name}")
                 return True
             return False
 
