@@ -30,7 +30,7 @@
     <div class="history-section">
       <h2>历史记录</h2>
       <ul>
-        <li v-for="entry in weightHistory" :key="entry.id">
+        <li v-for="entry in reversedHistory" :key="entry.id">
           <span class="date">{{ formatDate(entry.create_time) }}</span>
           <span class="weight">{{ entry.weight }} kg</span>
           <button @click="deleteEntry(entry.id)" class="delete-btn">×</button>
@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import axios from 'axios'
-import { ref, onMounted, watchEffect, type Ref, watch } from 'vue'
+import { ref, onMounted, type Ref, computed } from 'vue'
 import { Chart } from 'chart.js/auto'
 import dayjs from 'dayjs'
 import TodoSubmit from '@/components/submit/TodoSubmit.vue'
@@ -127,7 +127,11 @@ function reloadChart() {
   }
 }
 
-
+// 计算属性：生成反向列表
+const reversedHistory= computed(() => {
+  // 通过浅拷贝避免修改原数组
+  return [...weightHistory.value].reverse();
+});
 
 
 
