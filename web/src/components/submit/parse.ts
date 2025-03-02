@@ -108,12 +108,18 @@ function parsePriority(priority: TodoPriority) {
   const time = new Date()
   switch (priority) {
     case 'p0':
-      return time.getTime() + Math.floor(1.5 * DayMillisecond) 
+      return getTodayEndTime()
     case 'p1':
-      return time.getTime() + Math.floor(3.5 * DayMillisecond) 
+      return time.getTime() + Math.floor(2.5 * DayMillisecond)
     case 'p2':
       return time.getTime() + Math.floor(7 * DayMillisecond) 
   }
+}
+
+function getTodayEndTime(): number {
+  const time = new Date()
+  time.setHours(24, 0, 0, 0)
+  return time.getTime()
 }
 
 function parseDeadline(deadline: string) {
