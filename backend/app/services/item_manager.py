@@ -91,6 +91,7 @@ class ItemManager:
             f(self.db, item)
 
         self.db.flush()
+        logger.info(f"删除任务: {item.name}")
 
 
     def create_upload_file(self, f, parent: Optional[int], owner: str) -> Item:
@@ -209,10 +210,11 @@ class ItemManager:
 
         item.used_tomato += 1
         self.db.flush()
-        logger.info(f"完成任务: {item.name}")
+        logger.info(f"完成番茄钟任务: {item.name}")
         return True
 
     def finish_used_tomato(self, xid: int, owner: str):
+        """手动结束一个任务, 用于在界面上手动点击完成的场景"""
         item = self.select_with_authority(xid=xid, owner=owner)
         if item.used_tomato >= item.expected_tomato:
             return False
