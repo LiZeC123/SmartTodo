@@ -38,8 +38,8 @@ function getDLCounterDownTag(item: Item): Tag {
         const dd = new Date(item.deadline).getTime() - new Date().getTime()
         const hour = parseFloat((dd / (1000 * 60 * 60)).toFixed(1))
 
-        // 非常接近的任务则显示具体的剩余时间
-        if (hour < 50) {
+        // 非常接近的任务显示具体的剩余时间
+        if (hour < 48 && hour > -48) {
             return '剩余' + hour + '小时'
         }
     }
