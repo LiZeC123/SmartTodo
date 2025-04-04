@@ -42,6 +42,12 @@ function getDLCounterDownTag(item: Item): Tag {
         if (hour < 48 && hour > -48) {
             return '剩余' + hour + '小时'
         }
+
+        // 已逾期较长时间的任务仅标记已逾期, 而不展示具体的时间
+        if (hour <= -48) {
+            return '已逾期'
+        }
+
     }
 }
 
