@@ -30,7 +30,7 @@
     <div class="history-section">
       <h2>历史记录</h2>
       <ul>
-        <li v-for="entry in reversedHistory" :key="entry.id">
+        <li v-for="entry in weightHistory" :key="entry.id">
           <span class="date">{{ formatDate(entry.create_time) }}</span>
           <span class="weight">{{ entry.weight }} kg</span>
           <button @click="deleteEntry(entry.id)" class="delete-btn">×</button>
@@ -71,7 +71,7 @@ const addWeight = () => {
   if (!newWeight.value) return
 
   axios.post('/me/weight/add', {'weight':newWeight.value }).then(() => {
-    weightHistory.value.push({
+    weightHistory.value.unshift({
       id: Date.now(),
       weight: parseFloat(newWeight.value),
       create_time: dayjs().format('YYYY-MM-DD')
@@ -97,10 +97,10 @@ onMounted( () => {
     chartInstance = new Chart(chart.value, {
       type: 'line',
       data: {
-        labels: weightHistory.value.map(entry => formatDate(entry.create_time)),
+        labels: reversedHistory.value.map(entry => formatDate(entry.create_time)),
         datasets: [{
           label: '体重变化 (kg)',
-          data: weightHistory.value.map(entry => entry.weight),
+          data: reversedHistory.value.map(entry => entry.weight),
           borderColor: '#42b983',
           tension: 0.4,
           fill: false
@@ -121,8 +121,8 @@ onMounted( () => {
 
 function reloadChart() {
   if (chartInstance) {
-    chartInstance.data.labels = weightHistory.value.map(entry => formatDate(entry.create_time))
-    chartInstance.data.datasets[0].data = weightHistory.value.map(entry => entry.weight)
+    chartInstance.data.labels = reversedHistory.value.map(entry => formatDate(entry.create_time))
+    chartInstance.data.datasets[0].data = reversedHistory.value.map(entry => entry.weight)
     chartInstance.update()
   }
 }

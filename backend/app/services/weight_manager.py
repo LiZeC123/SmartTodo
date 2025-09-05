@@ -10,7 +10,7 @@ Database = scoped_session[Session]
 
 
 def query_log(db: Database, owner: str) -> List:
-    stmt = sal.select(WeightLog).where(WeightLog.owner == owner).limit(30)
+    stmt = sal.select(WeightLog).where(WeightLog.owner == owner).order_by(WeightLog.id.desc()).limit(30)
     logs = db.execute(stmt).scalars().all()
     return [log.to_dict() for log in logs]
 
