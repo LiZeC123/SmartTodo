@@ -66,11 +66,11 @@
     </div>
 
     <!-- 操作按钮 -->
-    <div class="actions">
-      <button @click="handleMakeup">补打卡 ({{ makeupChances }}次剩余)</button>
-      <button @click="handleShare">分享成就</button>
-      <button @click="handleRemind">设置提醒</button>
-    </div>
+<!--    <div class="actions">-->
+<!--      <button @click="handleMakeup">补打卡 ({{ makeupChances }}次剩余)</button>-->
+<!--      <button @click="handleShare">分享成就</button>-->
+<!--      <button @click="handleRemind">设置提醒</button>-->
+<!--    </div>-->
   </div>
 </template>
 
@@ -119,21 +119,38 @@ const taskData = reactive<TaskData>({
 
 // 响应式状态
 const activeTab = ref<string>('words')
-const makeupChances = ref<number>(3)
+const makeupChances = ref<number>(0)
 
 // 计算属性
 const currentTask = computed(() => taskData[activeTab.value])
 
 // 日历日期生成（当前月份）
 const calendarDates = computed(() => {
-  const date = new Date()
-  const year = date.getFullYear()
-  const month = date.getMonth()
+  const currentDate = new Date();
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
 
-  const firstDay = new Date(year, month, 1)
-  const lastDay = new Date(year, month + 1, 0)
+  // 获取本月第一天的 Date 对象
+  const firstDayOfMonth = new Date(year, month, 1);
+  const dayOfWeek = firstDayOfMonth.getDay(); // 0 (周日) 到 6 (周六)
 
-  return Array.from({ length: lastDay.getDate() }, (_, i) => i + 1)
+  // 计算到前一个周一需要减去的天数
+  const daysToSubtract = (dayOfWeek + 6) % 7;
+  const monday = new Date(firstDayOfMonth);
+  monday.setDate(firstDayOfMonth.getDate() - daysToSubtract);
+
+  // 获取本月的最后一天
+  const lastDayOfMonth = new Date(year, month + 1, 0);
+
+  // 生成日期数组
+  const dates: number[] = [];
+  let currentDay = new Date(monday);
+  while (currentDay <= lastDayOfMonth) {
+    dates.push(currentDay.getDate());
+    currentDay.setDate(currentDay.getDate() + 1);
+  }
+
+  return dates;
 })
 
 // 方法
