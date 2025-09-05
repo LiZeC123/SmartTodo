@@ -21,8 +21,8 @@ export function parseTitleToData(todoContent: string, priority: TodoPriority) {
   }
 
   // 解决一些冲突情况
-  // 每日任务没有截止日期
-  if (data.repeatable) {
+  // 每日任务没有截止日期, note类型没有截止日期
+  if (data.repeatable || data.itemType == 'note') {
     data.deadline = undefined
   }
 
