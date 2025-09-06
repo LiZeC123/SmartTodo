@@ -1,4 +1,4 @@
-FROM node:18.18.0-alpine as build-stage
+FROM node:22.19.0-alpine as build-stage
 LABEL stage=builder
 
 WORKDIR /app
@@ -10,7 +10,7 @@ RUN npm run build
 
 # =====================
 
-FROM python:3.11-alpine
+FROM python:3.13-alpine
 
 ENV TZ Asia/Shanghai
 
