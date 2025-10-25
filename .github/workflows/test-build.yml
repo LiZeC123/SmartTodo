@@ -36,6 +36,7 @@ jobs:
         flags: unittests
 
   build:
+    if: github.event_name == 'push' # 仅在push事件时执行
     runs-on: ubuntu-latest
     needs: test
     
