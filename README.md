@@ -8,6 +8,8 @@ Smart-Todo 待办管理器
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/LiZeC123/SmartTodo)
 ![GitHub last commit](https://img.shields.io/github/last-commit/LiZeC123/SmartTodo)
 
+[中文][[English](https://deepwiki.com/LiZeC123/SmartTodo)]
+
 Smart-Todo是一个简单智能的待办事项管理程序. Smart-Todo提供了创建和删除待办事项的基础功能, 并在此基础上自动优先级排序, 离线下载文件, 创建便签等重要的辅助功能.
 
 ![SmartTodo项目截图](doc/image/首页展示.png)
@@ -41,6 +43,9 @@ Smart-Todo是一个简单智能的待办事项管理程序. Smart-Todo提供了�
     - [富文本编辑](#富文本编辑)
     - [子任务拆分](#子任务拆分)
   - [指令系统](#指令系统)
+  - [开发指引](#开发指引)
+    - [开发环境推荐](#开发环境推荐)
+    - [插件推荐](#插件推荐)
   - [开源项目和组件](#开源项目和组件)
   - [参考资料](#参考资料)
     - [Vue.js](#vuejs)
