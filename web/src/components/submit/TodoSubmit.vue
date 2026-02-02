@@ -1,7 +1,7 @@
 <template>
   <div class="header">
     <div class="box">
-      <div id="form" @keyup.enter="commitTodo">
+      <div id="form">
         <label for="title" @mousedown.left="gotoHome">SmartTodo</label>
         <div v-show="enableSubmit" style="float: right; width: 60%">
           <label for="itemType"></label>
@@ -16,6 +16,8 @@
             placeholder="添加ToDo"
             autocomplete="off"
             v-model="todoContent"
+            enterkeyhint="done" 
+            @keydown.enter.prevent="commitTodo"
           />
         </div>
       </div>
