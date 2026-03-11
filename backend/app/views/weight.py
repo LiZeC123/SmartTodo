@@ -4,9 +4,7 @@ from flask import Blueprint, request
 
 from app import db
 from app.services.weight_manager import *
-from app.tools.log import Log_File
 from app.views.authority import authority_check
-from app.views.tool import try_get_parent_from_request
 
 weight_bp = Blueprint('weight', __name__)
 
@@ -21,7 +19,7 @@ def query(owner: str):
 @authority_check()
 def add(owner: str):
     data: Dict = request.get_json()
-    weight = float(data.get('weight'))
+    weight = float(data.get('weight', 0))
     return add_log(db, owner, weight)
 
 

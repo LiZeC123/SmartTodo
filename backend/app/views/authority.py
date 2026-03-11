@@ -20,7 +20,7 @@ class authority_check:
             if owner is None:
                 logging.warning(f"当前用户未登录, 无法请求 {func.__name__} 接口")
                 abort(401)
-            if self.role not in role_list:
+            if role_list is None or self.role not in role_list:
                 logger.warning(f"用户 {owner} 缺少 {self.role} 权限")
                 abort(401)
 
