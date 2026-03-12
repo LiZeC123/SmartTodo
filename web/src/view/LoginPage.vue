@@ -2,7 +2,7 @@
   <div>
     <div class="wrapper">
       <div class="container">
-        <h1>基于时空大数据的时间管理工具</h1>
+        <h1>基于时空大数据与计算智能的时间管理工具</h1>
         <form class="form" onsubmit="return false;">
           <input type="text" placeholder="Username" name="username" id="username" v-model="username">
           <input type="password" placeholder="Password" name="password" id="password" v-model="password">
