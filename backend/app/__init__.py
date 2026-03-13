@@ -8,7 +8,7 @@ from app.services.interpreter import OpInterpreter
 from app.services.item_manager import ItemManager
 from app.services.task_manager import TaskManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
-from app.tools.token import generate_token_str
+from app.tools.gen import generate_token_str
 
 # 初始化数据库对象
 engine = create_engine(url='sqlite:///data/data.db', echo=True, future=True)

@@ -42,3 +42,7 @@ class ConfigManager:
             qw_hook = user_config.get("qw_hook")
             ans.append((username, email, qw_hook))
         return ans
+
+    def get_llm_info(self):
+        info = self.config["LLM_INFO"]
+        return info["BASE_URL"], info["API_KEY"]
