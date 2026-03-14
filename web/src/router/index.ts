@@ -10,6 +10,7 @@ import PomodoroTimer from '@/view/me/PomodoroTimer.vue'
 import WelfarePage from '@/view/me/WelfarePage.vue'
 import CreditAdd from '@/view/me/CreditAdd.vue'
 import ShowTask from '@/view/me/ShowTask.vue'
+import LLM from '@/view/me/LLM.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -27,6 +28,7 @@ const router = createRouter({
     { path: '/me/welfare', component: WelfarePage },
     { path: '/me/credit/add', component: CreditAdd },
     { path: '/me/showTask', component: ShowTask },
+    { path: '/me/llm', component: LLM },
   ]
 })
 
