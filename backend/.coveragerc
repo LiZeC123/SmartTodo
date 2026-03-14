@@ -1,2 +1,4 @@
 [run]
-omit = app/views/* run.py
+omit = 
+    app/views/* 
+    run.py
