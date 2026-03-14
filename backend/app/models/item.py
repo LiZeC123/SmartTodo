@@ -24,7 +24,8 @@ class Item(Base):
     repeatable: Mapped[int]         = mapped_column(SmallInteger, nullable=False, default=False)
     specific: Mapped[int]           = mapped_column(SmallInteger, nullable=False, default=0)
     priority: Mapped[str]           = mapped_column(SmallInteger, nullable=False, default='p2')
-    tags: Mapped[str]               = mapped_column(SmallInteger, nullable=False, default='')
+    
+    tags: Mapped[str]               = mapped_column(SmallInteger, nullable=False, default='') # 废弃
 
     owner: Mapped[str] = mapped_column(String(15), nullable=False)
     # 指示此Item是否附属于某个note, None表示不属于任何note
