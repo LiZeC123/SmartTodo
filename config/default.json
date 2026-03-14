@@ -12,10 +12,9 @@
       "qw_hook": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx-xxxx"
     }
   },
-  "MAIL_INFO": {
-    "SENDER": "sender@example.com",
-    "PASSWORD": "put your Authorization code here",
-    "RECEIVER": "receiver@example.com"
+  "LLM_INFO": {
+    "BASE_URL": "https://api.siliconflow.cn/v1",
+    "API_KEY": "sk-xxx"
   },
-  "VERSION": "2.0.0"
+  "VERSION": "3.0.0"
 }

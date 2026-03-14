@@ -1,2 +1,11 @@
 [run]
-omit = app/views/* run.py
+omit = 
+    # 忽略视图层
+    app/views/* 
+    
+    # 忽略启动函数
+    run.py
+    
+    # 忽略包含外部依赖的组件
+    app\tools\mail.py
+    app\services\llm_manager.py

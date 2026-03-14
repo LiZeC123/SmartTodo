@@ -1,0 +1,310 @@
+<!-- components/ChatComponent.vue -->
+<template>
+  <div class="chat-container">
+    <div class="chat-history">
+      <div v-for="(message, index) in messages" :key="index" 
+           :class="['message', message.role]">
+        <div class="message-content">
+          <!-- 流式消息显示 -->
+          <span v-if="message.isStreaming" class="streaming-text">
+            {{ message.content }}
+            <span class="cursor">|</span>
+          </span>
+          <span v-else>{{ message.content }}</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="input-area">
+      <textarea 
+        v-model="inputText" 
+        @keydown.enter.prevent="sendMessage"
+        placeholder="输入消息..."
+        :disabled="isLoading"
+      ></textarea>
+      <button @click="sendMessage" :disabled="isLoading">
+        {{ isLoading ? '生成中...' : '发送' }}
+      </button>
+      <label>
+        <input type="checkbox" v-model="useStreaming"> 使用流式输出
+      </label>
+    </div>
+    
+    <div v-if="error" class="error">{{ error }}</div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
+
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+  isStreaming?: boolean
+}
+
+const inputText = ref('')
+const isLoading = ref(false)
+const useStreaming = ref(true)
+const error = ref('')
+const messages = reactive<Message[]>([])
+let controller: AbortController | null = null
+
+// 添加消息
+const addMessage = (role: 'user' | 'assistant', content: string, isStreaming = false) => {
+  messages.push({ role, content, isStreaming })
+}
+
+// 更新最后一条消息（用于流式）
+const updateLastMessage = (content: string, isStreaming = false) => {
+  if (messages.length > 0) {
+    const lastMsg = messages[messages.length - 1]
+    lastMsg.content += content
+    lastMsg.isStreaming = isStreaming
+  }
+}
+
+// 流式API调用
+const streamChat = async (prompt: string) => {
+  controller = new AbortController()
+  
+  try {
+    const response = await fetch('/api/llm/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt }),
+      signal: controller.signal
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    if (!response.body) {
+      throw new Error('No response body')
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let buffer = ''
+
+    addMessage('assistant', '', true)
+
+    while (true) {
+      const { done, value } = await reader.read()
+      
+      if (done) break
+      
+      buffer += decoder.decode(value, { stream: true })
+      
+      // 解析SSE格式
+      const lines = buffer.split('\n\n')
+      buffer = lines.pop() || ''  // 保留未完成的数据
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const dataStr = line.substring(6)
+          if (dataStr === '[DONE]') continue
+          
+          try {
+            const data = JSON.parse(dataStr)
+            
+            if (data.error) {
+              error.value = data.error
+              break
+            }
+            
+            if (data.text) {
+              updateLastMessage(data.text, !data.done)
+            }
+            
+            if (data.done) {
+              const lastMsg = messages[messages.length - 1]
+              if (lastMsg) {
+                lastMsg.isStreaming = false
+              }
+              return
+            }
+          } catch (e) {
+            console.error('解析SSE数据失败:', e)
+          }
+        }
+      }
+    }
+  } catch (err: any) {
+    if (err.name !== 'AbortError') {
+      error.value = '请求失败: ' + err.message
+      console.error('Stream error:', err)
+    }
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 非流式API调用
+const nonStreamChat = async (prompt: string) => {
+  try {
+    const response = await fetch('/api/chat/non-stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt })
+    })
+
+    const data = await response.json()
+    
+    if (data.success) {
+      addMessage('assistant', data.text)
+    } else {
+      error.value = data.error || '请求失败'
+    }
+  } catch (err: any) {
+    error.value = '请求失败: ' + err.message
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 发送消息
+const sendMessage = async () => {
+  if (!inputText.value.trim() || isLoading.value) return
+  
+  const prompt = inputText.value.trim()
+  inputText.value = ''
+  error.value = ''
+  isLoading.value = true
+  
+  // 添加用户消息
+  addMessage('user', prompt)
+  
+  if (useStreaming.value) {
+    await streamChat(prompt)
+  } else {
+    await nonStreamChat(prompt)
+  }
+}
+
+// 停止生成
+const stopGeneration = () => {
+  if (controller) {
+    controller.abort()
+    controller = null
+  }
+  isLoading.value = false
+  
+  // 标记最后一条消息为非流式
+  if (messages.length > 0) {
+    const lastMsg = messages[messages.length - 1]
+    if (lastMsg.isStreaming) {
+      lastMsg.isStreaming = false
+    }
+  }
+}
+
+// 组件卸载时清理
+onUnmounted(() => {
+  stopGeneration()
+})
+
+// 键盘快捷键
+onMounted(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && isLoading.value) {
+      stopGeneration()
+    }
+  }
+  
+  window.addEventListener('keydown', handleKeyDown)
+  onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
+})
+</script>
+
+<style scoped>
+.chat-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.chat-history {
+  min-height: 400px;
+  max-height: 500px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  background: #f9f9f9;
+}
+
+.message {
+  margin-bottom: 15px;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.message.user {
+  background: #e3f2fd;
+  text-align: right;
+}
+
+.message.assistant {
+  background: #f5f5f5;
+  text-align: left;
+}
+
+.streaming-text {
+  display: inline-block;
+}
+
+.cursor {
+  animation: blink 1s infinite;
+  color: #666;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.input-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+textarea {
+  min-height: 100px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  resize: vertical;
+}
+
+button {
+  padding: 10px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #d32f2f;
+  padding: 10px;
+  background: #ffebee;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+</style>

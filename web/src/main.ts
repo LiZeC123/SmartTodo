@@ -27,11 +27,6 @@ axios.interceptors.response.use(res => {
 });
 
 
-
-// 请求发送通知权限, 用于番茄钟提醒
-Notification.requestPermission()
-
-
 const app = createApp(App)
 
 app.use(createPinia())

@@ -31,10 +31,6 @@ class ConfigManager:
     def is_admin_user(self, username: str):
         return "ROLE_ADMIN" in self.get_roles(username)
 
-    def get_mail_info(self):
-        info = self.config['MAIL_INFO']
-        return info["SENDER"], info["PASSWORD"]
-
     def get_users_msg_info(self):
         ans = []
         for username, user_config in self.config["USER_INFO"].items():
@@ -42,3 +38,7 @@ class ConfigManager:
             qw_hook = user_config.get("qw_hook")
             ans.append((username, email, qw_hook))
         return ans
+
+    def get_llm_info(self):
+        info = self.config["LLM_INFO"]
+        return info["BASE_URL"], info["API_KEY"]
