@@ -9,7 +9,7 @@ from app.tools.exception import UnauthorizedException
 Database = scoped_session[Session]
 
 
-def query_log(db: Database, owner: str) -> List:
+def query_log(db: Database, owner: str) -> List[dict]:
     stmt = sal.select(WeightLog).where(WeightLog.owner == owner).order_by(WeightLog.id.desc()).limit(30)
     logs = db.execute(stmt).scalars().all()
     return [log.to_dict() for log in logs]
@@ -18,6 +18,7 @@ def query_log(db: Database, owner: str) -> List:
 def add_log(db: Database, owner: str, weight: float) -> bool:
     log = WeightLog(owner=owner, weight=weight)
     db.add(log)
+    db.flush()
     return True
 
 
@@ -27,4 +28,5 @@ def remove_log(db: Database, owner: str, id: int) -> bool:
     if log is None:
         raise UnauthorizedException(f'User {owner} dose not have authority for weight log id {id}')
     db.delete(log)
+    db.flush()
     return True
