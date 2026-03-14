@@ -12,5 +12,5 @@ def test_base():
 
     assert manager.get_users_msg_info() != []
 
-    sender, password = manager.get_mail_info()
-    assert sender is not None and password is not None
+    base_url, api_key = manager.get_llm_info()
+    assert base_url is not None and api_key is not None

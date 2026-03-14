@@ -31,10 +31,6 @@ class ConfigManager:
     def is_admin_user(self, username: str):
         return "ROLE_ADMIN" in self.get_roles(username)
 
-    def get_mail_info(self):
-        info = self.config['MAIL_INFO']
-        return info["SENDER"], info["PASSWORD"]
-
     def get_users_msg_info(self):
         ans = []
         for username, user_config in self.config["USER_INFO"].items():
