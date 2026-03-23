@@ -224,7 +224,9 @@ class ItemManager:
             item.used_tomato = 1
         else:
             # 否则收缩预期的番茄钟数量为当前值, 例如已经消耗2个番茄钟, 而预期消耗4个番茄钟
-            # 此时完成任务, 则将预期番茄钟数量调整为2
+            # 此时完成任务, 则将预期番茄钟数量调整为2, 相当于不计入新的番茄钟
+            # 需要保证当前已使用番茄钟至少为1, 否则设置为0将产生异常状态
+            item.used_tomato = item.used_tomato if item.used_tomato > 1 else 1
             item.expected_tomato = item.used_tomato
         self.db.flush()
 
