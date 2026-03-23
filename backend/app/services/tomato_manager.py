@@ -47,7 +47,7 @@ class TomatoManager:
         return ""
 
     def finish_task(self, xid: int, owner: str) -> bool:
-        status = self.query_task(owner)
+        status = self.query_task_for_update(owner)
         if status is None:
             return False
 
@@ -55,16 +55,15 @@ class TomatoManager:
             logger.error(f"完成番茄钟失败: 用户{owner}当前任务的Id不匹配, 期望为 {status.item_id} 实际为 {xid}")
             return False
 
-        with self.db.begin(nested=True):
-            self.db.delete(status)
-            # 浏览器端由于内存回收等原因, 可能在番茄钟完成时触发两次完成操作
-            # 当前无法有效区分此情况, 仅通过剩余番茄钟时间进行判断
-            # 如果增加番茄钟操作失败, 则不进行后续操作
-            if self.item_manager.increase_used_tomato(xid, owner):
-                self.__insert_record(status)
-                update_credit(self.db, owner, 2, f"完成番茄钟 {status.name}")
-                return True
-            return False
+        self.db.delete(status)
+        # 浏览器端由于内存回收等原因, 可能在番茄钟完成时触发两次完成操作
+        # 当前无法有效区分此情况, 仅通过剩余番茄钟时间进行判断
+        # 如果增加番茄钟操作失败, 则不进行后续操作
+        if self.item_manager.increase_used_tomato(xid, owner):
+            self.__insert_record(status)
+            update_credit(self.db, owner, 2, f"完成番茄钟 {status.name}")
+            return True
+        return False
 
     def clear_task(self, xid: int, reason: str, owner: str) -> bool:
         status = self.query_task(owner)
@@ -82,6 +81,11 @@ class TomatoManager:
 
     def query_task(self, owner: str) -> Optional[TomatoStatus]:
         stmt = sal.select(TomatoStatus).where(TomatoStatus.owner == owner)
+        return self.db.scalar(stmt)
+    
+    def query_task_for_update(self, owner: str) -> Optional[TomatoStatus]:
+        # 查询番茄钟时增加for update标记, 如果后续要更新该条目, 可以保证操作互斥, 不会同时更新触发多次业务逻辑的执行
+        stmt = sal.select(TomatoStatus).where(TomatoStatus.owner == owner).with_for_update()
         return self.db.scalar(stmt)
 
     def get_task(self, owner: str) -> Dict | None:

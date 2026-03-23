@@ -30,6 +30,10 @@ def test_start_and_query():
     assert task is not None
     assert task['itemId'] == item.id
 
+    task = tomato_manager.query_task_for_update(owner)
+    assert task is not None
+    assert task.item_id == item.id
+
 
 def test_finish():
     item = make_base_item(name=f"Test")
