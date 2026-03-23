@@ -12,12 +12,14 @@ import CreditAdd from '@/view/me/CreditAdd.vue'
 import ShowTask from '@/view/me/ShowTask.vue'
 import LLM from '@/view/me/LLM.vue'
 import CheckDay from '@/view/me/CheckDay.vue'
+import Index from '@/view/Index.vue'
 
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', redirect: '/todo' },
+    { path: '/', redirect: '/index' },
+    { path: '/index', component: Index },
     { path: '/login', component: Login },
     { path: '/todo', component: Todo },
     { path: '/note/:id', component: Todo },
