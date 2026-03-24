@@ -117,8 +117,8 @@ body :-ms-input-placeholder {
   top: 50%;
   left: 0;
   width: 100%;
-  height: 400px;
-  margin-top: -200px;
+  height: 600px;
+  margin-top: -300px;
   overflow: hidden;
 
 }
