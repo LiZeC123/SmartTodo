@@ -3,13 +3,8 @@
   <div class="container">
     <!-- 番茄钟模块 -->
     <TomatoClock :item="tomatoItem" @done-task="doneTomatoTask"></TomatoClock>
+    <ItemGroupedList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="doneItem"></ItemGroupedList>
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
-    <ItemGroupedList
-      title="今日任务"
-      :btnCfg="tCfg"
-      :data="tTask"
-      @done="doneItem"
-    ></ItemGroupedList>
     <Footer :is-admin="false" :config="footerConfig"></Footer>
     <AlertBox :text="alertText"></AlertBox>
   </div>
@@ -18,7 +13,6 @@
 <script setup lang="ts">
 import axios from 'axios'
 import { onMounted, ref, type Ref } from 'vue'
-import router from '@/router'
 
 import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 import TomatoClock from '@/components/tomato/TomatoClock.vue'
