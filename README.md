@@ -73,8 +73,6 @@ services:
     volumes:
       - ./config:/app/config
       - ./data:/app/data
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
 ```
 
 执行如下命令即可拉取并在后台运行服务
