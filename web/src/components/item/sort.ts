@@ -12,6 +12,9 @@ export function byCalcValue(a: Item, b: Item): number {
 
 const dayMs = 24 * 60 * 60 * 1000
 
+// 规则:
+// 1. 没有DL的任务 按照创建顺序进行排序, 越早的分数越小, 排序越靠后
+// 2. 有DL的任务, 按照与DL的差值进行排序, 越近的分数越大, 排序越靠前
 function calcValue(item: Item): number {
     let base = new Date(item.create_time).getTime()
 

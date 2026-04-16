@@ -17,7 +17,7 @@ export function parseTitleToData(todoContent: string, priority: TodoPriority) {
     priority: priority,
     repeatable: inferRepeatable(name),
     deadline: parsePriority(priority),
-    tags: [],
+    tags: []
   }
 
   // 解决一些冲突情况
@@ -25,7 +25,6 @@ export function parseTitleToData(todoContent: string, priority: TodoPriority) {
   if (data.repeatable || data.itemType == 'note') {
     data.deadline = undefined
   }
-
 
   // 分析参数
   for (let i = 1; i < values.length; i++) {
@@ -62,7 +61,7 @@ function inferFileType(name: string): boolean {
   const dot = name.lastIndexOf('.')
   const fileType = name.substring(dot + 1)
 
-    const knowTypes = [
+  const knowTypes = [
         "zip", "rar", "tar", "gz", "7z",
         "jpg", "png", "gif",
         "exe", "msi",
@@ -108,18 +107,47 @@ function parsePriority(priority: TodoPriority) {
   const time = new Date()
   switch (priority) {
     case 'p0':
-      return getTodayEndTime()
+      return getTomorrowMidnight().getTime()
     case 'p1':
-      return time.getTime() + Math.floor(2.5 * DayMillisecond)
+      return getThisSaturdayEnd().getTime()
     case 'p2':
-      return time.getTime() + Math.floor(8 * DayMillisecond) 
+      return getNextSaturdayEnd().getTime()
   }
 }
 
-function getTodayEndTime(): number {
-  const time = new Date()
-  time.setHours(24, 0, 0, 0)
-  return time.getTime()
+function getEndOfDay(date: Date): Date {
+  const result = new Date(date)
+  result.setHours(23, 59, 59, 999)
+  return result
+}
+
+function getTomorrowMidnight(): Date {
+  const now = new Date()
+  const tomorrow = new Date(now)
+  tomorrow.setDate(now.getDate() + 1)
+  return getEndOfDay(tomorrow)
+}
+
+function getThisSaturdayEnd(): Date {
+  const now = new Date()
+  const currentDay = now.getDay() // 0 = 周日, 6 = 周六
+  // 距离本周六的天数（0 表示今天就是周六）
+  const daysUntilSaturday = (6 - currentDay + 7) % 7
+  const thisSaturday = new Date(now)
+  thisSaturday.setDate(now.getDate() + daysUntilSaturday)
+  return getEndOfDay(thisSaturday)
+}
+
+function getNextSaturdayEnd(): Date {
+  const now = new Date()
+  const currentDay = now.getDay()
+  // 距离本周六的天数（0 表示今天就是周六，此时下周六是 7 天后）
+  let daysUntilThisSaturday = (6 - currentDay + 7) % 7
+  // 如果今天已经是周六，daysUntilThisSaturday = 0，下周六需再加 7 天
+  const daysUntilNextSaturday = daysUntilThisSaturday === 0 ? 7 : daysUntilThisSaturday + 7
+  const nextSaturday = new Date(now)
+  nextSaturday.setDate(now.getDate() + daysUntilNextSaturday)
+  return getEndOfDay(nextSaturday)
 }
 
 function parseDeadline(deadline: string) {
@@ -143,10 +171,10 @@ function parseDate(tMonth: string, tDay: string, tHour: string, tMin: string, tS
     const nowTime = new Date();
     const nowYear = nowTime.getFullYear();
     let ans = new Date(nowYear + "-" + tMonth + "-" + tDay + " " + tHour + ":" + tMin + ":" + tSec);
-    if (ans < nowTime) {
+  if (ans < nowTime) {
         const nextYear = nowYear + 1;
         ans = new Date(nextYear + "-" + tMonth + "-" + tDay + " " + tHour + ":" + tMin + ":" + tSec);
-    }
+  }
     return ans.getTime();
 }
 
