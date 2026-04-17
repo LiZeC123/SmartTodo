@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import datetime
 from itertools import groupby
 from typing import Optional, Dict, List, Sequence, Callable
 
@@ -177,6 +178,10 @@ class ItemManager:
         stmt = sal.select(Item).where(Item.owner == owner, Item.expected_tomato == Item.used_tomato)
         return self.db.execute(stmt).scalars().all()
 
+    def select_done_itme_after(self, owner: str, after: datetime) -> Sequence[Item]:
+        stmt = sal.select(Item).where(Item.owner == owner, Item.expected_tomato == Item.used_tomato, Item.update_time > after).order_by(Item.update_time.asc())
+        return self.db.execute(stmt).scalars().all()
+
     def select_undone_item(self, owner: str) -> Sequence[str]:
         stmt = sal.select(Item.name).where(Item.owner == owner, Item.tomato_type == TomatoType.Today,
                                            Item.expected_tomato != Item.used_tomato,
@@ -222,6 +227,9 @@ class ItemManager:
         if item.expected_tomato == 1:
             # 如果当前是一个普通的任务, 即不需要消耗多个番茄钟, 则设置为完成状态
             item.used_tomato = 1
+            # 任务已完成, 更新时间设置为当前时间, 后续可基于更新时间查询特定时段内完成的任务
+            # 基于番茄钟驱动的代办事项有单独落库, 因此无需使用此方法查询
+            item.update_time = now()
         else:
             # 否则收缩预期的番茄钟数量为当前值, 例如已经消耗2个番茄钟, 而预期消耗4个番茄钟
             # 此时完成任务, 则将预期番茄钟数量调整为2, 相当于不计入新的番茄钟
