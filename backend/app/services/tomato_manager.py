@@ -118,7 +118,7 @@ class TomatoRecordManager:
         self.item_manager = item_manager
 
     def get_time_line_summary(self, owner: str):
-        record = self.__select_record_before(owner, today_begin())
+        record = self.select_record_after(owner, today_begin())
         return {"counter": self.__time_line_stat(record), "items": [
             {"start": get_hour_str_from(r.start_time), "finish": get_hour_str_from(r.finish_time), "title": r.name} for
             r in record]}
@@ -161,7 +161,7 @@ class TomatoRecordManager:
     #     items = self.db.execute(stmt).all()
     #     return list(sorted(items, key=lambda x: x[1], reverse=True))
 
-    def __select_record_before(self, owner: str, time) -> Sequence[TomatoTaskRecord]:
+    def select_record_after(self, owner: str, time) -> Sequence[TomatoTaskRecord]:
         stmt = sal.select(TomatoTaskRecord) \
             .where(TomatoTaskRecord.owner == owner, TomatoTaskRecord.finish_time > time) \
             .order_by(TomatoTaskRecord.id.asc())

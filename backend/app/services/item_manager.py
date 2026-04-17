@@ -255,7 +255,7 @@ class ItemManager:
 
     def get_tomato_item(self, owner: str) -> List[Dict]:
         stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today,
-                                      Item.item_type == ItemType.Single, Item.expected_tomato > Item.used_tomato)
+                                      Item.item_type == ItemType.Single)
         items = self.db.execute(stmt).scalars().all()
         return self.__group_sub_task(items, owner)
 
@@ -268,13 +268,12 @@ class ItemManager:
     def __group_sub_task(self, items: Sequence[Item], owner):
         groups = []
         globalItem = Item(id=0, name="全局任务", item_type=ItemType.Single, tomato_type=TomatoType.Today, owner=owner)
-        for iid, g in groupby(sorted(items, key=lambda x: x.parent if x.parent is not None else 0),
+        for parent_id, g in groupby(sorted(items, key=lambda x: x.parent if x.parent is not None else 0),
                               key=lambda x: x.parent):
-            item = None
-            if iid is not None:
-                item = self.select(iid)
-            if item is not None:
-                groups.append({"self": item.to_dict(), "children": [i.to_dict() for i in g]})
+            
+            parent_item = self.select(parent_id) if parent_id is not None else None
+            if parent_item is not None:
+                groups.append({"self": parent_item.to_dict(), "children": [i.to_dict() for i in g]})
             else:
                 groups.append({"self": globalItem.to_dict(), "children": [i.to_dict() for i in g]})
 

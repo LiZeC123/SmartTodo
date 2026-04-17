@@ -2,7 +2,7 @@ import functools
 import logging
 from typing import Any
 
-from flask import jsonify, abort, session
+from flask import Response, jsonify, abort, session
 
 from app.tools.exception import UnauthorizedException
 from app.tools.log import logger
@@ -25,7 +25,11 @@ class authority_check:
                 abort(401)
 
             try:
-                return jsonify(func(*args, **kwargs, owner=owner))
+                rsp = func(*args, **kwargs, owner=owner)
+                if isinstance(rsp, Response):
+                    return rsp
+                else:
+                    return jsonify(rsp)
             except UnauthorizedException as e:
                 logger.warning(e)
                 abort(401)
