@@ -56,7 +56,7 @@ async function submit() {
   })
 
   if (response.data !== "") {
-    await router.push('/todo')
+    await router.push('/')
   } else {
     alert("用户名或密码错误, 请检查后重新输入");
   }

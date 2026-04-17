@@ -90,7 +90,7 @@ function calcRS(item: TomatoItem) {
   const tomatoTimeMS = 25 * OneMinuteMS
   const finishedSecond = (new Date(item.startTime).getTime()) + tomatoTimeMS
   const tsNow = new Date().getTime()
-  console.log(item.startTime, new Date(item.startTime))
+  // console.log(item.startTime, new Date(item.startTime))
   return (finishedSecond - tsNow) / 1000
 }
 </script>

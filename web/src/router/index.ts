@@ -25,6 +25,7 @@ const router = createRouter({
     { path: '/note/:id', component: Todo },
     { path: '/log/:type', component: Message },
     { path: '/tomato', component: TomatoPage },
+    { path: '/pa', component: LLM },
     { path: '/summary', component: SummaryPage },
     { path: '/me/credits', component: CreditsPage },
     { path: '/me/weight', component: WeightRecord },
@@ -32,7 +33,6 @@ const router = createRouter({
     { path: '/me/welfare', component: WelfarePage },
     { path: '/me/credit/add', component: CreditAdd },
     { path: '/me/showTask', component: ShowTask },
-    { path: '/me/llm', component: LLM },
     { path: '/me/checkday', component: CheckDay },
   ]
 })
