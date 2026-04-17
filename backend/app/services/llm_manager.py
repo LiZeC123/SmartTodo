@@ -125,19 +125,26 @@ class AssistantManager:
         memory.remove_last_assistant()
         return self.generate(memory)
     
-    def delete(self, owner: str):
+    def delete(self, owner: str) -> bool:
         memory = self.get_memory(owner)
         memory.remove_last_pair()
+        return True
     
     def replace(self, prompt: str, owner: str) ->  Generator[str, Any, None]:
         memory = self.get_memory(owner)
         memory.remove_last_pair()
         return self.chat(prompt, owner)
+    
+    def reset(self, owner: str) -> bool:
+        self.memory.pop(owner)
+        return True
 
     def make_system_prompt(self, owner: str) -> str:
         role_info = self.get_role_info()
         task_table = self.get_task_info(owner)
-        event_table = self.get_event_info(owner)
+        event_table = self.get_event_info(owner, today_begin())
+        if event_table == "":
+            event_table = "当前用户还未完成任何事项"
         
 
         return f'''### 角色设定
@@ -148,38 +155,35 @@ class AssistantManager:
 
 | 时段     | 起止时间      | 番茄钟数量 |
 | -------- | ------------- | ---------- |
-| 早间     | 7:00 ~ 9:20   | 自由安排   |
+| 早间准备  | 7:00 ~ 9:20   | 自由决定番茄钟数量 |
 | 上午     | 9:20 ~ 11:20  | 4个        |
-| 午间     | 11:20 ~ 14:20 | 自由安排   |
+| 午间休息  | 11:20 ~ 14:20 | /   |
 | 下午1    | 14:20 ~ 16:20 | 4个        |
-| 下午休息 | 16:20 ~ 16:40 | 中间休息   |
+| 下午休息 | 16:20 ~ 16:40 | /   |
 | 下午2    | 16:40 ~ 17:40 | 2个        |
-| 晚间     | 17:40 ~ 19:00 | 自由安排   |
+| 晚间休息  | 17:40 ~ 19:00 | /   |
 | 晚上     | 19:00 ~ 20:00 | 2个        |
-| 晚上sp   | 20:00 ~ 21:00 | 自由安排   |
+| 晚上sp   | 20:00 ~ 21:00 | 自由决定工作或休息 |
 
+> 每天晚上21点至第二天7点为休息时间, 不用于完成规划的任务
+
+### 用户今日规划的代办事项
 {task_table}
 
+### 用户当前任务完成情况
 {event_table}
 
 ### 关键注意事项
 
-1. 用户的作息时间表仅为参考, 大致完成对应数量的番茄钟即可
-2. 除了规定的休息时间段, 用户每完成一个番茄钟有5分钟的休息时间
-3. 除非用户明确要求, 不要替用户规划后续的番茄钟安排
-4. 尽力满足用户的要求
-5. 每次回复需要至少200字
+1. 根据用户的作息时间表和今天的规划, 评估当前的完成情况
+2. 一个番茄钟的周期是工作25分钟后休息5分钟, 结合当前时间判断工作和休息状态
+3. 每次回复需要至少200字
 '''
 
     def make_user_prompt(self, prompt: str, start: datetime, owner: str) -> str:        
         content = f"当前时间: {now_str()}\n"
         
-        # 新增番茄钟记录
-        records = self.tomato_record_manager.select_record_after(owner, start)
-        if records:
-            content += "用户当前新增的行为日志:\n"
-        for record in records:
-            content += f"{get_hour_str_from(record.start_time)} - {get_hour_str_from(record.finish_time)}: 完成番茄钟 {record.name}\n"
+        content += self.get_event_info(owner, start)
         
         # 当前番茄钟情况(如果有)
         state = self.tomato_manager.query_task(owner)
@@ -196,16 +200,16 @@ class AssistantManager:
 
     def get_role_info(self) -> str:
         try:
-            with open("data/llm/role.md") as f:
+            with open("config/role/Assistant.md") as f:
                 return f.read()
         except OSError:
             # 文件不存在时, 直接返回空即可, 相当于没有额外的角色设定
             return ""
 
     def get_task_info(self, owner:str) -> str:
-        content =  '''### 用户今日的代办事项列表
-预计需要的番茄钟数量 | 任务创建时间 | 任务截止时间| 优先级 
-------------------|------------|-----------|---------
+        content =  '''
+项目名 | 预计番茄钟数量 | 任务截止时间| 优先级 
+------|--------------|-----------|---------
 '''
         tasks = self.item_manager.get_tomato_item(owner=owner)
         for task in tasks:
@@ -215,12 +219,21 @@ class AssistantManager:
    
         return content
     
-    def get_event_info(self, owner:str) -> str:
-        content = '''### 用户截止当前时间的行为日志\n'''
-
-        records = self.tomato_record_manager.select_record_after(owner, today_begin())
+    def get_event_info(self, owner:str, begin_time: datetime) -> str:
+        content = ""
+        # 新增番茄钟记录
+        records = self.tomato_record_manager.select_record_after(owner, begin_time)
+        if records:
+            content += "用户当前新增的番茄钟完成记录:\n"
         for record in records:
             content += f"{get_hour_str_from(record.start_time)} - {get_hour_str_from(record.finish_time)}: 完成番茄钟 {record.name}\n"
+        
+        # 新增的非番茄钟任务完成记录
+        items = self.item_manager.select_done_itme_after(owner, begin_time)
+        if items:
+            content += "用户当前新增的任务完成记录:\n"
+        for item in items:
+            content += f"{get_hour_str_from(item.update_time)}: 完成任务 {item.name}\n"
         
         return content
 
@@ -238,8 +251,17 @@ class AssistantManager:
                 # 用户的prompt使用'---'分割了系统数据和用户输入数据, 在web端不展示系统数据
                 parts = v.split("---", 1)
                 if len(parts) == 2:
-                    rst.append(parts[1])
+                    rst.append(parts[1].strip())
                 else:
                     rst.append("[用户没有输入]")
         return rst
+    
+    def dump_history(self, owner:str) -> Generator[str, Any, None]:
+        m_list = self.get_memory(owner).messages
         
+        for item in m_list:
+            v = str(item.message.get("content"))
+            for token in v:
+                yield f"data: {json.dumps({'text': token, 'done': False})}\n\n"
+            yield f"data: {json.dumps({'text': '\n\n---------------------------\n\n', 'done': False})}\n\n"
+        yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"

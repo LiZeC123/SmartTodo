@@ -1,7 +1,7 @@
 <!-- components/ChatComponent.vue -->
 <template>
   <div class="chat-container">
-    <div class="chat-history">
+    <div class="chat-history" ref="chatHistoryRef">
       <div v-for="(message, index) in messages" :key="index" 
            :class="['message', message.role]">
         <div class="message-content">
@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 import axios from 'axios'
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -46,6 +46,9 @@ const isLoading = ref(false)
 const error = ref('')
 const messages = reactive<Message[]>([])
 let controller: AbortController | null = null
+
+// 滚动容器 DOM 引用
+const chatHistoryRef = ref<HTMLDivElement | null>(null)
 
 // 添加消息
 const addMessage = (role: 'user' | 'assistant', content: string, isStreaming = false) => {
@@ -159,6 +162,12 @@ const sendMessage = async () => {
     return 
   }
 
+  if (prompt === '/reset') {
+    messages.length = 0
+    resetChat()
+    return 
+  }
+
   if (prompt.startsWith("/replace " )) {
     messages.pop()
     messages.pop()
@@ -201,6 +210,12 @@ function deleteLastChat() {
   })
 }
 
+function resetChat() {
+    axios.post('assistant/reset', {}).then(_ => {
+    isLoading.value = false
+  })
+}
+
 // 停止生成
 const stopGeneration = () => {
   if (controller) {
@@ -222,6 +237,19 @@ const stopGeneration = () => {
 onUnmounted(() => {
   stopGeneration()
 })
+
+// 自动滚动到底部
+const scrollToBottom = async () => {
+  await nextTick() // 等待 DOM 更新完成
+  if (chatHistoryRef.value) {
+    chatHistoryRef.value.scrollTop = chatHistoryRef.value.scrollHeight
+  }
+}
+
+// 监听 messages 变化 → 自动滚动
+watch(messages, () => {
+  scrollToBottom()
+}, { deep: true })
 
 // 键盘快捷键
 onMounted(() => {
@@ -259,6 +287,7 @@ onMounted(() => {
   margin-bottom: 15px;
   padding: 10px;
   border-radius: 8px;
+  white-space: pre-line;
 }
 
 .message.user {
