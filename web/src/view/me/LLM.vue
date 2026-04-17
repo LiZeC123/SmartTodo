@@ -69,7 +69,7 @@ const streamChat = async (prompt: string) => {
   controller = new AbortController()
   
   try {
-    const response = await fetch('/api/llm/stream', {
+    const response = await fetch('/api/stream/assistant/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -172,10 +172,15 @@ const nonStreamChat = async (prompt: string) => {
 const sendMessage = async () => {
   if (!inputText.value.trim() || isLoading.value) return
   
-  const prompt = inputText.value.trim()
+  let prompt = inputText.value.trim()
   inputText.value = ''
   error.value = ''
   isLoading.value = true
+
+  if (prompt == '=') {
+    prompt = ''
+  }
+
   
   // 添加用户消息
   addMessage('user', prompt)

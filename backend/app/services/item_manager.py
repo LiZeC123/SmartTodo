@@ -255,7 +255,7 @@ class ItemManager:
 
     def get_tomato_item(self, owner: str) -> List[Dict]:
         stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today,
-                                      Item.item_type == ItemType.Single, Item.expected_tomato > Item.used_tomato)
+                                      Item.item_type == ItemType.Single)
         items = self.db.execute(stmt).scalars().all()
         return self.__group_sub_task(items, owner)
 
