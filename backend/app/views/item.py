@@ -26,6 +26,9 @@ def create_item(owner: str):
 
     if "specific" in f:
         item.specific = int(f["specific"])
+    
+    if "priority" in f:
+        item.priority = str(f['priority'])
 
     if "parent" in f:
         item.parent = int(f["parent"])
