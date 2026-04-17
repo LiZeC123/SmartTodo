@@ -25,9 +25,6 @@
       <button @click="sendMessage" :disabled="isLoading">
         {{ isLoading ? '生成中...' : '发送' }}
       </button>
-      <label>
-        <input type="checkbox" v-model="useStreaming"> 使用流式输出
-      </label>
     </div>
     
     <div v-if="error" class="error">{{ error }}</div>
@@ -35,6 +32,7 @@
 </template>
 
 <script setup lang="ts">
+import axios from 'axios'
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 
 interface Message {
@@ -45,7 +43,6 @@ interface Message {
 
 const inputText = ref('')
 const isLoading = ref(false)
-const useStreaming = ref(true)
 const error = ref('')
 const messages = reactive<Message[]>([])
 let controller: AbortController | null = null
@@ -143,31 +140,6 @@ const streamChat = async (prompt: string) => {
   }
 }
 
-// 非流式API调用
-const nonStreamChat = async (prompt: string) => {
-  try {
-    const response = await fetch('/api/chat/non-stream', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ prompt })
-    })
-
-    const data = await response.json()
-    
-    if (data.success) {
-      addMessage('assistant', data.text)
-    } else {
-      error.value = data.error || '请求失败'
-    }
-  } catch (err: any) {
-    error.value = '请求失败: ' + err.message
-  } finally {
-    isLoading.value = false
-  }
-}
-
 // 发送消息
 const sendMessage = async () => {
   if (!inputText.value.trim() || isLoading.value) return
@@ -177,19 +149,56 @@ const sendMessage = async () => {
   error.value = ''
   isLoading.value = true
 
-  if (prompt == '=') {
+  if (prompt === '/step') {
     prompt = ''
   }
 
+  if (prompt === '/remake') {
+    messages.pop()
+    await streamChat(prompt)
+    return 
+  }
+
+  if (prompt.startsWith("/replace " )) {
+    messages.pop()
+    messages.pop()
+    prompt = prompt.replace(/^\/replace\s*/, '')
+    // 添加用户消息
+    addMessage('user', prompt)
+    await streamChat(prompt)
+    return
+  }
+
+  if (prompt === '/delete') {
+    messages.pop()
+    messages.pop()
+    deleteLastChat()
+    return 
+  }
   
   // 添加用户消息
   addMessage('user', prompt)
-  
-  if (useStreaming.value) {
-    await streamChat(prompt)
-  } else {
-    await nonStreamChat(prompt)
-  }
+  await streamChat(prompt)
+}
+
+function loadHistory() {
+    axios.post<string[]>('assistant/history', {}).then(res => {
+      messages.length = 0
+      for(let i=0; i < res.data.length; i++) {
+        const data = res.data[i]
+        if( i % 2== 0)  {
+          addMessage("user", data)
+        } else {
+          addMessage("assistant", data)
+        }
+      }
+  })
+}
+
+function deleteLastChat() {
+  axios.post('assistant/delete', {}).then(_ => {
+    isLoading.value = false
+  })
 }
 
 // 停止生成
@@ -224,6 +233,7 @@ onMounted(() => {
   
   window.addEventListener('keydown', handleKeyDown)
   onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
+  loadHistory()
 })
 </script>
 

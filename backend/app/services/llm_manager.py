@@ -39,12 +39,11 @@ class MemoryItem:
 
 class UserMemory:
     def __init__(self, system_prompt: str):
-        meta = self.make_meta()
         message: ChatCompletionMessageParam = {
             "role": "system",
             "content": system_prompt,
         }
-        self.messages: List[MemoryItem] = [MemoryItem(meta, message)]
+        self.messages: List[MemoryItem] = [MemoryItem(self.make_meta(), message)]
 
     def add_user_prompt(self, prompt: str):
         meta = self.make_meta()
@@ -224,3 +223,23 @@ class AssistantManager:
             content += f"{get_hour_str_from(record.start_time)} - {get_hour_str_from(record.finish_time)}: 完成番茄钟 {record.name}\n"
         
         return content
+
+    def get_web_history(self, owner:str) -> List[str]:
+        m_list = self.get_memory(owner).messages
+        if len(m_list) <= 1:
+            return []
+        
+        rst: List[str] = []
+        for item in m_list[1:]:
+            if item.message.get("role") == "assistant":
+                rst.append(str(item.message.get("content")))
+            else:
+                v = str(item.message.get("content"))
+                # 用户的prompt使用'---'分割了系统数据和用户输入数据, 在web端不展示系统数据
+                parts = v.split("---", 1)
+                if len(parts) == 2:
+                    rst.append(parts[1])
+                else:
+                    rst.append("[用户没有输入]")
+        return rst
+        
