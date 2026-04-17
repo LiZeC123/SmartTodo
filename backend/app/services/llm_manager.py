@@ -125,14 +125,19 @@ class AssistantManager:
         memory.remove_last_assistant()
         return self.generate(memory)
     
-    def delete(self, owner: str):
+    def delete(self, owner: str) -> bool:
         memory = self.get_memory(owner)
         memory.remove_last_pair()
+        return True
     
     def replace(self, prompt: str, owner: str) ->  Generator[str, Any, None]:
         memory = self.get_memory(owner)
         memory.remove_last_pair()
         return self.chat(prompt, owner)
+    
+    def reset(self, owner: str) -> bool:
+        self.memory.pop(owner)
+        return True
 
     def make_system_prompt(self, owner: str) -> str:
         role_info = self.get_role_info()
@@ -238,8 +243,17 @@ class AssistantManager:
                 # 用户的prompt使用'---'分割了系统数据和用户输入数据, 在web端不展示系统数据
                 parts = v.split("---", 1)
                 if len(parts) == 2:
-                    rst.append(parts[1])
+                    rst.append(parts[1].strip())
                 else:
                     rst.append("[用户没有输入]")
         return rst
+    
+    def dump_history(self, owner:str) -> Generator[str, Any, None]:
+        m_list = self.get_memory(owner).messages
         
+        for item in m_list:
+            v = str(item.message.get("content"))
+            for token in v:
+                yield f"data: {json.dumps({'text': token, 'done': False})}\n\n"
+            yield f"data: {json.dumps({'text': '\n\n---------------------------\n\n', 'done': False})}\n\n"
+        yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"

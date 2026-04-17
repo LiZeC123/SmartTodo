@@ -18,6 +18,8 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.remake(owner)
     elif prompt.startswith("/replace "):
         g = assistant_manager.replace(prompt[9:], owner)
+    elif prompt == "/dump":
+        g = assistant_manager.dump_history(owner)
     else:
         g = assistant_manager.chat(prompt, owner)
     
@@ -42,4 +44,7 @@ def assistant_history(owner: str):
 def assistant_delete(owner: str):
     return assistant_manager.delete(owner)
 
-
+@llm_bp.post('/api/assistant/reset')
+@authority_check()
+def assistant_reset(owner: str):
+    return assistant_manager.reset(owner)
