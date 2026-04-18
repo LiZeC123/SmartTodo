@@ -154,6 +154,10 @@ const sendMessage = async () => {
 
   if (prompt === '/step') {
     prompt = ''
+      // 添加用户消息
+    addMessage('user', '[用户没有输入]')
+    await streamChat(prompt)
+    return
   }
 
   if (prompt === '/remake') {

@@ -155,7 +155,7 @@ class AssistantManager:
 
 | 时段     | 起止时间      | 番茄钟数量 |
 | -------- | ------------- | ---------- |
-| 早间准备  | 7:00 ~ 9:20   | 自由决定番茄钟数量 |
+| 早间准备  | 9:00 ~ 9:20   | 准备时间无需番茄钟 |
 | 上午     | 9:20 ~ 11:20  | 4个        |
 | 午间休息  | 11:20 ~ 14:20 | /   |
 | 下午1    | 14:20 ~ 16:20 | 4个        |
@@ -165,7 +165,7 @@ class AssistantManager:
 | 晚上     | 19:00 ~ 20:00 | 2个        |
 | 晚上sp   | 20:00 ~ 21:00 | 自由决定工作或休息 |
 
-> 每天晚上21点至第二天7点为休息时间, 不用于完成规划的任务
+> 每天晚上21点至第二天9点为休息时间, 不用于完成规划的任务
 
 ### 用户今日规划的代办事项
 {task_table}
@@ -261,7 +261,6 @@ class AssistantManager:
         
         for item in m_list:
             v = str(item.message.get("content"))
-            for token in v:
-                yield f"data: {json.dumps({'text': token, 'done': False})}\n\n"
+            yield f"data: {json.dumps({'text': v, 'done': False})}\n\n"
             yield f"data: {json.dumps({'text': '\n\n---------------------------\n\n', 'done': False})}\n\n"
         yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
