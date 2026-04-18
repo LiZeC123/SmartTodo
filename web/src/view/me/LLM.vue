@@ -175,9 +175,9 @@ const sendMessage = async () => {
   if (prompt.startsWith("/replace " )) {
     messages.pop()
     messages.pop()
-    prompt = prompt.replace(/^\/replace\s*/, '')
-    // 添加用户消息
-    addMessage('user', prompt)
+    // 添加替换后的用户消息
+    addMessage('user', prompt.replace(/^\/replace\s*/, ''))
+    // 原始信息发送到后台, 后台需要再次解析
     await streamChat(prompt)
     return
   }
