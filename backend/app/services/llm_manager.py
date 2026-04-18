@@ -2,6 +2,7 @@ from datetime import datetime
 import json
 
 from dataclasses import dataclass
+import random
 from typing import Any, Dict, Generator, List
 
 from app.services.config_manager import ConfigManager
@@ -201,7 +202,7 @@ class AssistantManager:
     def get_role_info(self) -> str:
         try:
             with open("config/role/Assistant.md") as f:
-                return f.read()
+                return self.select_random_role(f.readlines())
         except OSError:
             # 文件不存在时, 直接返回空即可, 相当于没有额外的角色设定
             return ""
@@ -218,6 +219,15 @@ class AssistantManager:
                 content = content + line
    
         return content
+    
+    def select_random_role(self, lines: List[str]) -> str:
+        roles = []
+        for line in lines:
+            v = line.strip()
+            if v == '':
+                continue
+            roles.append(v)
+        return random.choice(roles)
     
     def get_event_info(self, owner:str, begin_time: datetime) -> str:
         content = ""
