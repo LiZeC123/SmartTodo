@@ -10,7 +10,7 @@
             type="number"
             step="0.1"
             v-model="newWeight"
-            placeholder="输入体重（kg）"
+            placeholder="输入体重（斤）"
             required
           />
           <button type="submit">提交</button>
@@ -32,7 +32,7 @@
       <ul>
         <li v-for="entry in weightHistory" :key="entry.id">
           <span class="date">{{ formatDate(entry.create_time) }}</span>
-          <span class="weight">{{ entry.weight }} kg</span>
+          <span class="weight">{{ entry.weight }} 斤</span>
           <button @click="deleteEntry(entry.id)" class="delete-btn">×</button>
         </li>
       </ul>
@@ -99,7 +99,7 @@ onMounted( () => {
       data: {
         labels: reversedHistory.value.map(entry => formatDate(entry.create_time)),
         datasets: [{
-          label: '体重变化 (kg)',
+          label: '体重变化 (斤)',
           data: reversedHistory.value.map(entry => entry.weight),
           borderColor: '#42b983',
           tension: 0.4,
