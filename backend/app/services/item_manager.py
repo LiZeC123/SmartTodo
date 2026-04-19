@@ -10,6 +10,7 @@ from app.models.base import ItemType, TomatoType
 from app.models.item import Item
 from app.models.note import Note
 from app.services.credit_manager import update_credit
+from app.services.event_log_manager import add_event_log
 from app.tools.exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
 from app.tools.file import create_download_file, delete_file_from_url, create_upload_file
 from app.tools.log import logger
@@ -29,7 +30,7 @@ def http_url_handler(_: DataBase, item: Item):
 
 
 def download_file_handler(_: DataBase,item: Item):
-    # 区分文件上传的场景, 上传文件时有URL, 而指定下载时无URL
+    # 区分文件上传和文件下载场景, 上传文件时有URL, 而指定下载时无URL
     if item.item_type == ItemType.File and item.url is None:
         item.url = create_download_file(item.name)
 
@@ -191,9 +192,8 @@ class ItemManager:
     def undo(self, xid: int, owner: str):
         item = self.select_with_authority(xid=xid, owner=owner)
         self._undo(item)
-        # self.event_manager.add_event(f"回退任务到列表: {item.name}", owner)
+        add_event_log(self.db, owner, f'回退任务[{item.name}]到待执行列表')
         return True
-        # return self.select_activate(owner, parent=parent)
 
     def _undo(self, item: Item):
         item.update_time = now()
@@ -203,7 +203,8 @@ class ItemManager:
     def increase_expected_tomato(self, xid: int, owner: str):
         item = self.select_with_authority(xid=xid, owner=owner)
         item.expected_tomato += 1
-        # self.event_manager.add_event(f"增加预计的时间: {item.name}", owner)
+        if item.used_tomato > 0:
+            add_event_log(self.db, owner, f'增加任务[{item.name}]的预计番茄钟数量')
         self.db.flush()
         return item is not None
 
@@ -214,8 +215,9 @@ class ItemManager:
             return False
 
         item.used_tomato += 1
+        item.update_time = now()
         self.db.flush()
-        logger.info(f"完成番茄钟任务: {item.name}")
+        add_event_log(self.db, owner, f'完成番茄钟任务[{item.name}]')
         return True
 
     def finish_used_tomato(self, xid: int, owner: str):
@@ -227,15 +229,21 @@ class ItemManager:
         if item.expected_tomato == 1:
             # 如果当前是一个普通的任务, 即不需要消耗多个番茄钟, 则设置为完成状态
             item.used_tomato = 1
-            # 任务已完成, 更新时间设置为当前时间, 后续可基于更新时间查询特定时段内完成的任务
-            # 基于番茄钟驱动的代办事项有单独落库, 因此无需使用此方法查询
             item.update_time = now()
+            add_event_log(self.db, owner, f'用户标记完成任务[{item.name}]')
+        elif item.used_tomato == 0:
+            # 直接手动完成了一个预计需要多个番茄钟的任务
+            delta = item.expected_tomato
+            item.used_tomato = 1
+            item.expected_tomato = 1
+            add_event_log(self.db, owner, f'用户提前标记完成任务[{item.name}]并废弃{delta}个预计的番茄钟')
         else:
-            # 否则收缩预期的番茄钟数量为当前值, 例如已经消耗2个番茄钟, 而预期消耗4个番茄钟
-            # 此时完成任务, 则将预期番茄钟数量调整为2, 相当于不计入新的番茄钟
-            # 需要保证当前已使用番茄钟至少为1, 否则设置为0将产生异常状态
-            item.used_tomato = item.used_tomato if item.used_tomato > 1 else 1
+            # 当前任务规划需要多个番茄钟, 并且已经完成了一部分番茄钟
+            # 此时手动点击完成, 则视为放弃原本预计需要的番茄钟, 直接调整为完成状态
+            # 例如原本预计4个番茄钟, 已经使用了两个番茄钟, 则直接将预期番茄钟数量调整为2并将任务设置为完成
+            delta = item.expected_tomato - item.used_tomato
             item.expected_tomato = item.used_tomato
+            add_event_log(self.db, owner, f'用户提前标记完成任务[{item.name}]并废弃{delta}个预计的番茄钟')
         self.db.flush()
 
         for f in self.on_done_event:

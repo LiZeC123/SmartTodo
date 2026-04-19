@@ -6,6 +6,7 @@ import random
 from typing import Any, Dict, Generator, List
 
 from app.services.config_manager import ConfigManager
+from app.services.event_log_manager import get_event_log_after
 from app.services.item_manager import ItemManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
 from app.tools.time import get_datetime_from_str, get_hour_str_from, now, now_str, today_begin
@@ -164,19 +165,21 @@ class AssistantManager:
 | 下午2    | 16:40 ~ 17:40 | 2个        |
 | 晚间休息  | 17:40 ~ 19:00 | /   |
 | 晚上     | 19:00 ~ 20:00 | 2个        |
-| 晚上sp   | 20:00 ~ 21:00 | 自由决定工作或休息 |
+| 晚上sp   | 20:00 ~ 21:00 | 根据完成情况决定工作或休息 |
 
 > 每天晚上21点至第二天9点为休息时间, 不用于完成规划的任务
 
 ### 用户今日规划的代办事项
 {task_table}
 
-### 用户当前任务完成情况
+> 部分任务(例如打卡)仅需要完成, 但无需番茄钟
+
+### 用户截止当前时间的事件记录
 {event_table}
 
 ### 关键注意事项
 
-1. 根据用户的作息时间表和今天的规划, 评估当前的完成情况
+1. 根据用户的作息时间表和今天的规划, 结合用户的事件记录评估当前的完成情况
 2. 一个番茄钟的周期是工作25分钟后休息5分钟, 结合当前时间判断工作和休息状态
 3. 每次回复需要至少200字
 '''
@@ -184,8 +187,10 @@ class AssistantManager:
     def make_user_prompt(self, prompt: str, start: datetime, owner: str) -> str:        
         content = f"当前时间: {now_str()}\n"
         
-        content += self.get_event_info(owner, start)
-        
+        event_info = self.get_event_info(owner, start)
+        if event_info != "":
+            content = "用户截止当前时间的事件记录:\n" + event_info
+                
         # 当前番茄钟情况(如果有)
         state = self.tomato_manager.query_task(owner)
         if state is not None:
@@ -215,10 +220,16 @@ class AssistantManager:
         tasks = self.item_manager.get_tomato_item(owner=owner)
         for task in tasks:
             for item in task['children']:
-                line = f"{item["name"]} | {item["expected_tomato"]} | {item["deadline"]} | {item["priority"]}\n"
+                expected_tomato = 0 if self.__is_zero_tomoto_task(item["name"]) else item["expected_tomato"]
+                line = f"{item["name"]} | {expected_tomato} | {item["deadline"]} | {item["priority"]}\n"
                 content = content + line
    
         return content
+    
+    def __is_zero_tomoto_task(self, name:str) -> bool:
+        # 打卡类任务可瞬间完成无需番茄钟.  午间和晚间任务不占用番茄钟
+        keywords = ['打卡', '午间', '晚间']
+        return any(word in name for word in keywords)
     
     def select_random_role(self, lines: List[str]) -> str:
         roles = []
@@ -232,18 +243,9 @@ class AssistantManager:
     def get_event_info(self, owner:str, begin_time: datetime) -> str:
         content = ""
         # 新增番茄钟记录
-        records = self.tomato_record_manager.select_record_after(owner, begin_time)
-        if records:
-            content += "用户当前新增的番茄钟完成记录:\n"
-        for record in records:
-            content += f"{get_hour_str_from(record.start_time)} - {get_hour_str_from(record.finish_time)}: 完成番茄钟 {record.name}\n"
-        
-        # 新增的非番茄钟任务完成记录
-        items = self.item_manager.select_done_itme_after(owner, begin_time)
-        if items:
-            content += "用户当前新增的任务完成记录:\n"
-        for item in items:
-            content += f"{get_hour_str_from(item.update_time)}: 完成任务 {item.name}\n"
+        events = get_event_log_after(self.item_manager.db, begin_time, owner)
+        for e in events:
+            content += f"{get_hour_str_from(e.create_time)}: {e.msg}"        
         
         return content
 
