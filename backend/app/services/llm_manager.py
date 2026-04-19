@@ -90,6 +90,7 @@ class AssistantManager:
         self.tomato_manager = tomato_manager
         self.tomato_record_manager = tomato_record_manager
         self.memory: Dict[str, UserMemory] = {}
+        self.role_id = 0
 
     def get_memory(self, owner: str) -> UserMemory:
         m = self.memory.get(owner)
@@ -137,12 +138,13 @@ class AssistantManager:
         memory.remove_last_pair()
         return self.chat(prompt, owner)
     
-    def reset(self, owner: str) -> bool:
+    def reset(self, owner: str, role_id: int = 0) -> bool:
         self.memory.pop(owner)
+        self.role_id = role_id
         return True
 
     def make_system_prompt(self, owner: str) -> str:
-        role_info = self.get_role_info()
+        role_info = self.get_role_info(self.get_role_list(), self.role_id)
         task_table = self.get_task_info(owner)
         event_table = self.get_event_info(owner, today_begin())
         if event_table == "":
@@ -204,13 +206,22 @@ class AssistantManager:
         return content
 
 
-    def get_role_info(self) -> str:
+    def get_role_list(self) -> List[str]:
         try:
             with open("config/role/Assistant.md") as f:
-                return self.select_random_role(f.readlines())
+                return [role.strip() for role in f if role.strip() != ""]
         except OSError:
             # 文件不存在时, 直接返回空即可, 相当于没有额外的角色设定
+            return []
+    
+    def get_role_info(self, roles: List[str], role_id: int) -> str:
+        if len(roles) == 0:
             return ""
+        
+        if 0 < role_id <= len(roles):
+            return roles[role_id -1]
+        else:
+            return random.choice(roles)
 
     def get_task_info(self, owner:str) -> str:
         content =  '''
@@ -231,21 +242,13 @@ class AssistantManager:
         keywords = ['打卡', '午间', '晚间']
         return any(word in name for word in keywords)
     
-    def select_random_role(self, lines: List[str]) -> str:
-        roles = []
-        for line in lines:
-            v = line.strip()
-            if v == '':
-                continue
-            roles.append(v)
-        return random.choice(roles)
     
     def get_event_info(self, owner:str, begin_time: datetime) -> str:
         content = ""
         # 新增番茄钟记录
         events = get_event_log_after(self.item_manager.db, begin_time, owner)
         for e in events:
-            content += f"{get_hour_str_from(e.create_time)}: {e.msg}"        
+            content += f"{get_hour_str_from(e.create_time)}: {e.msg}\n"        
         
         return content
 

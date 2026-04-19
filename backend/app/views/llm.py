@@ -47,4 +47,6 @@ def assistant_delete(owner: str):
 @llm_bp.post('/api/assistant/reset')
 @authority_check()
 def assistant_reset(owner: str):
-    return assistant_manager.reset(owner)
+    f: Dict = request.get_json()
+    role_id = int(f.get("roleId", "0"))
+    return assistant_manager.reset(owner, role_id=role_id)

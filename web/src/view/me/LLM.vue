@@ -166,9 +166,13 @@ const sendMessage = async () => {
     return 
   }
 
-  if (prompt === '/reset') {
+  if (prompt.startsWith('/reset')) {
     messages.length = 0
-    resetChat()
+
+    const match = prompt.trim().match(/^\/reset(?:\s+(\d+))?$/);
+    const roleId = match?.[1] ? parseInt(match[1], 10) : 0;
+    
+    resetChat(roleId)
     return 
   }
 
@@ -214,8 +218,8 @@ function deleteLastChat() {
   })
 }
 
-function resetChat() {
-    axios.post('assistant/reset', {}).then(_ => {
+function resetChat(roleId: number) {
+    axios.post('assistant/reset', {"roleId": roleId}).then(_ => {
     isLoading.value = false
   })
 }
