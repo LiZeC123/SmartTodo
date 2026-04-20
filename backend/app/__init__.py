@@ -6,10 +6,11 @@ from app.services.config_manager import ConfigManager
 from app.models.base import Base
 from app.services.interpreter import OpInterpreter
 from app.services.item_manager import ItemManager
-from app.services.llm_manager import AssistantManager, LLMManager
+from app.services.llm_manager import AssistantManager
 from app.services.task_manager import TaskManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
 from app.tools.gen import generate_token_str
+from app.tools.llm import LLMClient
 
 # 初始化数据库对象
 engine = create_engine(url='sqlite:///data/data.db', echo=True, future=True)
@@ -26,8 +27,7 @@ item_manager = ItemManager(db)
 op_interpreter = OpInterpreter(item_manager)
 tomato_manager = TomatoManager(db, item_manager)
 tomato_record_manager = TomatoRecordManager(db, item_manager)
-llm_manager = LLMManager(config_manager)
-assistant_manager = AssistantManager(llm_manager, item_manager, tomato_manager, tomato_record_manager)
+assistant_manager = AssistantManager(LLMClient(config_manager), item_manager, tomato_manager, tomato_record_manager)
 
 # 初始化定时任务
 task_manager = TaskManager()

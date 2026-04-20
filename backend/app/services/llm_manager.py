@@ -5,32 +5,14 @@ from dataclasses import dataclass
 import random
 from typing import Any, Dict, Generator, List
 
-from app.services.config_manager import ConfigManager
 from app.services.event_log_manager import get_event_log_after
 from app.services.item_manager import ItemManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
+from app.tools.llm import LLMClient
 from app.tools.time import get_datetime_from_str, get_hour_str_from, now, now_str, today_begin
 
-from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
-
-class LLMManager:
-    def __init__(self, config_manager: ConfigManager) -> None:
-        base_url, api_key = config_manager.get_llm_info()
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
-
-    def generate_stream(self, history: List[ChatCompletionMessageParam]) -> Generator[str, Any, None]:
-        response = self.client.chat.completions.create(
-            model="deepseek-ai/DeepSeek-V3.2",
-            messages=history,
-            stream=True,
-        )
-
-        for chunk in response:
-            if chunk.choices[0].delta.content is not None:
-                data = chunk.choices[0].delta.content
-                yield data
 
 
 @dataclass
@@ -84,7 +66,7 @@ class UserMemory:
 
 
 class AssistantManager:
-    def __init__(self, llm_manager: LLMManager, item_manager: ItemManager, tomato_manager: TomatoManager, tomato_record_manager: TomatoRecordManager) -> None:
+    def __init__(self, llm_manager: LLMClient, item_manager: ItemManager, tomato_manager: TomatoManager, tomato_record_manager: TomatoRecordManager) -> None:
         self.llm_manager = llm_manager
         self.item_manager = item_manager
         self.tomato_manager = tomato_manager
