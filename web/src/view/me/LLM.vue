@@ -152,9 +152,9 @@ const sendMessage = async () => {
   error.value = ''
   isLoading.value = true
 
-  if (prompt === '/step') {
+  if (prompt === '/') {
+    // 只有一个/视为没有发送内容, 由模型根据注入的系统信息自行回复
     prompt = ''
-      // 添加用户消息
     addMessage('user', '[用户没有输入]')
     await streamChat(prompt)
     return
