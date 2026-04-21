@@ -66,12 +66,12 @@ def test_base():
     assert assistant_manager.delete(owner=owner)
     assert len(memory.messages) == 1
 
-    assert assistant_manager.reset(owner=owner, role_id=0)
+    assert assistant_manager.reset(owner=owner)
     assert len(memory.messages) == 1
 
     g = assistant_manager.dump_history(owner)
     finish(g)  # 访问一次memory, 触发sp构造
 
     # 至少有sp才能再次重置
-    assert assistant_manager.reset(owner=owner, role_id=1)
+    assert assistant_manager.reset(owner=owner)
     assert len(memory.messages) == 1
