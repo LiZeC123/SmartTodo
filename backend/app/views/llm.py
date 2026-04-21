@@ -48,5 +48,5 @@ def assistant_delete(owner: str):
 @authority_check()
 def assistant_reset(owner: str):
     f: Dict = request.get_json()
-    role_id = int(f.get("roleId", "0"))
-    return assistant_manager.reset(owner, role_id=role_id)
+    role_keyword = str(f.get("keyword", "")).strip()
+    return assistant_manager.reset(owner, role_keyword=role_keyword)

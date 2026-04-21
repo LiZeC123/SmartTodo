@@ -72,7 +72,7 @@ class AssistantManager:
         self.tomato_manager = tomato_manager
         self.tomato_record_manager = tomato_record_manager
         self.memory: Dict[str, UserMemory] = {}
-        self.role_id = 0
+        self.role_keyword = ''
 
     def get_memory(self, owner: str) -> UserMemory:
         m = self.memory.get(owner)
@@ -120,13 +120,13 @@ class AssistantManager:
         memory.remove_last_pair()
         return self.chat(prompt, owner)
     
-    def reset(self, owner: str, role_id: int = 0) -> bool:
+    def reset(self, owner: str, role_keyword: str = '') -> bool:
         self.memory.pop(owner)
-        self.role_id = role_id
+        self.role_keyword = role_keyword
         return True
 
     def make_system_prompt(self, owner: str) -> str:
-        role_info = self.get_role_info(self.get_role_list(), self.role_id)
+        role_info = self.get_role_info(self.get_role_list(), self.role_keyword)
         task_table = self.get_task_info(owner)
         event_table = self.get_event_info(owner, today_begin())
         if event_table == "":
@@ -196,14 +196,20 @@ class AssistantManager:
             # 文件不存在时, 直接返回空即可, 相当于没有额外的角色设定
             return []
     
-    def get_role_info(self, roles: List[str], role_id: int) -> str:
+    def get_role_info(self, roles: List[str], role_keyword: str) -> str:
         if len(roles) == 0:
             return ""
         
-        if 0 < role_id <= len(roles):
-            return roles[role_id -1]
-        else:
-            return random.choice(roles)
+        print(role_keyword)
+        for role in roles:
+            print(role_keyword in role)
+        
+        random_role = random.choice(roles)
+        if role_keyword == "":
+            return random_role      
+
+        it = (role for role in roles if role_keyword in role)
+        return next(it, random_role)
 
     def get_task_info(self, owner:str) -> str:
         content =  '''

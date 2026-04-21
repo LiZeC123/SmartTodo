@@ -169,10 +169,8 @@ const sendMessage = async () => {
   if (prompt.startsWith('/reset')) {
     messages.length = 0
 
-    const match = prompt.trim().match(/^\/reset(?:\s+(\d+))?$/);
-    const roleId = match?.[1] ? parseInt(match[1], 10) : 0;
-    
-    resetChat(roleId)
+    const roleKeyword = prompt.replace(/^\/reset/, '')
+    resetChat(roleKeyword)
     return 
   }
 
@@ -218,8 +216,8 @@ function deleteLastChat() {
   })
 }
 
-function resetChat(roleId: number) {
-    axios.post('assistant/reset', {"roleId": roleId}).then(_ => {
+function resetChat(roleId: string) {
+    axios.post('assistant/reset', {"keyword": roleId}).then(_ => {
     isLoading.value = false
   })
 }
@@ -261,6 +259,8 @@ watch(messages, () => {
 
 // 键盘快捷键
 onMounted(() => {
+  document.title = '私人助理'
+  
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape' && isLoading.value) {
       stopGeneration()
