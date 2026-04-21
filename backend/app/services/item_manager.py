@@ -329,6 +329,7 @@ class ItemManager:
     def remove_by_id(self, xid: int, owner: str) -> bool:
         item = self.select_with_authority(xid, owner)
         self.remove(item)
+        add_event_log(self.db, owner, f'用户手动删除任务[{item.name}]')
         return True
 
     def garbage_collection(self):
