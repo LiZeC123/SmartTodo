@@ -14,9 +14,34 @@
       </div>
     </div>
 
-    <div class="input-area">
-      <textarea v-model="inputText" @keydown.enter.prevent="sendMessage" placeholder="输入消息..."
-        :disabled="isLoading"></textarea>
+    <div class="input-area" ref="inputAreaRef">
+      <textarea 
+        v-model="inputText" 
+        @keydown="handleKeydown"
+        @input="handleInput"
+        placeholder="输入消息... (以 / 开头可查看指令补全)"
+        :disabled="isLoading"
+        ref="textareaRef"
+      ></textarea>
+
+      <!-- 指令补全面板 -->
+      <div 
+        v-if="showCompletion && filteredCommands.length" 
+        class="completion-panel"
+        ref="completionPanelRef"
+      >
+        <div 
+          v-for="(cmd, idx) in filteredCommands" 
+          :key="cmd.command"
+          :class="['completion-item', { selected: idx === selectedIndex }]"
+          @click="selectCommand(cmd)"
+          @mouseenter="selectedIndex = idx"
+        >
+          <span class="cmd-text">{{ cmd.command }}</span>
+          <span class="cmd-desc">{{ cmd.description }}</span>
+        </div>
+      </div>
+
       <button @click="sendMessage" :disabled="isLoading">
         {{ isLoading ? '生成中...' : '发送' }}
       </button>
@@ -28,7 +53,7 @@
 
 <script setup lang="ts">
 import axios from 'axios'
-import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, nextTick, watch, computed } from 'vue'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -36,21 +61,118 @@ interface Message {
   isStreaming?: boolean
 }
 
+// 指令列表定义
+const COMMANDS = [
+  { command: '/rk', description: '重新生成最后一次回答', needsSpace: false },
+  { command: '/du', description: '显示系统注入的用户信息', needsSpace: false },
+  { command: '/da', description: '显示所有会话信息', needsSpace: false },
+  { command: '/rr', description: '切换助理角色 (支持[角色名] [输入消息])', needsSpace: true },
+  { command: '/rs', description: '重置会话(支持 [角色名])', needsSpace: true },
+  { command: '/rc', description: '替换最后一条用户消息', needsSpace: true },
+  { command: '/delete', description: '删除最后一条对话 (同步后端)', needsSpace: false },
+]
+
 const inputText = ref('')
 const isLoading = ref(false)
 const error = ref('')
 const messages = reactive<Message[]>([])
 let controller: AbortController | null = null
 
-// 滚动容器 DOM 引用
+// DOM 引用
 const chatHistoryRef = ref<HTMLDivElement | null>(null)
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
+const inputAreaRef = ref<HTMLDivElement | null>(null)
+const completionPanelRef = ref<HTMLDivElement | null>(null)
 
-// 添加消息
+// 指令补全状态
+const showCompletion = ref(false)
+const selectedIndex = ref(0)
+let lastFilterWord = '' // 用于过滤时的缓存
+
+// 根据用户输入过滤指令（取 '/' 后面的部分作为过滤词）
+const filteredCommands = computed(() => {
+  if (!inputText.value.startsWith('/')) return []
+  const filterPart = inputText.value.slice(1) // 去掉开头的 '/'
+  lastFilterWord = filterPart
+  if (!filterPart) return COMMANDS
+  return COMMANDS.filter(cmd => 
+    cmd.command.slice(1).toLowerCase().startsWith(filterPart.toLowerCase())
+  )
+})
+
+// 处理输入事件，控制补全面板显示/隐藏
+const handleInput = () => {
+  if (inputText.value && inputText.value[0] === '/') {
+    showCompletion.value = true
+    selectedIndex.value = 0
+  } else {
+    showCompletion.value = false
+  }
+}
+
+// 选择指令并填入输入框
+const selectCommand = (cmd: { command: string; description: string; needsSpace: boolean }) => {
+  let newValue = cmd.command
+  if (cmd.needsSpace) {
+    newValue += ' '
+  }
+  inputText.value = newValue
+  showCompletion.value = false
+  // 让 textarea 重新获得焦点
+  nextTick(() => {
+    textareaRef.value?.focus()
+  })
+}
+
+// 键盘事件处理（支持补全导航、发送消息、换行）
+const handleKeydown = (e: KeyboardEvent) => {
+  // 处理补全面板的键盘导航
+  if (showCompletion.value && filteredCommands.value.length) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      selectedIndex.value = (selectedIndex.value + 1) % filteredCommands.value.length
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      selectedIndex.value = (selectedIndex.value - 1 + filteredCommands.value.length) % filteredCommands.value.length
+    } else if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      // 如果有补全面板，选中当前高亮的指令
+      if (showCompletion.value && filteredCommands.value[selectedIndex.value]) {
+        selectCommand(filteredCommands.value[selectedIndex.value])
+      }
+      return
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      showCompletion.value = false
+      return
+    }
+  }
+  
+  // 处理发送消息：Enter (非 Shift 组合) 且没有补全面板激活时
+  if (e.key === 'Enter' && !e.shiftKey && !showCompletion.value) {
+    e.preventDefault()
+    sendMessage()
+  }
+  // Shift+Enter 让 textarea 默认插入换行，不做额外处理
+}
+
+// 点击外部关闭补全面板
+const handleClickOutside = (e: MouseEvent) => {
+  if (!showCompletion.value) return
+  const target = e.target as HTMLElement
+  const isClickInside = 
+    textareaRef.value?.contains(target) ||
+    completionPanelRef.value?.contains(target)
+  if (!isClickInside) {
+    showCompletion.value = false
+  }
+}
+
+// 原有功能：添加消息、流式对话等保持不变
 const addMessage = (role: 'user' | 'assistant', content: string, isStreaming = false) => {
   messages.push({ role, content, isStreaming })
 }
 
-// 更新最后一条消息（用于流式）
 const updateLastMessage = (content: string, isStreaming = false) => {
   if (messages.length > 0) {
     const lastMsg = messages[messages.length - 1]
@@ -59,7 +181,6 @@ const updateLastMessage = (content: string, isStreaming = false) => {
   }
 }
 
-// 流式API调用
 const streamChat = async (prompt: string) => {
   controller = new AbortController()
 
@@ -89,14 +210,11 @@ const streamChat = async (prompt: string) => {
 
     while (true) {
       const { done, value } = await reader.read()
-
       if (done) break
 
       buffer += decoder.decode(value, { stream: true })
-
-      // 解析SSE格式
       const lines = buffer.split('\n\n')
-      buffer = lines.pop() || ''  // 保留未完成的数据
+      buffer = lines.pop() || ''
 
       for (const line of lines) {
         if (line.startsWith('data: ')) {
@@ -105,16 +223,13 @@ const streamChat = async (prompt: string) => {
 
           try {
             const data = JSON.parse(dataStr)
-
             if (data.error) {
               error.value = data.error
               break
             }
-
             if (data.text) {
               updateLastMessage(data.text, !data.done)
             }
-
             if (data.done) {
               const lastMsg = messages[messages.length - 1]
               if (lastMsg) {
@@ -138,7 +253,6 @@ const streamChat = async (prompt: string) => {
   }
 }
 
-// 发送消息
 const sendMessage = async () => {
   if (!inputText.value.trim() || isLoading.value) return
 
@@ -146,9 +260,9 @@ const sendMessage = async () => {
   inputText.value = ''
   error.value = ''
   isLoading.value = true
+  showCompletion.value = false  // 发送时关闭补全面板
 
   if (prompt === '/') {
-    // 只有一个/视为没有发送内容, 由模型根据注入的系统信息自行回复
     prompt = ''
     addMessage('user', '[用户没有输入]')
     await streamChat(prompt)
@@ -177,9 +291,7 @@ const sendMessage = async () => {
   if (prompt.startsWith("/rc ")) {
     messages.pop()
     messages.pop()
-    // 添加替换后的用户消息
     addMessage('user', prompt.replace(/^\/replace\s*/, ''))
-    // 原始信息发送到后台, 后台需要再次解析
     await streamChat(prompt)
     return
   }
@@ -191,7 +303,6 @@ const sendMessage = async () => {
     return
   }
 
-  // 添加用户消息
   addMessage('user', prompt)
   await streamChat(prompt)
 }
@@ -200,7 +311,6 @@ interface AssistantMsg {
   role: 'user' | 'assistant'
   msg: string
 }
-
 
 function loadHistory() {
   axios.post<AssistantMsg[]>('assistant/history', {}).then(res => {
@@ -218,15 +328,12 @@ function deleteLastChat() {
   })
 }
 
-// 停止生成
 const stopGeneration = () => {
   if (controller) {
     controller.abort()
     controller = null
   }
   isLoading.value = false
-
-  // 标记最后一条消息为非流式
   if (messages.length > 0) {
     const lastMsg = messages[messages.length - 1]
     if (lastMsg.isStreaming) {
@@ -235,37 +342,40 @@ const stopGeneration = () => {
   }
 }
 
-// 组件卸载时清理
-onUnmounted(() => {
-  stopGeneration()
-})
-
-// 自动滚动到底部
 const scrollToBottom = async () => {
-  await nextTick() // 等待 DOM 更新完成
+  await nextTick()
   if (chatHistoryRef.value) {
     chatHistoryRef.value.scrollTop = chatHistoryRef.value.scrollHeight
   }
 }
 
-// 监听 messages 变化 → 自动滚动
 watch(messages, () => {
   scrollToBottom()
 }, { deep: true })
 
-// 键盘快捷键
 onMounted(() => {
   document.title = '私人助理'
-
+  
+  // 全局点击外部关闭补全
+  document.addEventListener('click', handleClickOutside)
+  
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape' && isLoading.value) {
       stopGeneration()
     }
   }
-
   window.addEventListener('keydown', handleKeyDown)
-  onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
+  
+  onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeyDown)
+    document.removeEventListener('click', handleClickOutside)
+  })
+  
   loadHistory()
+})
+
+onUnmounted(() => {
+  stopGeneration()
 })
 </script>
 
@@ -314,21 +424,15 @@ onMounted(() => {
 }
 
 @keyframes blink {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 .input-area {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  position: relative;
 }
 
 textarea {
@@ -338,6 +442,7 @@ textarea {
   border-radius: 4px;
   font-size: 14px;
   resize: vertical;
+  font-family: inherit;
 }
 
 button {
@@ -348,6 +453,7 @@ button {
   border-radius: 4px;
   cursor: pointer;
   font-size: 16px;
+  transition: background 0.2s;
 }
 
 button:disabled {
@@ -361,5 +467,50 @@ button:disabled {
   background: #ffebee;
   border-radius: 4px;
   margin-top: 10px;
+}
+
+/* 指令补全面板样式 */
+.completion-panel {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+  margin-top: 2px;
+}
+
+.completion-item {
+  padding: 8px 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.completion-item:last-child {
+  border-bottom: none;
+}
+
+.completion-item.selected,
+.completion-item:hover {
+  background: #e8f0fe;
+}
+
+.cmd-text {
+  font-weight: 600;
+  color: #1a73e8;
+  font-family: monospace;
+  font-size: 14px;
+  min-width: 70px;
+}
+
+.cmd-desc {
+  font-size: 13px;
+  color: #555;
+  flex: 1;
 }
 </style>
