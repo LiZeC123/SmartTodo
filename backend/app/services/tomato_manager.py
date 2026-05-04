@@ -9,6 +9,7 @@ from app.models.base import ItemType, TomatoType
 from app.models.item import Item
 from app.models.tomato import TomatoStatus, TomatoTaskRecord
 from app.services.credit_manager import update_credit
+from app.services.event_log_manager import add_event_log
 from app.services.item_manager import ItemManager
 from app.tools.log import logger
 from app.tools.time import get_hour_str_from, now, parse_time, today_begin
@@ -37,7 +38,7 @@ class TomatoManager:
         item = self.item_manager.select_with_authority(xid, owner)
         if item.used_tomato == item.expected_tomato:
             # 如果当前已完成全部番茄钟, 则自动增加一个预期番茄钟
-            # TODO: 预期时间变更操作落库, 后续进行分析
+            add_event_log(self.db, owner, f'用户增加任务[{item.name}]的预计番茄钟数量, 该任务预计需要{item.expected_tomato}个番茄钟, 已完成{item.used_tomato}个番茄钟')
             self.item_manager.increase_expected_tomato(xid, owner)
 
         # 针对owner字段设置了唯一索引, 避免一个用户同时提交多个番茄钟请求, 导致状态异常
@@ -74,7 +75,8 @@ class TomatoManager:
             logger.error(f"清除番茄钟失败: 用户{owner}当前任务的Id不匹配, 期望为 {status.item_id} 实际为 {xid}")
             return False
 
-        # self.event_manager.add_event(f"由于 {reason} 取消番茄钟 {status.name}", owner)
+        elapsed_minutes = (now() - status.start_time).total_seconds() / 60
+        add_event_log(self.db, owner, f'用户取消番茄钟任务[{status.name}]的执行, 取消原因是{reason}. 该任务在取消前已经执行{elapsed_minutes}分钟.')
         self.db.delete(instance=status)
         self.db.flush()
         return True
@@ -119,9 +121,8 @@ class TomatoRecordManager:
 
     def get_time_line_summary(self, owner: str):
         record = self.select_record_after(owner, today_begin())
-        return {"counter": self.__time_line_stat(record), "items": [
-            {"start": get_hour_str_from(r.start_time), "finish": get_hour_str_from(r.finish_time), "title": r.name} for
-            r in record]}
+        items = [{"start": get_hour_str_from(r.start_time), "finish": get_hour_str_from(r.finish_time), "title": r.name} for r in record]
+        return {"counter": self.__time_line_stat(record), "items": items}
 
     def get_smart_analysis_report(self, owner: str):
         items = self.item_manager.select_done_item(owner)
@@ -231,3 +232,42 @@ class TomatoRecordManager:
     #             counts[delta] += (finish - start)
 
     #     return list(map(lambda time: int(time.total_seconds() / 60), counts))
+
+
+
+# import datetime
+# from typing import Sequence
+# import sqlalchemy as sal
+# from sqlalchemy.orm import scoped_session, Session
+#
+# from entity import Summary
+# from tool4time import today_str
+#
+#
+# class ReportManager:
+#     def __init__(self, db: scoped_session[Session]) -> None:
+#         self.db = db
+#
+#     def update_summary(self, content:str, owner: str)-> bool:
+#         # day = today_str()
+#         # stmt = sal.select(Summary).where(Summary.owner == owner, Summary.create_time == day)
+#         # summary = self.db.scalar(stmt)
+#         # if summary is None:
+#         #     summary = Summary(create_time=day, content=content, owner=owner)
+#         # else:
+#         #     summary.content = content
+#         # self.db.add(summary)
+#         # self.db.flush()
+#         return True
+#
+#     def get_today_summary(self, owner: str)-> str:
+#         day = today_str()
+#         stmt = sal.select(Summary.content).where(Summary.create_time == day, Summary.owner == owner)
+#         content =  self.db.scalar(stmt)
+#         if content is None:
+#             return ""
+#         return content
+#
+#     def get_summary_from(self, date: datetime.datetime) -> Sequence[Summary]:
+#         stmt = sal.select(Summary).where(Summary.create_time > date)
+#         return self.db.execute(stmt).scalars().all()
