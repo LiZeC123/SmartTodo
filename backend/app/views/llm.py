@@ -1,8 +1,10 @@
-from typing import Dict
+from typing import Dict, List
 
 from flask import Blueprint, request, Response
+from sqlalchemy import Tuple
 
 from app import assistant_manager
+from app.models.assistant import AssistantModeType
 from app.views.authority import authority_check
 
 llm_bp = Blueprint('llm', __name__)
@@ -23,17 +25,16 @@ def assistant_chat_stream(owner: str):
     elif prompt == '/rk':
         # remake answer
         g = assistant_manager.remake(owner)
-    elif prompt.startswith("/rr "):
-        args = [arg for arg in prompt.strip().split() if arg]
-        if len(args) >= 3:
-            # 指定的角色并给出了prompt
-            g = assistant_manager.replace_role(args[1],args[2], owner)
-        elif len(args) == 2:
-            # 仅给出角色, 无prompt
-            g = assistant_manager.replace_role(args[1], '', owner)
-        else:
-            # 没有任何附加信息, 随机切换一个角色
-            g = assistant_manager.replace_role('', '', owner)
+    elif prompt == "/role_list":
+        g = assistant_manager.get_role_info_list()
+    elif prompt.startswith("/switch_work "):
+        # 切换指定角色到聊天模式
+        role_keyword, user_prompt = parse_switch_args(prompt)
+        g = assistant_manager.switch(role_keyword=role_keyword, role_mode=AssistantModeType.Assistant, prompt=user_prompt, owner=owner)
+    elif prompt.startswith("/switch_talk "):
+        # 切换指定角色到扮演模式
+        role_keyword, user_prompt = parse_switch_args(prompt)
+        g = assistant_manager.switch(role_keyword=role_keyword, role_mode=AssistantModeType.RolePlaying, prompt=user_prompt, owner=owner)
     elif prompt.startswith("/rc "):
         # replace content
         args = [arg for arg in prompt.strip().split() if arg]
@@ -55,6 +56,18 @@ def assistant_chat_stream(owner: str):
             'X-Accel-Buffering': 'no'  # 禁用Nginx缓冲
         }
     )
+
+
+def parse_switch_args(prompt) -> tuple[str, str]:
+    "解析角色名关键词和用户的prompt"
+    args: List[str] = [arg for arg in prompt.strip().split() if arg]
+    if len(args) >= 3:
+        return args[1],args[2]
+    elif len(args) == 2:
+        return args[1],""
+    else:
+        return "", ""
+
 
 
 @llm_bp.post('/api/assistant/history')

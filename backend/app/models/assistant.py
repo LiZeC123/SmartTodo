@@ -22,6 +22,13 @@ class AssistantType:
     Assistant = "assistant"
     Tool = "tool"
 
+class AssistantModeType:
+    Assistant = 0
+    RolePlaying = 1
+    
+class AssistantTagType:
+    RoleSwitch = 1
+    ModeSwich = 2
 
 class AssistantHistory(Base):
     __tablename__ = "assistant_history"
@@ -31,8 +38,15 @@ class AssistantHistory(Base):
     content: Mapped[str]                = mapped_column(Text, nullable=False, default='')
     create_time: Mapped[datetime]       = mapped_column(DateTime, nullable=False, default=now)
     system_inject_content: Mapped[str]  = mapped_column(Text, nullable=False, default='')   # 系统自动注入的待办相关信息
-    tool_call_id:Mapped[str]            = mapped_column(String, nullable=False, default='')  # 工具的ID
+    tool_call_id:Mapped[str]            = mapped_column(String, nullable=False, default='') # 工具的ID
     owner: Mapped[str]                  = mapped_column(String(15), nullable=False)
+    
+    assistant_name: Mapped[str]         = mapped_column(String(15), nullable=False, default='') # 助理的角色名
+    assistant_mode: Mapped[int]         = mapped_column(Integer, nullable=False, default=0)     # 助理的模式 0: 助理模式 1: 扮演模式
+    
+    # 扩展字段, 后续可能会对消息增加额外的标记
+    tag: Mapped[int]                    = mapped_column(Integer, nullable=False, default=0)     # 消息标记 0: 无标记 
+
 
     # 定义联合索引
     __table_args__ = (
@@ -44,7 +58,7 @@ class AssistantHistory(Base):
         if self.role == "system":
             return ChatCompletionSystemMessageParam(content=self.content, role="system")
         if self.role == "user":
-            content = f"当前时间: {self.create_time.strftime("%Y-%m-%d %H:%M:%S")}\n{self.system_inject_content}\n\n---\n\n{self.content}"
+            content = f"当前时间: {self.create_time.strftime("%Y-%m-%d %H:%M:%S %a")}\n{self.system_inject_content}\n\n---\n\n{self.content}"
             return ChatCompletionUserMessageParam(content=content, role="user")
         if self.role == 'assistant':
             return ChatCompletionAssistantMessageParam(content=self.content, role='assistant')
@@ -65,7 +79,10 @@ class AssistantStatus(Base):
     
     id: Mapped[int]                 = mapped_column(Integer, primary_key=True, autoincrement=True)
     owner: Mapped[str]              = mapped_column(String(15), nullable=False)
-    start_time: Mapped[datetime]    = mapped_column(DateTime, nullable=False, default=now) # 用户聊天记录的起始时间
+    start_time: Mapped[datetime]    = mapped_column(DateTime, nullable=False, default=now)  # 用户聊天记录的起始时间
+    assistant_name: Mapped[str]     = mapped_column(String(15), nullable=False, default='') # 当前助理的角色名
+    assistant_desc: Mapped[str]     = mapped_column(Text, nullable=False, default='')       # 助理的角色描述
+    assistant_mode: Mapped[int]     = mapped_column(Integer, nullable=False, default=0)     # 助理的模式 0: 助理模式 1: 扮演模式
     
     
 def make_assistant_status(owner: str, start_time:datetime):

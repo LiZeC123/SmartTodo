@@ -66,8 +66,10 @@ const COMMANDS = [
   { command: '/rk', description: '重新生成最后一次回答', needsSpace: false },
   { command: '/du', description: '显示系统注入的用户信息', needsSpace: false },
   { command: '/da', description: '显示所有会话信息', needsSpace: false },
-  { command: '/rr', description: '切换助理角色 (支持[角色名] [输入消息])', needsSpace: true },
-  { command: '/rs', description: '重置会话(支持 [角色名])', needsSpace: true },
+  { command: '/switch_work', description: '切换助理到工作模式 (要求[角色名])', needsSpace: true },
+  { command: '/switch_talk', description: '切换助理到扮演模式 (要求[角色名])', needsSpace: true },
+  { command: '/role_list', description: '显示所有角色信息', needsSpace: false },
+  // { command: '/rs', description: '重置会话(支持 [角色名])', needsSpace: true },
   { command: '/rc', description: '替换最后一条用户消息', needsSpace: true },
   { command: '/delete', description: '删除最后一条对话 (同步后端)', needsSpace: false },
 ]

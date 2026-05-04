@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import json
 import random
+import re
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple
 
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionSystemMessageParam, ChatCompletionToolUnionParam
@@ -9,7 +10,7 @@ from openai.types.chat.chat_completion_function_tool_param import ChatCompletion
 import sqlalchemy as sal
 from sqlalchemy.orm import Session, scoped_session
 
-from app.models.assistant import AssistantHistory, AssistantStatus, AssistantType, make_assistant_status
+from app.models.assistant import AssistantHistory, AssistantModeType, AssistantStatus, AssistantTagType, AssistantType, make_assistant_status
 from app.models.item import Item
 from app.models.tomato import TomatoTaskRecord
 from app.services.event_log_manager import get_event_log_after
@@ -21,31 +22,32 @@ from app.tools.time import get_datetime_from_str, get_hour_str_from, now, today_
 
 
 
+SystemPrompt = '''# 角色设定
+你是用户的个人待办事项管理助理. {role_desc}
 
-# 系统提示词仅包含固定内容
-SystemPrompt = ChatCompletionSystemMessageParam(
-    role="system",
-    content='''你是用户的个人待办事项管理助理.
+# 用户的工作模式
 
-### 用户的工作模式
+1. 用户采用番茄工作法, 在 工作 -> 休息 -> 规划 三个状态中循环, 每个番茄钟包含25分钟的工作时间, 5分钟的休息时间. 两个番茄钟之间属于规划时间. 
+2. 每4个番茄钟为一个大组, 完成一个大组后有额外的15分钟休息时间. 
+3. 当前状态为工作时, 话题围绕当前工作项. 当前状态为休息时, 按照人设和用户对话进行闲聊. 当前状态为规划状态时, 可闲聊并讨论后续任务规划. 
 
-用户采用番茄工作法, 在 工作 -> 休息 -> 规划 三个状态中循环, 每个番茄钟包含25分钟的工作时间, 5分钟的休息时间. 两个番茄钟之间属于规划时间. 每4个番茄钟为一个大组, 完成一个大组后有额外的15分钟休息时间. 
+# 用户的休息模式
 
-每天的11:30~14:30为午休时间, 17:30~19:00为晚餐时间, 这两个时段为休息状态, 并将全天分割为上午, 下午和晚上. 用户晚上21:00后进入休息状态, 在大约23:00准备睡觉.
+1. 每天的11:30~14:30为午休时间, 17:30~19:00为晚餐时间. 21:00~23:00为深夜休息时间, 23:00以后为睡眠时间. 
+2. 用户有特定的自由行动时间, 该状态会在系统信息中展示
+3. 在上述休息时间和自由行动时间时, 不可主动提及工作事项, 仅需要按照人设与用户进行对话.
 
-### 系统权限
+# 系统权限
 
-你具有创建新的待办事项的权限, 你可以调用`create_item`工具进行处理. 事项名称的格式为: [助手名称]:[事项主题]
+1. 你具有创建新的待办事项的权限, 在用户要求创建或添加某个事项时, 你必须通过调用`create_item`工具创建待办事项, 并且明确告知用户执行结果.
+2. 事项名称的格式为: [助手名称]:[事项主题]
 
-在用户要求创建或添加某个事项时, 必须通过调用工具的方式完成事项的添加, 并且明确告知用户执行结果.
+# 关键注意事项
 
-### 关键注意事项
-
-1. 在用户的对话前有系统插入的当前状态信息,和用户行为日志. 系统会在每天凌晨将用户的可重复任务自动重置为未完成状态, 以便于用户重新进行打卡.
-2. 当前状态为工作时, 话题围绕当前工作项. 当前状态为休息时, 按照人设和用户对话进行闲聊. 当前状态为规划状态时, 可闲聊并讨论后续任务规划. 
-3. 每次回复需要至少200字
+1. 在用户的对话前有系统插入的当前状态信息和用户行为日志.  
+2. 系统会在每天凌晨将用户的可重复任务自动重置为未完成状态, 以便于用户重新进行打卡.
+2. 每次回复需要至少200字
 '''
-)
 
 
 # 创建待办事项工具
@@ -83,15 +85,27 @@ class AssistantHistoryManager:
         self.db = db
         pass
 
-    def add_user_prompt(self, prompt: str, inject: str, owner:str):
-        msg = AssistantHistory(role='user', content=prompt, system_inject_content=inject, owner=owner)
+    def add_user_prompt(self, prompt: str, inject: str, owner:str, /, tag:int=0):
+        status = self.query_or_init_status(owner)
+        msg = AssistantHistory(role='user', content=prompt, system_inject_content=inject, owner=owner, 
+                               assistant_name=status.assistant_name, assistant_mode=status.assistant_mode, tag=tag)
         self.db.add(msg)
         self.db.flush()
         self.db.commit()
     
-    def add_assistant_prompt(self, content: str,owner:str):
-        msg = AssistantHistory(role='assistant', content=content, owner=owner)
+    def add_assistant_prompt(self, content: str,owner:str, /, tag:int=0):
+        status = self.query_or_init_status(owner)
+        msg = AssistantHistory(role='assistant', content=content, owner=owner,
+                               assistant_name=status.assistant_name, assistant_mode=status.assistant_mode, tag=tag)
         self.db.add(msg)
+        self.db.flush()
+        self.db.commit()
+        
+    def switch(self, /, role_name: str, role_desc:str, role_mode: int, owner:str):
+        status = self.query_or_init_status(owner)
+        status.assistant_name = role_name
+        status.assistant_desc = role_desc
+        status.assistant_mode = role_mode
         self.db.flush()
         self.db.commit()
         
@@ -126,7 +140,7 @@ class AssistantHistoryManager:
         u = self.remove_last_user(owner)
         return a and u
 
-    def get_start_time(self, owner: str) -> datetime:
+    def query_or_init_status(self, owner: str) -> AssistantStatus:
         stmt = sal.select(AssistantStatus).where(AssistantStatus.owner == owner)
         t = self.db.scalar(stmt)
         if t is None:
@@ -134,42 +148,47 @@ class AssistantHistoryManager:
             t = make_assistant_status(owner=owner, start_time=start_time)
             self.db.add(t)
             self.db.flush()
-            self.db.commit()
-        return t.start_time    
+            self.db.commit()            
+        return t
     
-    def reset_start_time(self, owner: str, start_time: datetime) -> bool:
-        stmt = sal.select(AssistantStatus).where(AssistantStatus.owner == owner)
-        t = self.db.scalar(stmt)
-        if t is None:
-            t = make_assistant_status(owner=owner, start_time=start_time)
-            self.db.add(t)
-        else:
-            t.start_time = start_time
-        self.db.flush()
-        self.db.commit()
-        return True
-
-    def get_last_chat_time(self, owner: str) ->datetime:
-        """获取上一条消息的时间, 如果该用户没有任何消息, 则上一条消息的时间视为今天的开始时间"""
-        last = self.select_last_msg(owner)
-        if last is None:
-            return today_begin()
-        else:
-            return last.create_time        
-    
+  
     def select_last_msg(self, owner: str) -> Optional[AssistantHistory]:
         stmt = sal.select(AssistantHistory).where(AssistantHistory.owner==owner).order_by(AssistantHistory.id.desc()).limit(1)
         return self.db.scalar(stmt)
     
-    def select_record(self, owner:str, start_time: datetime) -> Iterable[AssistantHistory]:
-        stmt = sal.select(AssistantHistory).where(AssistantHistory.owner == owner, AssistantHistory.create_time > start_time)
-        return self.db.scalars(stmt)
-
-    def get_history(self, owner)-> List[ChatCompletionMessageParam]:
-        start_time = self.get_start_time(owner)
-        records = self.select_record(owner, start_time)
-        return [SystemPrompt] + [msg.to_openai() for msg in records]
+    def get_last_assistant_mode_time(self, status:AssistantStatus) -> datetime:
+        # 查询当前助手上一次助手模式的记录时间, 在非助手模式获取其他助手对话过程中产生的记录对当前助手来说是没有见过的
+        stmt = sal.select(AssistantHistory).where(AssistantHistory.owner==status.owner, 
+                                                  AssistantHistory.assistant_mode==AssistantModeType.Assistant,
+                                                  AssistantHistory.assistant_name==status.assistant_name).order_by(AssistantHistory.id.desc()).limit(1)
+        last = self.db.scalar(stmt)
+        if last is None:
+            return today_begin()
+        else:
+            return last.create_time
     
+    def select_record(self, owner:str) -> Tuple[AssistantStatus, Iterable[AssistantHistory]]:
+        # 查询当前角色最近2天聊天记录
+        status = self.query_or_init_status(owner)
+        start_time = today_begin() - timedelta(days=2)
+        stmt = sal.select(AssistantHistory).where(AssistantHistory.owner == owner, 
+                                                  AssistantHistory.create_time > start_time,
+                                                  AssistantHistory.assistant_name == status.assistant_name)
+        return (status, self.db.scalars(stmt)) 
+
+    def get_history(self, owner:str)-> List[ChatCompletionMessageParam]:        
+        status, records = self.select_record(owner)
+        return [self.make_system_prompt(status.assistant_desc)] + [msg.to_openai() for msg in records]
+    
+    def get_web_history(self, owner: str) -> List[Dict]:
+        _, records = self.select_record(owner)
+        return [{'role': msg.role, 'msg': msg.to_web()} for msg in records if msg.role in [AssistantType.User, AssistantType.Assistant]]
+    
+    def make_system_prompt(self, role_desc) -> ChatCompletionSystemMessageParam:
+        return ChatCompletionSystemMessageParam(
+            role="system",
+            content=SystemPrompt.format(role_desc=role_desc)
+        )
 
 class AssistantManager:
     def __init__(self, llm_manager: LLMClient, item_manager: ItemManager, 
@@ -224,21 +243,26 @@ class AssistantManager:
             except Exception as e:
                 return f"error: {e}"
             return "success"
-
         
         return [CreatItemTool], {"create_item": create_f}
-        
              
                 
     def chat(self, prompt: str, owner: str) ->  Generator[str, Any, None]:
-        start = self.history_manager.get_last_chat_time(owner)
-        inject_content = self.make_user_inject_content(start, owner)
+        status = self.history_manager.query_or_init_status(owner)
+        if status.assistant_mode == AssistantModeType.Assistant:
+            # 助理模式下注入待办系统的状态信息
+            start = self.history_manager.get_last_assistant_mode_time(status)
+            inject_content = self.make_user_inject_content(start, owner)
+        else:
+            # 非助理模式仅注入一个状态提示
+            inject_content = "当前状态: 自由行动模式"
+            
         self.history_manager.add_user_prompt(prompt, inject_content, owner)
-        return self.generate(owner, enable_tools=True) # TODO: 使用开关控制
+        return self.generate(owner, enable_tools=True)
         
     def remake(self, owner: str) ->  Generator[str, Any, None]:
         self.history_manager.remove_last_assistant(owner)
-        return self.generate(owner)
+        return self.generate(owner, enable_tools=True)
     
     def delete(self, owner: str) -> bool:
         return self.history_manager.remove_last_pair(owner)
@@ -248,19 +272,14 @@ class AssistantManager:
         return self.chat(prompt, owner)
     
     def reset(self, owner: str, role_keyword: str = '') -> Generator[str, Any, None]:
-        self.history_manager.reset_start_time(owner=owner, start_time=now())
-        role_info = self.make_replace_role_prompt(role_keyword)
-        inject = self.make_user_inject_content(today_begin(), owner) # 操作信息要从今天开始的时间读取
-        content = inject  + "\n\n---\n\n" + role_info
-        self.history_manager.add_user_prompt("", content, owner)
+        # reset功能不存在了, 先不删除, 后续看有无必要实现
+        raise Exception('reset not implemented')
         
-        return self.generate(owner)
-    
-    def replace_role(self, keyword: str, prompt:str, owner: str) -> Generator[str, Any, None]:
-        inject = self.make_replace_role_prompt(keyword)
-        self.history_manager.add_user_prompt(prompt, inject, owner)
-        return self.generate(owner)
-    
+    def switch(self, /, role_keyword: str, role_mode: int, prompt:str, owner:str)-> Generator[str, Any, None]:
+        role_name, role_desc = self.make_switch_role(role_keyword)
+        self.history_manager.switch(role_name=role_name, role_desc=role_desc, role_mode=role_mode, owner=owner)
+        content = f"切换到角色: {role_name}"
+        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
     
     def make_user_inject_content(self, start: datetime, owner:str) -> str:
         # 当前番茄钟状态
@@ -275,10 +294,13 @@ class AssistantManager:
             
         return content
 
-
-    def make_replace_role_prompt(self, keyword: str) -> str:
-        role_info = self.get_role_info(self.get_role_list(), keyword)
-        return f"角色切换: {role_info}. 现在由你接替之前的个人助理"
+    def make_switch_role(self, keyword: str) -> Tuple[str, str]:
+        role_desc = self.get_role_info(self.get_role_list(), keyword)
+        role_name = extract_role_name(role_desc)
+        if role_name is None:
+            logger.warning(f"加载的角色描述信息无法提取角色名: {role_desc}")
+            role_name = '未知角色'
+        return (role_name, role_desc)
 
     def get_role_list(self) -> List[str]:
         try:
@@ -298,6 +320,15 @@ class AssistantManager:
 
         it = (role for role in roles if role_keyword in role)
         return next(it, random_role)
+    
+    def get_role_info_list(self) -> Generator[str, Any, None]:
+        raw_list = self.get_role_list()
+        for role in raw_list:
+            name = extract_role_name(role)
+            desc = role.split(",")[0]
+            content = f"{name}: {desc}\n"
+            yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
+        yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"            
     
     def __is_zero_tomoto_task(self, name:str) -> bool:
         # 打卡类任务可瞬间完成无需番茄钟.  午间和晚间任务不占用番茄钟
@@ -371,12 +402,13 @@ class AssistantManager:
         
         # 不是初始状态, 再检查休息和规划状态
         elapsed_minutes = (now() - last_record.finish_time).total_seconds() / 60
-        # 如果上一个番茄钟是一组里的最后一个番茄钟, 则需要进行组之间的休息时间判断
+        # 如果上一个番茄钟是一组里的最后一个番茄钟, 则需要进行组之间的休息时间判断, 
         if last_tomato_cnt == 0:
             if elapsed_minutes < 20:
-                return f"已完成{begin_state}第{last_group_cnt+1}组番茄钟, 当前为大组之间的休息时间, 剩余{20 - elapsed_minutes:.2f}分钟\n"
+                # 最后一个番茄钟会让cnt+1所以输出时无需+1了
+                return f"已完成{begin_state}第{last_group_cnt}组番茄钟, 当前为大组之间的休息时间, 剩余{20 - elapsed_minutes:.2f}分钟\n"
             else:
-                return f"已完成{begin_state}第{last_group_cnt+1}组番茄钟, 已完成大组之间的休息, 当前进入规划状态, 已持续{elapsed_minutes - 20:.2f}分钟\n"
+                return f"已完成{begin_state}第{last_group_cnt}组番茄钟, 已完成大组之间的休息, 当前进入规划状态, 已持续{elapsed_minutes - 20:.2f}分钟\n"
         
         # 如果不是最后一个番茄钟
         if elapsed_minutes < 5:
@@ -400,14 +432,11 @@ class AssistantManager:
                   
 
     def get_web_history(self, owner:str) -> List[Dict]:
-        start_time = self.history_manager.get_start_time(owner)
-        record = self.history_manager.select_record(owner, start_time)
-        return [{'role': msg.role, 'msg': msg.to_web()} for msg in record if msg.role in [AssistantType.User, AssistantType.Assistant]]
+        return self.history_manager.get_web_history(owner)
         
     
     def dump_history(self, owner:str) -> Generator[str, Any, None]:
-        start_time = self.history_manager.get_start_time(owner)
-        record = self.history_manager.select_record(owner, start_time)
+        _, record = self.history_manager.select_record(owner)
         
         for item in record:
             v = item.to_openai()
@@ -416,7 +445,25 @@ class AssistantManager:
         yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
         
     def dump_user_prompt(self, owner: str) ->Generator[str, Any, None]:
-        start = self.history_manager.get_last_chat_time(owner)
+        status = self.history_manager.query_or_init_status(owner)
+        start = self.history_manager.get_last_assistant_mode_time(status)
+        
         content = self.make_user_inject_content(start, owner)
         yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
+        
+        content = f"\n当前状态信息\n 角色名: {status.assistant_name}\n 角色模式: {status.assistant_mode}\n 角色描述: {status.assistant_desc}\n"
+        yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
+        
         yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
+        
+
+def extract_role_name(text):
+    """提取角色名, 角色描述中需要包含 '名为xxx,' 的文字, 提取该部分作为角色名"""
+    # 正则表达式：匹配 名叫(任意1+字符), 捕获中间的内容
+    pattern = r"名叫(.+?),"
+    # 查找第一个匹配项
+    match = re.search(pattern, text)
+    
+    if match:
+        return match.group(1)  # 返回括号内捕获的名字
+    return None        
