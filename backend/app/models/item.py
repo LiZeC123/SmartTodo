@@ -4,8 +4,19 @@ from typing import Optional
 from sqlalchemy import DateTime, Integer, String, Text, SmallInteger, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TomatoType
+from app.models.base import Base
 from app.tools.time import now
+
+
+class ItemType:
+    Single = "single"
+    File = "file"
+    Note = "note"
+
+
+class TomatoType:
+    Activate = "activate"
+    Today = "today"
 
 
 class Item(Base):
@@ -13,8 +24,9 @@ class Item(Base):
 
     id: Mapped[int]     = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str]   = mapped_column(Text, nullable=False)
+    
     # Item类型，具体取值见 ItemType 类
-    item_type: Mapped[str]  = mapped_column(String(10), nullable=False)
+    item_type: Mapped[str]  = mapped_column(String(10), nullable=False, default=ItemType.Single)
 
     create_time: Mapped[datetime]           = mapped_column(DateTime, nullable=False, default=now)
     update_time: Mapped[datetime]           = mapped_column(DateTime, nullable=False, default=now)
@@ -24,10 +36,10 @@ class Item(Base):
     repeatable: Mapped[int]         = mapped_column(SmallInteger, nullable=False, default=False)
     specific: Mapped[int]           = mapped_column(SmallInteger, nullable=False, default=0)
     priority: Mapped[str]           = mapped_column(SmallInteger, nullable=False, default='p2')
-    
     tags: Mapped[str]               = mapped_column(SmallInteger, nullable=False, default='') # 废弃
 
     owner: Mapped[str] = mapped_column(String(15), nullable=False)
+    
     # 指示此Item是否附属于某个note, None表示不属于任何note
     parent: Mapped[Optional[int]]   = mapped_column(Integer, ForeignKey("item.id"), default=None)
 

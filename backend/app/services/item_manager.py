@@ -6,8 +6,7 @@ from typing import Optional, Dict, List, Sequence, Callable
 import sqlalchemy as sal
 from sqlalchemy.orm import scoped_session, Session
 
-from app.models.base import ItemType, TomatoType
-from app.models.item import Item
+from app.models.item import Item, ItemType, TomatoType
 from app.models.note import Note
 from app.services.credit_manager import update_credit
 from app.services.event_log_manager import add_event_log

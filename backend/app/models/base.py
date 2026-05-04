@@ -13,11 +13,3 @@ class Base(DeclarativeBase):
                 d[c.name] = v
         return d
     
-class ItemType:
-    Single = "single"
-    File = "file"
-    Note = "note"
-
-class TomatoType:
-    Activate = "activate"
-    Today = "today"

@@ -1,3 +1,4 @@
+from app.models.item import ItemType, TomatoType
 from app.services.tomato_manager import *
 from app.tests.services.make_db import make_new_db
 
