@@ -380,21 +380,28 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* 让整个容器占满视口高度 */
 .chat-container {
   max-width: 800px;
   margin: 0 auto;
+  height: 100dvh;           /* 全屏高度 */
+  display: flex;
+  flex-direction: column;
   padding: 20px;
+  box-sizing: border-box;  /* 避免 padding 导致溢出 */
+  overflow: hidden;        /* 防止整个页面滚动 */
 }
 
+/* 聊天区域自动填充剩余空间 */
 .chat-history {
-  min-height: 400px;
-  max-height: 500px;
-  overflow-y: auto;
+  flex: 1;                 /* 自动占据剩余高度 */
+  overflow-y: auto;        /* 内部滚动 */
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 20px;
-  margin-bottom: 20px;
   background: #f9f9f9;
+  margin-bottom: 15px;     /* 与输入区留一点空隙 */
+  min-height: 0;           /* flex 子项防止溢出关键 */
 }
 
 .message {
@@ -428,11 +435,12 @@ onUnmounted(() => {
   50% { opacity: 0; }
 }
 
+/* 输入区域保持自动高度 */
 .input-area {
+  flex-shrink: 0;          /* 不被压缩 */
   display: flex;
   flex-direction: column;
   gap: 10px;
-  position: relative;
 }
 
 textarea {
