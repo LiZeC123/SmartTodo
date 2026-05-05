@@ -153,7 +153,8 @@ class AssistantHistoryManager:
     
   
     def select_last_msg(self, owner: str) -> Optional[AssistantHistory]:
-        stmt = sal.select(AssistantHistory).where(AssistantHistory.owner==owner).order_by(AssistantHistory.id.desc()).limit(1)
+        status = self.query_or_init_status(owner)
+        stmt = sal.select(AssistantHistory).where(AssistantHistory.owner==owner, AssistantHistory.assistant_name==status.assistant_name).order_by(AssistantHistory.id.desc()).limit(1)
         return self.db.scalar(stmt)
     
     def get_last_assistant_mode_time(self, status:AssistantStatus) -> datetime:
