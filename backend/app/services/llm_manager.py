@@ -203,9 +203,9 @@ LongTermMemoryPrompt = """
 这一部分输出助手明确表达的约定或待办事项, 每一项需要包含事项标题, 预计处理时间和当前状态(例如:待执行、进行中或者挂起等). 不提取系统任务（如番茄钟）和用户的个人规划.
 对于旧记忆中已经存在的条目, 需要逐一检查并更新状态, 已完成的事项删除并评估是否进入里程碑条目.
 
-# 助手状态信息
+# 助手内心想法
 
-这一部分根据最新的对话文本结合之前的助手状态信息, 以助手的人设使用一段文本给出一段助手的内心想法. 
+这一部分根据最新的对话文本, 以助手的人设使用一段文本给出一段助手的内心想法. 
 
 # 新增设定
 
@@ -298,7 +298,13 @@ class AssistantMemoryManager:
             logger.warning(f'模型返回记忆为空. 用户:{owner} 助手:{role_name}')
             return ""
     
-    def evaluate_cost(self, role_name: str, owner: str) -> str:
+    def evaluate_cost(self, owner: str) -> str:
+        stmt = sal.select(AssistantHistory.assistant_name.distinct()).where(AssistantHistory.owner==owner)
+        names = self.db.scalars(stmt)
+        
+        return "\n".join([self.evaluate_one_role_cost(name, owner) for name in names])
+    
+    def evaluate_one_role_cost(self, role_name: str, owner: str) -> str:
         memory = self.query_or_init_memory(role_name, owner)
         stmt = sal.select(AssistantHistory).where(AssistantHistory.owner == owner, 
                                                   AssistantHistory.create_time > memory.processed_time,
@@ -308,7 +314,7 @@ class AssistantMemoryManager:
         char_cost = sum(len(s) for r in records if (s := r.to_dump()) is not None)
         token_cost = char_cost * 1.5
         conv_cnt = len(records)
-        return f"字符成本: {char_cost // 1024}KB Token预估数量 {token_cost // 1024:.1f}K 对话轮次: {conv_cnt // 2}轮"
+        return f"角色名: {role_name:>8s} 字符成本: {char_cost // 1024:6d}KB Token预估数量: {token_cost / 1024:6.1f}K 对话轮次: {conv_cnt // 2:3d}轮"
 
 
 
@@ -455,8 +461,7 @@ class AssistantManager:
  
  
     def show_cost(self, owner:str) -> Generator[str, Any, None]:
-        status = self.history_manager.query_or_init_status(owner)
-        cost_report = self.memory_manager.evaluate_cost(status.assistant_name, owner)
+        cost_report = self.memory_manager.evaluate_cost(owner)
         yield f"data: {json.dumps({'text': cost_report, 'done': True})}\n\n"
         
     def show_memory(self, owner:str) -> Generator[str, Any, None]:
