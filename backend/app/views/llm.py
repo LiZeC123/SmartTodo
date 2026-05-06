@@ -27,6 +27,14 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.remake(owner)
     elif prompt == "/role_list":
         g = assistant_manager.get_role_info_list()
+    elif prompt == '/show_cost':
+        g = assistant_manager.show_cost(owner)
+    elif prompt == '/show_memory':
+        g = assistant_manager.show_memory(owner)    
+    elif prompt == '/compress':
+        g = assistant_manager.compress_memory(owner)
+    elif prompt == '/reason':
+        g = assistant_manager.show_last_reason(owner)
     elif prompt.startswith("/switch_work "):
         # 切换指定角色到聊天模式
         role_keyword, user_prompt = parse_switch_args(prompt)

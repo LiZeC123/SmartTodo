@@ -24,6 +24,23 @@ class LLMClient:
             if len(chunk.choices) > 0 and chunk.choices[0].delta.content is not None:
                 data = chunk.choices[0].delta.content
                 yield data
+
+    def generate_one_shot(self, prompt:str):
+        """单次非流式请求模型, 返回思考内容和模型回复"""
+        response = self.client.chat.completions.create(
+            model=self.model_name,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant"},
+                {"role": "user", "content": prompt},
+            ],
+            reasoning_effort="xhigh",
+            extra_body={"thinking": {"type": "enabled"}}
+        )
+        
+        reasoning_content = response.choices[0].message.reasoning_content # type: ignore
+        content = response.choices[0].message.content
+        return reasoning_content, content
+        
                 
     def generate_steam_with_tools(self, history: List[ChatCompletionMessageParam], tools: Iterable[ChatCompletionToolUnionParam],
                                   tool_map: Dict[str, Callable[[str], str]]) -> Generator[str, Any, None]:

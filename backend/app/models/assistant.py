@@ -73,6 +73,14 @@ class AssistantHistory(Base):
             return self.content
         if self.role == 'user':
             return self.content if self.content != "" else "[用户没有任何输入]"
+        
+    def to_dump(self) -> Optional[str]:
+        if self.role in ['system', 'tool']:
+            return None
+        if self.role in "assistant":
+            return f"{self.role}:\n{self.content}\n"
+        if self.role == 'user':
+            return f"{self.role}:\n[当前时间: {self.create_time.strftime("%Y-%m-%d %H:%M:%S %a")}\n{self.system_inject_content}]\n{self.content}"
 
 class AssistantStatus(Base):
     __tablename__ = "assistant_status"
@@ -87,3 +95,22 @@ class AssistantStatus(Base):
     
 def make_assistant_status(owner: str, start_time:datetime):
     return AssistantStatus(owner=owner, start_time=start_time)
+
+
+
+class AssistantMemory(Base):
+    """助手记忆表, 存储用户的每一个助理的记忆"""
+    __tablename__ = "assistant_memory"
+    
+    id: Mapped[int]                 = mapped_column(Integer, primary_key=True, autoincrement=True)
+    owner: Mapped[str]              = mapped_column(String(15), nullable=False)
+    assistant_name: Mapped[str]     = mapped_column(String(15), nullable=False, default='') # 当前助理的角色名
+    short_term_memory: Mapped[str]  = mapped_column(String(15), nullable=False, default='')
+    long_term_memory: Mapped[str]   = mapped_column(String(15), nullable=False, default='')
+    processed_time: Mapped[datetime]= mapped_column(DateTime, nullable=False, default=datetime(year=1970, month=1, day=1)) # 记忆已经处理过的记录的时间
+    
+    def to_assistant(self):
+        pass
+    
+    def to_dump(self) -> str:
+        return f"角色名: {self.assistant_name}\n记忆处理时间: {self.processed_time}\n短期记忆: {self.short_term_memory}\n长期记忆:{self.long_term_memory}"

@@ -10,7 +10,7 @@ from openai.types.chat.chat_completion_function_tool_param import ChatCompletion
 import sqlalchemy as sal
 from sqlalchemy.orm import Session, scoped_session
 
-from app.models.assistant import AssistantHistory, AssistantModeType, AssistantStatus, AssistantTagType, AssistantType, make_assistant_status
+from app.models.assistant import AssistantHistory, AssistantMemory, AssistantModeType, AssistantStatus, AssistantTagType, AssistantType, make_assistant_status
 from app.models.item import Item
 from app.models.tomato import TomatoTaskRecord
 from app.services.event_log_manager import get_event_log_after
@@ -83,7 +83,6 @@ CreatItemTool: ChatCompletionFunctionToolParam = ChatCompletionFunctionToolParam
 class AssistantHistoryManager:
     def __init__(self, db: scoped_session[Session]) -> None:
         self.db = db
-        pass
 
     def add_user_prompt(self, prompt: str, inject: str, owner:str, /, tag:int=0):
         status = self.query_or_init_status(owner)
@@ -158,7 +157,7 @@ class AssistantHistoryManager:
         return self.db.scalar(stmt)
     
     def get_last_assistant_mode_time(self, status:AssistantStatus) -> datetime:
-        # 查询当前助手上一次助手模式的记录时间, 在非助手模式获取其他助手对话过程中产生的记录对当前助手来说是没有见过的
+        # 查询当前助手上一次助手模式的记录时间, 在非助手模式或者其他助手对话过程中产生的记录对当前助手来说是没有见过的
         stmt = sal.select(AssistantHistory).where(AssistantHistory.owner==status.owner, 
                                                   AssistantHistory.assistant_mode==AssistantModeType.Assistant,
                                                   AssistantHistory.assistant_name==status.assistant_name).order_by(AssistantHistory.id.desc()).limit(1)
@@ -191,15 +190,138 @@ class AssistantHistoryManager:
             content=SystemPrompt.format(role_desc=role_desc)
         )
 
+
+LongTermMemoryPrompt = """
+你是一个长期记忆整合引擎, 处理和整合聊天助手的记忆.
+
+【输出格式与内容说明】
+
+请严格按照如下的章节标题输出内容. 每一章节中包含了该部分内容的要求描述. 输出时不要多余解释，直接输出正文
+
+# 约定和待办
+
+这一部分输出助手明确表达的约定或待办事项, 每一项需要包含事项标题, 预计处理时间和当前状态(例如:待执行、进行中或者挂起等). 不提取系统任务（如番茄钟）和用户的个人规划.
+对于旧记忆中已经存在的条目, 需要逐一检查并更新状态, 已完成的事项删除并评估是否进入里程碑条目.
+
+# 助手状态信息
+
+这一部分根据最新的对话文本结合之前的助手状态信息, 以助手的人设使用一段文本给出一段助手的内心想法. 
+
+# 新增设定
+
+这一部分根据对话提取在助手和用户之间已经确认的新增设定. 该设定应该是长期生效且对角色会产生影响的. 例如在第二天依然会有效.
+
+# 用户偏好预测
+
+## 表层偏好预测
+
+这一部分基于对话内容预测用户可能的偏好, 给出该预测的置信度(高、中、低等)以及简短的证据描述. 根据新的对话调整原有偏好预测的置信度, 合并相似的表达, 移除预测错误的条目.
+
+## 深层偏好推测
+
+这一部分深度分析和推测用户的认知模式、价值观和沟通风格等更为抽象和一般性的偏好. 根据表层偏好预测的变化和新对话调整现有条目的置信度. 
+深层偏好的更新应该具有一定的迟滞性. 新增条目的置信度默认为"中". 当新的对话继续支持某个已有条目时提高该条目的置信度, 反之降低该条目的置信度. 已经是低置信度的条目再次产生矛盾时才能删除对应条目.
+
+# 近期话题
+
+这一部分输出助手和用户之间讨论的话题和助手的核心观点. 每个话题用一句话进行概述并给出该话题的提出时间. 给出包含年月日的精确日期以便于后续按照日期进行热度删除处理.
+根据新的对话提取助手和用户之间的新增话题, 并优先考虑将新话题与已有话题合并然后更新该条目的提出时间. 最后检查话题数量, 如果已经超过十条, 则抛弃提出时间最久的条目, 使得总条目数量维持在十条以内.
+
+# 共享里程碑
+
+这一部分记录助手和用户之间最重要的节点性时刻的信息, 包含: 事件的时间点, 事件的简要描述.
+只记录对于助手和用户共享的、与情感关系相关的最重要的事件. 该部分只能新增与合并, 不能删除, 如果没有重要的事件则保持原有记录不变. 
+
+【其他约束条件】
+
+1. 除了助手状态信息使用助手第一视角以外, 其他部分使用客观视角描述, 即使用助手的名字指代助手, 使用助手对用户的常态称呼指代用户.
+2. 冲突信息以最新对话为准, 补充信息时不重复. 
+3. 任何部分都不要提取 助手描述信息 中已经描述的信息.
+
+【助手描述信息】
+
+{role_desc}
+
+【旧记忆】
+
+{old_memory}
+
+【新的多轮对话】
+
+{new_content}
+"""
+
+
+
+
+class AssistantMemoryManager:
+    def __init__(self, db: scoped_session[Session], llm_client: LLMClient) -> None:
+        self.db = db
+        self.cliet = llm_client
+        self.last_reason_content = "" #TODO: 临时存储方案, 后续应该调整
+    
+    def query_or_init_memory(self, role_name:str, owner:str) -> AssistantMemory:
+        stmt = sal.select(AssistantMemory).where(AssistantMemory.assistant_name==role_name,AssistantMemory.owner==owner)
+        t = self.db.scalar(stmt)
+        if t is None:
+            t = AssistantMemory(assistant_name=role_name, owner=owner)
+            self.db.add(t)
+            self.db.flush()
+            self.db.commit()
+        return t
+        
+    def update_long_term_memory(self, /, role_name: str, role_desc:str, owner: str) -> str:
+        memory = self.query_or_init_memory(role_name, owner)
+        stmt = sal.select(AssistantHistory).where(AssistantHistory.owner == owner, 
+                                                  AssistantHistory.create_time > memory.processed_time,
+                                                  AssistantHistory.assistant_name == role_name)
+        records = self.db.scalars(stmt)
+
+        new_content = ""
+        for record in records:
+            r = record.to_openai()
+            new_content += json.dumps(r, ensure_ascii=False)
+            new_content += "\n"
+        
+        prompt = LongTermMemoryPrompt.format(role_desc=role_desc, old_memory=memory.long_term_memory, new_content=new_content)
+        reason, content = self.cliet.generate_one_shot(prompt)
+        if reason is not None:
+            self.last_reason_content = reason
+        
+        if content is not None:    
+            memory.long_term_memory = content
+            memory.processed_time = now()
+            self.db.flush()
+            self.db.commit()
+            return content
+        else:
+            logger.warning(f'模型返回记忆为空. 用户:{owner} 助手:{role_name}')
+            return ""
+    
+    def evaluate_cost(self, role_name: str, owner: str) -> str:
+        memory = self.query_or_init_memory(role_name, owner)
+        stmt = sal.select(AssistantHistory).where(AssistantHistory.owner == owner, 
+                                                  AssistantHistory.create_time > memory.processed_time,
+                                                  AssistantHistory.assistant_name == role_name)
+        records = self.db.scalars(stmt).all()
+        
+        char_cost = sum(len(s) for r in records if (s := r.to_dump()) is not None)
+        token_cost = char_cost * 1.5
+        conv_cnt = len(records)
+        return f"字符成本: {char_cost // 1024}KB Token预估数量 {token_cost // 1024:.1f}K 对话轮次: {conv_cnt // 2}轮"
+
+
+
 class AssistantManager:
     def __init__(self, llm_manager: LLMClient, item_manager: ItemManager, 
                  tomato_manager: TomatoManager, tomato_record_manager: TomatoRecordManager,
-                 history_manager: AssistantHistoryManager) -> None:
+                 history_manager: AssistantHistoryManager, memory_manager: AssistantMemoryManager) -> None:
         self.llm_manager = llm_manager
         self.item_manager = item_manager
         self.tomato_manager = tomato_manager
         self.tomato_record_manager = tomato_record_manager
         self.history_manager = history_manager
+        self.memory_manager = memory_manager
     
     def generate(self, owner: str, /, enable_tools=False) -> Generator[str, Any, None]:
         """流式生成回复：后台消费 LLM 流并保存，前台推送给客户端"""
@@ -330,6 +452,29 @@ class AssistantManager:
             content = f"{name}: {desc}\n"
             yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
         yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"            
+ 
+ 
+    def show_cost(self, owner:str) -> Generator[str, Any, None]:
+        status = self.history_manager.query_or_init_status(owner)
+        cost_report = self.memory_manager.evaluate_cost(status.assistant_name, owner)
+        yield f"data: {json.dumps({'text': cost_report, 'done': True})}\n\n"
+        
+    def show_memory(self, owner:str) -> Generator[str, Any, None]:
+        status = self.history_manager.query_or_init_status(owner)
+        memory = self.memory_manager.query_or_init_memory(status.assistant_name, owner)
+        content = memory.long_term_memory
+        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
+        
+    def compress_memory(self, owner:str) -> Generator[str, Any, None]:
+        status = self.history_manager.query_or_init_status(owner)
+        yield f"data: {json.dumps({'text': '正在处理中...\n', 'done': False})}\n\n"
+        new_memory = self.memory_manager.update_long_term_memory(status.assistant_name, status.assistant_desc, owner)
+        yield f"data: {json.dumps({'text': new_memory, 'done': True})}\n\n"
+        
+    def show_last_reason(self, owner:str) -> Generator[str, Any, None]:
+        content = self.memory_manager.last_reason_content
+        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
+        
     
     def __is_zero_tomoto_task(self, name:str) -> bool:
         # 打卡类任务可瞬间完成无需番茄钟.  午间和晚间任务不占用番茄钟
@@ -440,8 +585,7 @@ class AssistantManager:
         _, record = self.history_manager.select_record(owner)
         
         for item in record:
-            v = item.to_openai()
-            v = str(f"{v.get('role')}: {v.get("content")}\n\n")
+            v = item.to_dump()
             yield f"data: {json.dumps({'text': v, 'done': False})}\n\n"
         yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
         
