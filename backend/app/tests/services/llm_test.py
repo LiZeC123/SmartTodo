@@ -27,26 +27,26 @@ class MockLLMClient(LLMClient):
         yield MockResponse
 
 
-db = make_new_db()
-config_manager = ConfigManager()
-llm_manager = MockLLMClient(config_manager)
-item_manager = ItemManager(db)
-tomato_manager = TomatoManager(db, item_manager)
-tomato_record_manager = TomatoRecordManager(db, item_manager)
-history_manager = AssistantHistoryManager(db)
+# db = make_new_db()
+# config_manager = ConfigManager()
+# llm_manager = MockLLMClient(config_manager)
+# item_manager = ItemManager(db)
+# tomato_manager = TomatoManager(db, item_manager)
+# tomato_record_manager = TomatoRecordManager(db, item_manager)
+# history_manager = AssistantHistoryManager(db)
 
-assistant_manager = AssistantManager(llm_manager, item_manager, tomato_manager, tomato_record_manager, history_manager)
-owner = "user"
-
-
-def finish(g: Generator[str, Any, None]):
-    [_ for _ in g]
+# assistant_manager = AssistantManager(llm_manager, item_manager, tomato_manager, tomato_record_manager, history_manager)
+# owner = "user"
 
 
-# 先完成基础测试, llm功能不稳定, 单元测试写太多, 以后可能都是负资产
-def test_base():
-    g = assistant_manager.chat("早上好", owner=owner)
-    finish(g)
+# def finish(g: Generator[str, Any, None]):
+#     [_ for _ in g]
+
+
+# # 先完成基础测试, llm功能不稳定, 单元测试写太多, 以后可能都是负资产
+# def test_base():
+#     g = assistant_manager.chat("早上好", owner=owner)
+#     finish(g)
     # memory = assistant_manager.get_memory(owner)
     # assert len(memory.messages) == 3
     # assert memory.messages[2].message.get("content") == MockResponse
