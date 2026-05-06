@@ -63,13 +63,21 @@ interface Message {
 
 // 指令列表定义
 const COMMANDS = [
+  { command: '/switch_work', description: '切换助理到工作模式 (参数 [角色名])', needsSpace: true },
+  { command: '/switch_talk', description: '切换助理到扮演模式 (参数 [角色名])', needsSpace: true },  
+
+  { command: '/show_cost', description: '评估当前角色会话成本', needsSpace: false },
+  { command: '/show_memory', description: '查看当前角色的记忆', needsSpace: false },
+  { command: '/compress', description: '压缩当前角色记忆', needsSpace: false },
+  { command: '/reason', description: '查看上一次模型思考内容', needsSpace: false },
+
+  { command: '/inject', description: '注入数据 (参数 [数据名称] [prompt])', needsSpace: true },
+
   { command: '/rk', description: '重新生成最后一次回答', needsSpace: false },
   { command: '/du', description: '显示系统注入的用户信息', needsSpace: false },
   { command: '/da', description: '显示所有会话信息', needsSpace: false },
-  { command: '/switch_work', description: '切换助理到工作模式 (要求[角色名])', needsSpace: true },
-  { command: '/switch_talk', description: '切换助理到扮演模式 (要求[角色名])', needsSpace: true },
+  
   { command: '/role_list', description: '显示所有角色信息', needsSpace: false },
-  // { command: '/rs', description: '重置会话(支持 [角色名])', needsSpace: true },
   { command: '/rc', description: '替换最后一条用户消息', needsSpace: true },
   { command: '/delete', description: '删除最后一条对话 (同步后端)', needsSpace: false },
 ]
@@ -126,22 +134,16 @@ const selectCommand = (cmd: { command: string; description: string; needsSpace: 
   })
 }
 
-// 键盘事件处理（支持补全导航、发送消息、换行）
 const handleKeydown = (e: KeyboardEvent) => {
-  // 处理补全面板的键盘导航
+  // 处理补全面板的键盘导航（上下箭头、Esc）
   if (showCompletion.value && filteredCommands.value.length) {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       selectedIndex.value = (selectedIndex.value + 1) % filteredCommands.value.length
+      return
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       selectedIndex.value = (selectedIndex.value - 1 + filteredCommands.value.length) % filteredCommands.value.length
-    } else if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      // 如果有补全面板，选中当前高亮的指令
-      if (showCompletion.value && filteredCommands.value[selectedIndex.value]) {
-        selectCommand(filteredCommands.value[selectedIndex.value])
-      }
       return
     } else if (e.key === 'Escape') {
       e.preventDefault()
@@ -149,13 +151,23 @@ const handleKeydown = (e: KeyboardEvent) => {
       return
     }
   }
-  
-  // 处理发送消息：Enter (非 Shift 组合) 且没有补全面板激活时
-  if (e.key === 'Enter' && !e.shiftKey && !showCompletion.value) {
+
+  // 统一处理 Enter 键
+  if (e.key === 'Enter') {
+    // Shift+Enter: 允许默认换行行为，不做任何处理
+    if (e.shiftKey) return
+
     e.preventDefault()
+
+    // 如果补全显示并且有选中的指令：填入指令，不发送
+    if (showCompletion.value && filteredCommands.value.length && filteredCommands.value[selectedIndex.value]) {
+      selectCommand(filteredCommands.value[selectedIndex.value])
+      return
+    }
+
+    // 否则直接发送消息
     sendMessage()
   }
-  // Shift+Enter 让 textarea 默认插入换行，不做额外处理
 }
 
 // 点击外部关闭补全面板
@@ -255,6 +267,7 @@ const streamChat = async (prompt: string) => {
   }
 }
 
+// 修改 sendMessage，在最后调用 focus
 const sendMessage = async () => {
   if (!inputText.value.trim() || isLoading.value) return
 
@@ -262,51 +275,42 @@ const sendMessage = async () => {
   inputText.value = ''
   error.value = ''
   isLoading.value = true
-  showCompletion.value = false  // 发送时关闭补全面板
+  showCompletion.value = false
 
+  // 根据指令分支处理
   if (prompt === '/') {
     prompt = ''
     addMessage('user', '[用户没有输入]')
     await streamChat(prompt)
-    return
-  }
-
-  if (prompt.startsWith('/rr ')) {
+  } else if (prompt.startsWith('/switch_work ') || prompt.startsWith('/switch_talk ')) {
     addMessage('user', '[用户切换了助理角色]')
     await streamChat(prompt)
-    return
-  }
-
-  if (prompt === '/rk') {
+    loadHistory()
+  } else if (prompt === '/rk') {
     messages.pop()
     await streamChat(prompt)
-    return
-  }
-
-  if (prompt.startsWith('/rs')) {
-    messages.length = 0
-    addMessage('user', '[用户重置了会话]')
-    await streamChat(prompt)
-    return
-  }
-
-  if (prompt.startsWith("/rc ")) {
+  // } else if (prompt.startsWith('/rs')) {
+  //   messages.length = 0
+  //   addMessage('user', '[用户重置了会话]')
+  //   await streamChat(prompt)
+  } else if (prompt.startsWith("/rc ")) {
     messages.pop()
     messages.pop()
     addMessage('user', prompt.replace(/^\/replace\s*/, ''))
     await streamChat(prompt)
-    return
-  }
-
-  if (prompt === '/delete') {
+  } else if (prompt === '/delete') {
     messages.pop()
     messages.pop()
-    deleteLastChat()
-    return
+    await deleteLastChat()
+  } else {
+    addMessage('user', prompt)
+    await streamChat(prompt)
   }
 
-  addMessage('user', prompt)
-  await streamChat(prompt)
+  // 发送完成后（流式结束或指令执行完毕）将焦点重新设置到文本框
+  // 使用 nextTick 确保 DOM 更新完成且输入框未被禁用
+  await nextTick()
+  textareaRef.value?.focus()
 }
 
 interface AssistantMsg {
@@ -324,10 +328,9 @@ function loadHistory() {
   })
 }
 
-function deleteLastChat() {
-  axios.post('assistant/delete', {}).then(_ => {
-    isLoading.value = false
-  })
+async function deleteLastChat() {
+  await axios.post('assistant/delete', {})
+  isLoading.value = false
 }
 
 const stopGeneration = () => {
