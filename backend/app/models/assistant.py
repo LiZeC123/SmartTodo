@@ -78,9 +78,9 @@ class AssistantHistory(Base):
         if self.role in ['system', 'tool']:
             return None
         if self.role in "assistant":
-            return f"{self.role}:\n{self.content}\n"
+            return f"{self.role}:\n{self.content}\n\n-------------------------------\n\n"
         if self.role == 'user':
-            return f"{self.role}:\n[当前时间: {self.create_time.strftime("%Y-%m-%d %H:%M:%S %a")}\n{self.system_inject_content}]\n{self.content}\n"
+            return f"{self.role}: [当前时间: {self.create_time.strftime("%Y-%m-%d %H:%M:%S %a")}\n{self.system_inject_content}]\n{self.content}\n\n"
 
 class AssistantStatus(Base):
     __tablename__ = "assistant_status"

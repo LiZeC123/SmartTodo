@@ -66,12 +66,14 @@ const COMMANDS = [
   { command: '/switch_work', description: '切换助理到工作模式 (参数 [角色名])', needsSpace: true },
   { command: '/switch_talk', description: '切换助理到扮演模式 (参数 [角色名])', needsSpace: true },  
 
-  { command: '/show_cost', description: '查看所有角色会话成本', needsSpace: false },
-  { command: '/show_memory', description: '查看当前角色的记忆', needsSpace: false },
-  { command: '/compress', description: '压缩当前角色记忆', needsSpace: false },
+  { command: '/cost', description: '查看所有角色会话成本', needsSpace: false },
+  { command: '/memory', description: '查看当前角色的记忆', needsSpace: false },
+  { command: '/compress', description: '压缩当前角色记忆 (参数 [相对截止时间])', needsSpace: true },
   { command: '/reason', description: '查看上一次模型思考内容', needsSpace: false },
   { command: '/set_memory', description: '覆盖当前角色的记忆 (参数 [记忆文本])', needsSpace: true },
+  { command: '/set_time', description: '修改记忆截止时间 (参数 [月.日:时 格式时间字符串])', needsSpace: true },
 
+  { command: '/rewrite', description: '重写当前角色的记忆 (参数 [重写要求])', needsSpace: true },
   { command: '/inject', description: '注入数据 (参数 [数据名称] [prompt])', needsSpace: true },
 
   { command: '/rk', description: '重新生成最后一次回答', needsSpace: false },

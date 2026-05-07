@@ -27,12 +27,11 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.remake(owner)
     elif prompt == "/role_list":
         g = assistant_manager.get_role_info_list()
-    elif prompt == '/show_cost':
+    elif prompt == '/cost':
         g = assistant_manager.show_cost(owner)
-    elif prompt == '/show_memory':
+    elif prompt == '/memory':
         g = assistant_manager.show_memory(owner)    
-    elif prompt == '/compress':
-        g = assistant_manager.compress_memory(owner)
+
     elif prompt == '/reason':
         g = assistant_manager.show_last_reason(owner)
     elif prompt.startswith("/switch_work "):
@@ -47,9 +46,21 @@ def assistant_chat_stream(owner: str):
         # replace content
         args = [arg for arg in prompt.strip().split() if arg]
         g = assistant_manager.replace(args[1], owner)
+    elif prompt.startswith('/compress'):
+        # 压缩记忆需要指定一个相当于今天的处理截止时间, 0表示截止今日零点, 1表示截止昨日0点, 依次类推
+        # 也可以不指定, 此时等于截止到当前时刻
+        # 因此该指令后面可以没有空格
+        args = prompt.removeprefix("/compress")
+        g = assistant_manager.compress_memory(args, owner)        
     elif prompt.startswith("/set_memory "):    
         args = prompt.removeprefix("/set_memory ")
         g = assistant_manager.set_memory(args, owner)
+    elif prompt.startswith("/set_time "):    
+        args = prompt.removeprefix("/set_time ")
+        g = assistant_manager.set_time(args, owner)        
+    elif prompt.startswith("/rewrite "):
+        args = prompt.removeprefix("/rewrite ")
+        g = assistant_manager.rewrite(args, owner)        
     elif prompt.startswith("/rs"):
         # reset 
         args = [arg for arg in prompt.strip().split() if arg]

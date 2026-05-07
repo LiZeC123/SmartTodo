@@ -10,7 +10,7 @@ from openai.types.chat.chat_completion_function_tool_param import ChatCompletion
 import sqlalchemy as sal
 from sqlalchemy.orm import Session, scoped_session
 
-from app.models.assistant import AssistantHistory, AssistantMemory, AssistantModeType, AssistantStatus, AssistantTagType, AssistantType, make_assistant_status
+from app.models.assistant import AssistantHistory, AssistantMemory, AssistantModeType, AssistantStatus, AssistantType, make_assistant_status
 from app.models.item import Item
 from app.models.tomato import TomatoTaskRecord
 from app.services.event_log_manager import get_event_log_after
@@ -18,7 +18,7 @@ from app.services.item_manager import ItemManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
 from app.tools.llm import LLMClient
 from app.tools.log import logger
-from app.tools.time import get_datetime_from_str, get_hour_str_from, now, today_begin
+from app.tools.time import format_timedelta, get_datetime_from_str, get_hour_str_from, now, parse_befeore_time_str, today_begin
 
 
 
@@ -234,13 +234,14 @@ LongTermMemoryPrompt = """
 
 # 新增设定
 
-这一部分根据对话提取在助手和用户之间已经确认的新增设定. 该设定应该是长期生效且对角色会产生影响的. 例如在第二天依然会有效.
+这一部分根据对话提取在助手和用户之间已经确认的新增设定. 该设定应该是长期生效且对角色会产生影响的. 例如在第二天依然会有效. 
+这一部分在旧记忆中已经存在的条目如果与对话文本相违背则删除, 如果未提及或者依然支持该设定则保留. 如果最终存在多条相似的设定, 可以将其合并为一个条目.
 
 # 用户偏好预测
 
 ## 表层偏好预测
 
-这一部分基于对话内容预测用户可能的偏好, 给出该预测的置信度(高、中、低等)以及简短的证据描述. 根据新的对话调整原有偏好预测的置信度, 合并相似的表达, 移除预测错误的条目.
+这一部分基于对话内容预测用户可能的偏好, 给出该预测的置信度(高、中高、中、中低、低)以及简短的证据描述. 根据新的对话调整原有偏好预测的置信度, 合并相似的表达, 移除预测错误的条目.
 
 ## 深层偏好推测
 
@@ -274,6 +275,16 @@ LongTermMemoryPrompt = """
 【新的多轮对话】
 
 {new_content}
+"""
+
+MemoryRewritePrompt="""
+你是一位文本编辑, 以下给出一段用户提供的文本和用户的改写要求, 依照用户的要求进行修改, 但需要确保只修改内容, 不修改整体的章节结构和文字风格.
+
+【用户提出的修改要求】
+{user_request}
+
+【待修改的文本】
+{content}
 """
 
 
@@ -331,10 +342,17 @@ class AssistantMemoryManager:
             self.db.commit()
         return t
         
-    def update_long_term_memory(self, /, role_name: str, role_desc:str, owner: str) -> str:
+    def update_long_term_memory(self, *, role_name: str, role_desc:str, relative_deadline:str, owner: str) -> str:
+        end_day_delta = self.parse_number(relative_deadline)
+        if end_day_delta >= 0:
+            end_time = today_begin() - timedelta(days=end_day_delta)
+        else:
+            end_time = now()
+        
         memory = self.query_or_init_memory(role_name, owner)
         stmt = sal.select(AssistantHistory).where(AssistantHistory.owner == owner, 
                                                   AssistantHistory.create_time > memory.processed_time,
+                                                  AssistantHistory.create_time < end_time,
                                                   AssistantHistory.assistant_name == role_name)
         records = self.db.scalars(stmt)
 
@@ -351,21 +369,44 @@ class AssistantMemoryManager:
         
         if content is not None:    
             memory.long_term_memory = content
-            memory.processed_time = now()
+            memory.processed_time = end_time
             self.db.flush()
             self.db.commit()
             return content
         else:
             logger.warning(f'模型返回记忆为空. 用户:{owner} 助手:{role_name}')
-            return ""
+            return "模型返回记忆为空"
         
-    def inject_long_term_memory(self, /, memory_content: str,  role_name: str, owner: str):
+    def inject_long_term_memory(self, *, memory_content: str,  role_name: str, owner: str):
         """从外部直接注入记忆"""
         memory = self.query_or_init_memory(role_name, owner)
         memory.long_term_memory = memory_content
         self.db.flush()
         self.db.commit()
         
+    def smart_rewrite_long_term_memory(self, *, user_reques: str, role_name:str, owner:str) -> str:
+        memory = self.query_or_init_memory(role_name, owner)
+        prompt = MemoryRewritePrompt.format(user_reques=user_reques, content=memory.long_term_memory)
+        reason, content = self.cliet.generate_one_shot(prompt)
+        if reason is not None:
+            self.last_reason_content = reason
+        
+        if content is not None:    
+            # 只修改内容, 不修改处理时间
+            memory.long_term_memory = content        
+            self.db.flush()
+            self.db.commit()
+            return content
+        else:
+            logger.warning(f'模型返回改写内容为空. 用户:{owner} 助手:{role_name}')
+            return "模型返回改写内容为空"
+
+    def reset_process_time(self, new_time: datetime,  role_name:str, owner:str) -> bool:
+        memory = self.query_or_init_memory(role_name, owner)
+        memory.processed_time = new_time
+        self.db.flush()
+        self.db.commit()
+        return True
     
     def evaluate_cost(self, owner: str) -> str:
         stmt = sal.select(AssistantHistory.assistant_name.distinct()).where(AssistantHistory.owner==owner)
@@ -380,13 +421,38 @@ class AssistantMemoryManager:
                                                   AssistantHistory.assistant_name == role_name)
         records = self.db.scalars(stmt).all()
         
+        memory_char_cost = len(memory.long_term_memory)
         char_cost = sum(len(s) for r in records if (s := r.to_dump()) is not None)
-        token_cost = char_cost * 1.5
+        token_cost = (memory_char_cost+char_cost) * 1.5
         conv_cnt = len(records)
-        delta_times = now()-memory.processed_time
-        return f"角色名: {role_name:>8s} 字符成本: {char_cost // 1024:6d}KB Token预估数量: {token_cost / 1024:6.1f}K 对话轮次: {conv_cnt // 2:3d}轮 已积累未处理对话时长: {delta_times}"
+        delta_times = format_timedelta(now()-memory.processed_time)
+        
+        return f"角色名: {role_name:>8s} 字符成本: {memory_char_cost/1024:2.1f}KB+{char_cost // 1024:3d}KB={(memory_char_cost+char_cost) // 1024:3d}KB Token预估数量: {token_cost / 1024:3.1f}K 对话轮次: {conv_cnt // 2:3d}轮 未压缩会话时长: {delta_times}"
 
-    
+    @staticmethod
+    def parse_number(s: str) -> int:
+        """
+        解析字符串为数字：
+        - 如果是 正整数 或 0 → 返回对应的数字
+        - 如果是空字符串 "" → 返回 -1
+        - 其他所有解析失败情况 → 返回 -2
+        """
+        # 空字符串 → 返回 -1
+        if s == "":
+            return -1
+
+        try:
+            # 尝试转整数
+            num = int(s)
+            # 是整数，但必须 >= 0 才合法
+            if num >= 0:
+                return num
+            else:
+                # 负数 → 解析错误
+                return -2
+        except (ValueError, TypeError):
+            # 无法转整数 → 解析错误
+            return -2
 
 
 class AssistantManager:
@@ -400,7 +466,7 @@ class AssistantManager:
         self.history_manager = history_manager
         self.memory_manager = memory_manager
     
-    def generate(self, owner: str, /, enable_tools=False) -> Generator[str, Any, None]:
+    def generate(self, owner: str, *, enable_tools=False) -> Generator[str, Any, None]:
         """流式生成回复：后台消费 LLM 流并保存，前台推送给客户端"""
         history = self.history_manager.get_history(owner)
         if enable_tools:
@@ -449,14 +515,7 @@ class AssistantManager:
                 
     def chat(self, prompt: str, owner: str) ->  Generator[str, Any, None]:
         status = self.history_manager.query_or_init_status(owner)
-        if status.assistant_mode == AssistantModeType.Assistant:
-            # 助理模式下注入待办系统的状态信息
-            start = self.history_manager.get_last_assistant_mode_time(status)
-            inject_content = self.make_user_inject_content(start, owner)
-        else:
-            # 非助理模式仅注入一个状态提示
-            inject_content = "当前状态: 自由行动模式"
-            
+        inject_content = self.make_user_inject_content(status, owner)    
         self.history_manager.add_user_prompt(prompt, inject_content, owner)
         return self.generate(owner, enable_tools=True)
         
@@ -475,14 +534,20 @@ class AssistantManager:
         # reset功能不存在了, 先不删除, 后续看有无必要实现
         raise Exception('reset not implemented')
         
-    def switch(self, /, role_keyword: str, role_mode: int, prompt:str, owner:str)-> Generator[str, Any, None]:
+    def switch(self, *, role_keyword: str, role_mode: int, prompt:str, owner:str)-> Generator[str, Any, None]:
         role_name, role_desc = self.make_switch_role(role_keyword)
         self.history_manager.switch(role_name=role_name, role_desc=role_desc, role_mode=role_mode, owner=owner)
         content = f"切换到角色: {role_name}"
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
     
-    def make_user_inject_content(self, start: datetime, owner:str) -> str:
+    def make_user_inject_content(self, status: AssistantStatus, owner:str) -> str:
+        # 扮演模式不注入任何系统相关的信息
+        if status.assistant_mode == AssistantModeType.RolePlaying:
+            return "当前状态: 自由行动模式"
+            
+        # 非扮演模式查询具体的状态信息    
         # 当前番茄钟状态
+        start = self.history_manager.get_last_assistant_mode_time(status)
         begin_time, begin_state = self.get_tomato_state_begin_time()
         state = self.get_tomato_state(owner=owner, begin_time=begin_time, begin_state=begin_state)
         content = f"番茄钟状态: {state}\n"
@@ -540,10 +605,10 @@ class AssistantManager:
         memory = self.memory_manager.query_or_init_memory(status.assistant_name, owner)
         yield f"data: {json.dumps({'text': memory.to_dump(), 'done': True})}\n\n"
         
-    def compress_memory(self, owner:str) -> Generator[str, Any, None]:
+    def compress_memory(self, relative_deadline: str, owner:str) -> Generator[str, Any, None]:
         status = self.history_manager.query_or_init_status(owner)
         yield f"data: {json.dumps({'text': '正在处理中...\n', 'done': False})}\n\n"
-        new_memory = self.memory_manager.update_long_term_memory(status.assistant_name, status.assistant_desc, owner)
+        new_memory = self.memory_manager.update_long_term_memory(role_name=status.assistant_name, role_desc=status.assistant_desc, relative_deadline=relative_deadline,  owner=owner)
         yield f"data: {json.dumps({'text': new_memory, 'done': True})}\n\n"
         
     def show_last_reason(self, owner:str) -> Generator[str, Any, None]:
@@ -556,6 +621,18 @@ class AssistantManager:
         self.memory_manager.inject_long_term_memory(memory_content=memory_content, role_name=status.assistant_name, owner=owner)
         yield from self.show_memory(owner)
         
+    def rewrite(self, user_request:str, owner:str)-> Generator[str, Any, None]:
+        status = self.history_manager.query_or_init_status(owner)
+        self.memory_manager.smart_rewrite_long_term_memory(user_reques=user_request, role_name=status.assistant_name, owner=owner)
+        yield from self.show_memory(owner) 
+        
+    def set_time(self, time_str: str, owner: str) -> Generator[str, Any, None]:
+        # 使用待办事项截止日期相同格式的时间处理逻辑, 简化输入
+        t = parse_befeore_time_str(time_str)
+        status = self.history_manager.query_or_init_status(owner)
+        self.memory_manager.reset_process_time(t, status.assistant_name, owner)
+        yield from self.show_memory(owner)
+    
     def __is_zero_tomoto_task(self, name:str) -> bool:
         # 打卡类任务可瞬间完成无需番茄钟.  午间和晚间任务不占用番茄钟
         keywords = ['打卡', '午间', '晚间']
@@ -672,13 +749,12 @@ class AssistantManager:
         yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
         
     def dump_user_prompt(self, owner: str) ->Generator[str, Any, None]:
-        status = self.history_manager.query_or_init_status(owner)
-        start = self.history_manager.get_last_assistant_mode_time(status)
-        
-        content = self.make_user_inject_content(start, owner)
+        status = self.history_manager.query_or_init_status(owner)        
+        content = self.make_user_inject_content(status, owner)
         yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
         
-        content = f"\n当前状态信息\n 角色名: {status.assistant_name}\n 角色模式: {status.assistant_mode}\n 角色描述: {status.assistant_desc}\n"
+        mode = '扮演模式' if status.assistant_mode == AssistantModeType.RolePlaying else '助理模式'
+        content = f"\n当前状态信息\n 角色名: {status.assistant_name}\n 角色模式: {mode}\n 角色描述: {status.assistant_desc}\n"
         yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
         
         yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
