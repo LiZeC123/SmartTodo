@@ -36,12 +36,12 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.show_last_reason(owner)
     elif prompt.startswith("/switch_work "):
         # 切换指定角色到聊天模式
-        role_keyword, user_prompt = parse_switch_args(prompt)
-        g = assistant_manager.switch(role_keyword=role_keyword, role_mode=AssistantModeType.Assistant, prompt=user_prompt, owner=owner)
+        role_keyword, _ = parse_switch_args(prompt)
+        g = assistant_manager.switch(role_keyword=role_keyword, role_mode=AssistantModeType.Assistant,  owner=owner)
     elif prompt.startswith("/switch_talk "):
         # 切换指定角色到扮演模式
-        role_keyword, user_prompt = parse_switch_args(prompt)
-        g = assistant_manager.switch(role_keyword=role_keyword, role_mode=AssistantModeType.RolePlaying, prompt=user_prompt, owner=owner)
+        role_keyword, _ = parse_switch_args(prompt)
+        g = assistant_manager.switch(role_keyword=role_keyword, role_mode=AssistantModeType.RolePlaying, owner=owner)
     elif prompt.startswith("/rc "):
         # replace content
         args = [arg for arg in prompt.strip().split() if arg]
@@ -60,7 +60,10 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.set_time(args, owner)        
     elif prompt.startswith("/rewrite "):
         args = prompt.removeprefix("/rewrite ")
-        g = assistant_manager.rewrite(args, owner)        
+        g = assistant_manager.rewrite(args, owner)
+    elif prompt.startswith("/rumor "):
+        args = prompt.removeprefix("/rumor ")
+        g = assistant_manager.rumor(args, owner)               
     elif prompt.startswith("/rs"):
         # reset 
         args = [arg for arg in prompt.strip().split() if arg]

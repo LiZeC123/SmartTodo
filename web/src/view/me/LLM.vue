@@ -72,8 +72,10 @@ const COMMANDS = [
   { command: '/reason', description: '查看上一次模型思考内容', needsSpace: false },
   { command: '/set_memory', description: '覆盖当前角色的记忆 (参数 [记忆文本])', needsSpace: true },
   { command: '/set_time', description: '修改记忆截止时间 (参数 [月.日:时 格式时间字符串])', needsSpace: true },
-
   { command: '/rewrite', description: '重写当前角色的记忆 (参数 [重写要求])', needsSpace: true },
+
+  { command: '/rumor', description: '对当前角色生成一条关于目标角色的流言 (参数 [目标角色名])', needsSpace: true }, 
+  
   { command: '/inject', description: '注入数据 (参数 [数据名称] [prompt])', needsSpace: true },
 
   { command: '/rk', description: '重新生成最后一次回答', needsSpace: false },

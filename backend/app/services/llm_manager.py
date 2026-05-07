@@ -188,6 +188,12 @@ class AssistantHistoryManager:
                                                   AssistantHistory.create_time > start_time,
                                                   AssistantHistory.assistant_name == status.assistant_name)
         return (status, memory, self.db.scalars(stmt)) 
+    
+    def select_record_after(self, role_name: str, start_time:datetime, owner: str) -> Iterable[AssistantHistory]:
+        stmt = sal.select(AssistantHistory).where(AssistantHistory.owner == owner, 
+                                                  AssistantHistory.create_time > start_time,
+                                                  AssistantHistory.assistant_name == role_name)
+        return self.db.scalars(stmt)
 
     def get_history(self, owner:str)-> List[ChatCompletionMessageParam]:        
         status, memory, records = self.select_record(owner)
@@ -312,7 +318,7 @@ RumorMillPrompt="""
 
 
 【输出要求】
-只输出一段自然语言文本, 描述观察者角色最后收到的信息. 不要输出分析过程, 不要添加"xx了解到:"这类元信息. 直接以观察者角色的语气和风格写出B说的或心里知道的内容
+只输出一段自然语言文本, 描述观察者角色最后收到的信息. 不要输出分析过程, 不要添加"xx了解到:"这类元信息. 直接以观察者角色的语气和风格写出其心里想到的内容
 
 【观察者角色的设定】
 {visitor_desc}
@@ -534,7 +540,7 @@ class AssistantManager:
         # reset功能不存在了, 先不删除, 后续看有无必要实现
         raise Exception('reset not implemented')
         
-    def switch(self, *, role_keyword: str, role_mode: int, prompt:str, owner:str)-> Generator[str, Any, None]:
+    def switch(self, *, role_keyword: str, role_mode: int, owner:str)-> Generator[str, Any, None]:
         role_name, role_desc = self.make_switch_role(role_keyword)
         self.history_manager.switch(role_name=role_name, role_desc=role_desc, role_mode=role_mode, owner=owner)
         content = f"切换到角色: {role_name}"
@@ -632,6 +638,36 @@ class AssistantManager:
         status = self.history_manager.query_or_init_status(owner)
         self.memory_manager.reset_process_time(t, status.assistant_name, owner)
         yield from self.show_memory(owner)
+
+
+    def rumor(self, target_keyword: str, owner:str) -> Generator[str, Any, None]:
+        status = self.history_manager.query_or_init_status(owner)
+        target_name, target_desc = self.make_switch_role(target_keyword)
+        content = f"正在生成{status.assistant_name}收到的关于{target_name}的流言蜚语\n"
+        yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
+        
+        history = self.history_manager.select_record_after(target_name, today_begin(), owner)
+        new_content = ""
+        for record in history:
+            r = record.to_openai()
+            new_content += json.dumps(r, ensure_ascii=False)
+            new_content += "\n"
+        
+        
+        prompt = RumorMillPrompt.format(visitor_desc=status.assistant_desc, role_desc=target_desc, new_content=new_content)
+        
+        reason, content = self.llm_manager.generate_one_shot(prompt)
+        if reason is not None:
+            self.memory_manager.last_reason_content = reason
+        
+        if content is None:
+            yield f"data: {json.dumps({'text': '生成失败', 'done': True})}\n\n"
+            return
+        
+        inject_content = f'你的内心产生了一个想法: {content}'
+        self.history_manager.add_user_prompt('', inject_content, owner)
+        yield from self.generate(owner, enable_tools=True)
+        
     
     def __is_zero_tomoto_task(self, name:str) -> bool:
         # 打卡类任务可瞬间完成无需番茄钟.  午间和晚间任务不占用番茄钟
