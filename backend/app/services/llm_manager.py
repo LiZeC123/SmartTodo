@@ -184,15 +184,15 @@ class AssistantHistoryManager:
             start_time = memory.processed_time
         else:
             start_time = today_begin() - timedelta(days=2)
-        stmt = sal.select(AssistantHistory).where(AssistantHistory.owner == owner, 
-                                                  AssistantHistory.create_time > start_time,
-                                                  AssistantHistory.assistant_name == status.assistant_name)
+        stmt = sal.select(AssistantHistory) \
+                  .where(AssistantHistory.owner == owner, AssistantHistory.create_time > start_time,
+                         AssistantHistory.assistant_name == status.assistant_name)
         return (status, memory, self.db.scalars(stmt)) 
     
     def select_record_after(self, role_name: str, start_time:datetime, owner: str) -> Iterable[AssistantHistory]:
-        stmt = sal.select(AssistantHistory).where(AssistantHistory.owner == owner, 
-                                                  AssistantHistory.create_time > start_time,
-                                                  AssistantHistory.assistant_name == role_name)
+        stmt = sal.select(AssistantHistory)\
+                  .where(AssistantHistory.owner == owner, AssistantHistory.create_time > start_time,
+                         AssistantHistory.assistant_name == role_name)
         return self.db.scalars(stmt)
 
     def get_history(self, owner:str)-> List[ChatCompletionMessageParam]:        
@@ -208,6 +208,18 @@ class AssistantHistoryManager:
     def get_web_history(self, owner: str) -> List[Dict]:
         _, _, records = self.select_record(owner)
         return [{'role': msg.role, 'msg': msg.to_web()} for msg in records if msg.role in [AssistantType.User, AssistantType.Assistant]]
+
+    def evalute_day_cost(self, owner: str) -> str:
+        status = self.query_or_init_status(owner)
+        start_day = now() - timedelta(days=14)
+        stmt = sal.select(sal.func.date(AssistantHistory.create_time).label("stat_date"),
+                          sal.func.sum(sal.func.length(AssistantHistory.content) +sal.func.length(AssistantHistory.system_inject_content)).label("total_chars"),
+                          sal.func.count().label('msg_count')) \
+                  .where(AssistantHistory.owner == owner,AssistantHistory.assistant_name == status.assistant_name, AssistantHistory.create_time > start_day) \
+                  .group_by(sal.func.date(AssistantHistory.create_time)) \
+                  .order_by("stat_date")
+        records = self.db.execute(stmt)
+        return "\n".join([f"{r.stat_date}: {r.total_chars / 1024:6.2f} KB / {r.msg_count // 2:4d} Msg" for r in records])
     
     def make_system_prompt(self, role_desc) -> ChatCompletionSystemMessageParam:
         return ChatCompletionSystemMessageParam(
@@ -601,9 +613,12 @@ class AssistantManager:
             yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
         yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"            
  
- 
     def show_cost(self, owner:str) -> Generator[str, Any, None]:
         cost_report = self.memory_manager.evaluate_cost(owner)
+        yield f"data: {json.dumps({'text': cost_report, 'done': True})}\n\n"
+        
+    def show_day_cost(self, owner: str) -> Generator[str, Any, None]:
+        cost_report = self.history_manager.evalute_day_cost(owner)
         yield f"data: {json.dumps({'text': cost_report, 'done': True})}\n\n"
         
     def show_memory(self, owner:str) -> Generator[str, Any, None]:

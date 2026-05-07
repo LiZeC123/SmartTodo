@@ -29,6 +29,8 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.get_role_info_list()
     elif prompt == '/cost':
         g = assistant_manager.show_cost(owner)
+    elif prompt == '/day_cost':
+        g = assistant_manager.show_day_cost(owner)
     elif prompt == '/memory':
         g = assistant_manager.show_memory(owner)    
 

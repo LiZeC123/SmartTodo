@@ -67,6 +67,7 @@ const COMMANDS = [
   { command: '/switch_talk', description: '切换助理到扮演模式 (参数 [角色名])', needsSpace: true },  
 
   { command: '/cost', description: '查看所有角色会话成本', needsSpace: false },
+  { command: '/day_cost', description: '查看当前角色按天统计会话成本', needsSpace: false },
   { command: '/memory', description: '查看当前角色的记忆', needsSpace: false },
   { command: '/compress', description: '压缩当前角色记忆 (参数 [相对截止时间])', needsSpace: true },
   { command: '/reason', description: '查看上一次模型思考内容', needsSpace: false },
