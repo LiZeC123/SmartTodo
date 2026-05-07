@@ -66,10 +66,11 @@ const COMMANDS = [
   { command: '/switch_work', description: '切换助理到工作模式 (参数 [角色名])', needsSpace: true },
   { command: '/switch_talk', description: '切换助理到扮演模式 (参数 [角色名])', needsSpace: true },  
 
-  { command: '/show_cost', description: '评估当前角色会话成本', needsSpace: false },
+  { command: '/show_cost', description: '查看所有角色会话成本', needsSpace: false },
   { command: '/show_memory', description: '查看当前角色的记忆', needsSpace: false },
   { command: '/compress', description: '压缩当前角色记忆', needsSpace: false },
   { command: '/reason', description: '查看上一次模型思考内容', needsSpace: false },
+  { command: '/set_memory', description: '覆盖当前角色的记忆 (参数 [记忆文本])', needsSpace: true },
 
   { command: '/inject', description: '注入数据 (参数 [数据名称] [prompt])', needsSpace: true },
 
@@ -310,7 +311,15 @@ const sendMessage = async () => {
   // 发送完成后（流式结束或指令执行完毕）将焦点重新设置到文本框
   // 使用 nextTick 确保 DOM 更新完成且输入框未被禁用
   await nextTick()
-  textareaRef.value?.focus()
+  if (!isMobile()) {
+    textareaRef.value?.focus()
+  }
+}
+
+// 辅助函数：检测是否为移动端
+const isMobile = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    || ('ontouchstart' in window) // 触摸屏设备
 }
 
 interface AssistantMsg {

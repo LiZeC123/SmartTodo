@@ -4,7 +4,7 @@ import random
 import re
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple
 
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionSystemMessageParam, ChatCompletionToolUnionParam
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletionSystemMessageParam, ChatCompletionToolUnionParam, ChatCompletionUserMessageParam
 from openai.types.shared_params.function_definition import FunctionDefinition
 from openai.types.chat.chat_completion_function_tool_param import ChatCompletionFunctionToolParam
 import sqlalchemy as sal
@@ -47,6 +47,12 @@ SystemPrompt = '''# 角色设定
 1. 在用户的对话前有系统插入的当前状态信息和用户行为日志.  
 2. 系统会在每天凌晨将用户的可重复任务自动重置为未完成状态, 以便于用户重新进行打卡.
 2. 每次回复需要至少200字
+'''
+
+MemoryPrompt = '''
+你总结了你在后续对话中可能需要的长期记忆
+
+{memory_content}
 '''
 
 
@@ -167,27 +173,46 @@ class AssistantHistoryManager:
         else:
             return last.create_time
     
-    def select_record(self, owner:str) -> Tuple[AssistantStatus, Iterable[AssistantHistory]]:
+    def select_record(self, owner:str) -> Tuple[AssistantStatus, Optional[AssistantMemory], Iterable[AssistantHistory]]:
         # 查询当前角色最近2天聊天记录
         status = self.query_or_init_status(owner)
-        start_time = today_begin() - timedelta(days=2)
+        
+        stmt = sal.select(AssistantMemory).where(AssistantMemory.assistant_name==status.assistant_name,AssistantMemory.owner==owner)
+        memory = self.db.scalar(stmt)
+        
+        if memory is not None:
+            start_time = memory.processed_time
+        else:
+            start_time = today_begin() - timedelta(days=2)
         stmt = sal.select(AssistantHistory).where(AssistantHistory.owner == owner, 
                                                   AssistantHistory.create_time > start_time,
                                                   AssistantHistory.assistant_name == status.assistant_name)
-        return (status, self.db.scalars(stmt)) 
+        return (status, memory, self.db.scalars(stmt)) 
 
     def get_history(self, owner:str)-> List[ChatCompletionMessageParam]:        
-        status, records = self.select_record(owner)
-        return [self.make_system_prompt(status.assistant_desc)] + [msg.to_openai() for msg in records]
+        status, memory, records = self.select_record(owner)
+        sp = self.make_system_prompt(status.assistant_desc)
+        
+        if memory is None:
+            return [sp] + [msg.to_openai() for msg in records]
+        
+        mp = self.make_memory_prompt(memory.to_dump())
+        return [sp, mp] + [msg.to_openai() for msg in records]
     
     def get_web_history(self, owner: str) -> List[Dict]:
-        _, records = self.select_record(owner)
+        _, _, records = self.select_record(owner)
         return [{'role': msg.role, 'msg': msg.to_web()} for msg in records if msg.role in [AssistantType.User, AssistantType.Assistant]]
     
     def make_system_prompt(self, role_desc) -> ChatCompletionSystemMessageParam:
         return ChatCompletionSystemMessageParam(
             role="system",
             content=SystemPrompt.format(role_desc=role_desc)
+        )
+        
+    def make_memory_prompt(self, memory: str) -> ChatCompletionUserMessageParam:
+        return ChatCompletionUserMessageParam(
+            role='user',
+            content=MemoryPrompt.format(memory_content=memory)
         )
 
 
@@ -200,8 +225,8 @@ LongTermMemoryPrompt = """
 
 # 约定和待办
 
-这一部分输出助手明确表达的约定或待办事项, 每一项需要包含事项标题, 预计处理时间和当前状态(例如:待执行、进行中或者挂起等). 不提取系统任务（如番茄钟）和用户的个人规划.
-对于旧记忆中已经存在的条目, 需要逐一检查并更新状态, 已完成的事项删除并评估是否进入里程碑条目.
+这一部分输出助手明确表达的约定或待办事项, 每一项需要包含事项标题, 预计处理时间(使用精确时间, 不要使用"明天"这种相对时间)和当前状态(例如:待执行、进行中或者挂起等). 不提取系统任务（如番茄钟）和用户的个人规划.
+不要提取已经完成的事项. 对于旧记忆中已经存在的条目, 需要逐一检查并更新状态, 已完成的事项删除并评估是否进入里程碑条目.
 
 # 助手内心想法
 
@@ -224,7 +249,7 @@ LongTermMemoryPrompt = """
 
 # 近期话题
 
-这一部分输出助手和用户之间讨论的话题和助手的核心观点. 每个话题用一句话进行概述并给出该话题的提出时间. 给出包含年月日的精确日期以便于后续按照日期进行热度删除处理.
+这一部分输出助手和用户之间讨论的话题. 每个条目包含话题提出的日期(精确的年月日), 一句话概括的话题的主题和助手的核心观点.
 根据新的对话提取助手和用户之间的新增话题, 并优先考虑将新话题与已有话题合并然后更新该条目的提出时间. 最后检查话题数量, 如果已经超过十条, 则抛弃提出时间最久的条目, 使得总条目数量维持在十条以内.
 
 # 共享里程碑
@@ -251,6 +276,42 @@ LongTermMemoryPrompt = """
 {new_content}
 """
 
+
+RumorMillPrompt="""
+你是一个角色间信息传播模拟器. 用户与助手之间有一段互动, 请按照以下规则和输入信息推测观察者角色最终会听到、看到或推断出什么信息
+
+
+【推理步骤】
+1. 判断事件的私密性等级. 
+
+如果事件明显发生在公共场所、多人可见、或参与者没有刻意隐藏则为公开等级. 
+如果事件发生在半开放空间(如包间、偏僻角落)、或只有有限间接证据(如电话、物品、第三方偶尔路过)则为半公开等级.
+如果事件发生在私密空间、参与者明确要求保密、或没有任何外部痕迹则为私有等级.
+
+2. 根据私密性等级和观察者角色的人设, 决定其获知信息的途径
+
+公开等级的信息观察者角色可能亲眼目击、当众听说. 该信息的保真度高.
+半公开等级的信息观察者角色可能通过偶然发现(遗落物品、通话内容、他人无意的提及)获得部分信息, 信息有缺失或包含猜测成分
+私有等级的信息只能由助手或者用户主动告知观察者角色, 否则观察者角色只能了解非常模糊的大致信息.
+
+3. 结合助手的设定和观察者角色的设定, 进行信息的失真、模糊、添油加醋或聚焦兴趣点
+
+分析用户与助手之间是否有明显的涉及不要告诉其他人的暗示. 如果有则丢失大量细节只保留类似"用户和助手聊了某些事情"的程度.
+根据助手的性格判断助手是否会主动泄露、无意泄露或刻意隐瞒. 根据观察者角色的性格判断她接收信息时的理解能力、记忆偏差或额外脑补.
+
+
+【输出要求】
+只输出一段自然语言文本, 描述观察者角色最后收到的信息. 不要输出分析过程, 不要添加"xx了解到:"这类元信息. 直接以观察者角色的语气和风格写出B说的或心里知道的内容
+
+【观察者角色的设定】
+{visitor_desc}
+
+【助手的角色设定】
+{role_desc}
+
+【用户和助手的对话】
+{new_content}
+"""
 
 
 
@@ -297,6 +358,14 @@ class AssistantMemoryManager:
         else:
             logger.warning(f'模型返回记忆为空. 用户:{owner} 助手:{role_name}')
             return ""
+        
+    def inject_long_term_memory(self, /, memory_content: str,  role_name: str, owner: str):
+        """从外部直接注入记忆"""
+        memory = self.query_or_init_memory(role_name, owner)
+        memory.long_term_memory = memory_content
+        self.db.flush()
+        self.db.commit()
+        
     
     def evaluate_cost(self, owner: str) -> str:
         stmt = sal.select(AssistantHistory.assistant_name.distinct()).where(AssistantHistory.owner==owner)
@@ -314,8 +383,10 @@ class AssistantMemoryManager:
         char_cost = sum(len(s) for r in records if (s := r.to_dump()) is not None)
         token_cost = char_cost * 1.5
         conv_cnt = len(records)
-        return f"角色名: {role_name:>8s} 字符成本: {char_cost // 1024:6d}KB Token预估数量: {token_cost / 1024:6.1f}K 对话轮次: {conv_cnt // 2:3d}轮"
+        delta_times = now()-memory.processed_time
+        return f"角色名: {role_name:>8s} 字符成本: {char_cost // 1024:6d}KB Token预估数量: {token_cost / 1024:6.1f}K 对话轮次: {conv_cnt // 2:3d}轮 已积累未处理对话时长: {delta_times}"
 
+    
 
 
 class AssistantManager:
@@ -333,7 +404,7 @@ class AssistantManager:
         """流式生成回复：后台消费 LLM 流并保存，前台推送给客户端"""
         history = self.history_manager.get_history(owner)
         if enable_tools:
-            print("进入包含工具的分支")
+            # print("历史内容", history)
             tool_desc, tool_map = self.make_tools(owner)
             stream = self.llm_manager.generate_steam_with_tools(history, tool_desc, tool_map)
         else:
@@ -467,8 +538,7 @@ class AssistantManager:
     def show_memory(self, owner:str) -> Generator[str, Any, None]:
         status = self.history_manager.query_or_init_status(owner)
         memory = self.memory_manager.query_or_init_memory(status.assistant_name, owner)
-        content = memory.long_term_memory
-        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
+        yield f"data: {json.dumps({'text': memory.to_dump(), 'done': True})}\n\n"
         
     def compress_memory(self, owner:str) -> Generator[str, Any, None]:
         status = self.history_manager.query_or_init_status(owner)
@@ -479,8 +549,13 @@ class AssistantManager:
     def show_last_reason(self, owner:str) -> Generator[str, Any, None]:
         content = self.memory_manager.last_reason_content
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
-        
     
+    def set_memory(self, memory_content: str, owner: str) -> Generator[str, Any, None]:
+        memory_content = memory_content.strip()
+        status = self.history_manager.query_or_init_status(owner)
+        self.memory_manager.inject_long_term_memory(memory_content=memory_content, role_name=status.assistant_name, owner=owner)
+        yield from self.show_memory(owner)
+        
     def __is_zero_tomoto_task(self, name:str) -> bool:
         # 打卡类任务可瞬间完成无需番茄钟.  午间和晚间任务不占用番茄钟
         keywords = ['打卡', '午间', '晚间']
@@ -587,7 +662,9 @@ class AssistantManager:
         
     
     def dump_history(self, owner:str) -> Generator[str, Any, None]:
-        _, record = self.history_manager.select_record(owner)
+        _, memory, record = self.history_manager.select_record(owner)
+        if memory is not None:
+            yield f"data: {json.dumps({'text': memory.to_dump(), 'done': False})}\n\n"
         
         for item in record:
             v = item.to_dump()

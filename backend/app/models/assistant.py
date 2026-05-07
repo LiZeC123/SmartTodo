@@ -80,7 +80,7 @@ class AssistantHistory(Base):
         if self.role in "assistant":
             return f"{self.role}:\n{self.content}\n"
         if self.role == 'user':
-            return f"{self.role}:\n[当前时间: {self.create_time.strftime("%Y-%m-%d %H:%M:%S %a")}\n{self.system_inject_content}]\n{self.content}"
+            return f"{self.role}:\n[当前时间: {self.create_time.strftime("%Y-%m-%d %H:%M:%S %a")}\n{self.system_inject_content}]\n{self.content}\n"
 
 class AssistantStatus(Base):
     __tablename__ = "assistant_status"
@@ -107,10 +107,10 @@ class AssistantMemory(Base):
     assistant_name: Mapped[str]     = mapped_column(String(15), nullable=False, default='') # 当前助理的角色名
     short_term_memory: Mapped[str]  = mapped_column(String(15), nullable=False, default='')
     long_term_memory: Mapped[str]   = mapped_column(String(15), nullable=False, default='')
-    processed_time: Mapped[datetime]= mapped_column(DateTime, nullable=False, default=datetime(year=1970, month=1, day=1)) # 记忆已经处理过的记录的时间
+    processed_time: Mapped[datetime]= mapped_column(DateTime, nullable=False, default=datetime(year=2026, month=5, day=1)) # 记忆已经处理过的记录的时间
     
     def to_assistant(self):
         pass
     
     def to_dump(self) -> str:
-        return f"角色名: {self.assistant_name}\n记忆处理时间: {self.processed_time}\n短期记忆: {self.short_term_memory}\n长期记忆:{self.long_term_memory}"
+        return f"角色名: {self.assistant_name}\n记忆处理时间: {self.processed_time}\n短期记忆:\n{self.short_term_memory}\n长期记忆:\n{self.long_term_memory}"
