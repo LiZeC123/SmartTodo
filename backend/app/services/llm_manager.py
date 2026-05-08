@@ -429,8 +429,19 @@ class AssistantMemoryManager:
         return True
     
     def evaluate_cost(self, owner: str) -> str:
-        stmt = sal.select(AssistantHistory.assistant_name.distinct()).where(AssistantHistory.owner==owner).order_by(AssistantHistory.id.desc())
-        names = self.db.scalars(stmt)
+        sql = sal.text("""
+            SELECT assistant_name
+            FROM (
+                SELECT assistant_name, MAX(id) as last_id
+                FROM assistant_history
+                WHERE owner = :owner
+                GROUP BY assistant_name
+            ) t
+            ORDER BY last_id DESC
+        """)
+
+        result = self.db.execute(sql, {"owner": owner})
+        names = result.scalars().all()   # 获得按照最近聊天顺序的列表
         
         return "\n".join([self.evaluate_one_role_cost(name, owner) for name in names])
     
