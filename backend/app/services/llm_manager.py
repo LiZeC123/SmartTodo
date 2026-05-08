@@ -18,7 +18,7 @@ from app.services.item_manager import ItemManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
 from app.tools.llm import LLMClient
 from app.tools.log import logger
-from app.tools.time import format_timedelta, get_datetime_from_str, get_hour_str_from, now, parse_befeore_time_str, today_begin
+from app.tools.time import format_timedelta, get_datetime_from_str, get_hour_str_from, now, parse_befeore_time_str, the_day_begin, today_begin
 
 
 
@@ -194,6 +194,13 @@ class AssistantHistoryManager:
                   .where(AssistantHistory.owner == owner, AssistantHistory.create_time > start_time,
                          AssistantHistory.assistant_name == role_name)
         return self.db.scalars(stmt)
+    
+    def select_record_between(self, role_name: str, start_time:datetime, end_time:datetime, owner: str):
+        stmt = sal.select(AssistantHistory)\
+                  .where(AssistantHistory.owner == owner, 
+                         AssistantHistory.create_time > start_time, AssistantHistory.create_time < end_time,
+                         AssistantHistory.assistant_name == role_name)
+        return self.db.scalars(stmt)        
 
     def get_history(self, owner:str)-> List[ChatCompletionMessageParam]:        
         status, memory, records = self.select_record(owner)
@@ -360,25 +367,20 @@ class AssistantMemoryManager:
             self.db.commit()
         return t
         
-    def update_long_term_memory(self, *, role_name: str, role_desc:str, relative_deadline:str, owner: str) -> str:
-        end_day_delta = self.parse_number(relative_deadline)
-        if end_day_delta >= 0:
-            end_time = today_begin() - timedelta(days=end_day_delta)
-        else:
-            end_time = now()
-        
+    def update_long_term_memory(self, *, role_name: str, role_desc:str, end_time:datetime, owner: str) -> str:
         memory = self.query_or_init_memory(role_name, owner)
-        stmt = sal.select(AssistantHistory).where(AssistantHistory.owner == owner, 
-                                                  AssistantHistory.create_time > memory.processed_time,
-                                                  AssistantHistory.create_time < end_time,
-                                                  AssistantHistory.assistant_name == role_name)
+        stmt = sal.select(AssistantHistory) \
+                  .where(AssistantHistory.owner == owner, 
+                         AssistantHistory.create_time > memory.processed_time, AssistantHistory.create_time < end_time,
+                         AssistantHistory.assistant_name == role_name)
         records = self.db.scalars(stmt)
-
         new_content = ""
         for record in records:
             r = record.to_openai()
             new_content += json.dumps(r, ensure_ascii=False)
             new_content += "\n"
+        if new_content == "":
+            return "该区间内没有记忆, 取消记忆压缩执行"
         
         prompt = LongTermMemoryPrompt.format(role_desc=role_desc, old_memory=memory.long_term_memory, new_content=new_content)
         reason, content = self.cliet.generate_one_shot(prompt)
@@ -427,7 +429,7 @@ class AssistantMemoryManager:
         return True
     
     def evaluate_cost(self, owner: str) -> str:
-        stmt = sal.select(AssistantHistory.assistant_name.distinct()).where(AssistantHistory.owner==owner)
+        stmt = sal.select(AssistantHistory.assistant_name.distinct()).where(AssistantHistory.owner==owner).order_by(AssistantHistory.id.desc())
         names = self.db.scalars(stmt)
         
         return "\n".join([self.evaluate_one_role_cost(name, owner) for name in names])
@@ -446,31 +448,6 @@ class AssistantMemoryManager:
         delta_times = format_timedelta(now()-memory.processed_time)
         
         return f"角色名: {role_name:>8s} 字符成本: {memory_char_cost/1024:2.1f}KB+{char_cost // 1024:3d}KB={(memory_char_cost+char_cost) // 1024:3d}KB Token预估数量: {token_cost / 1024:3.1f}K 对话轮次: {conv_cnt // 2:3d}轮 未压缩会话时长: {delta_times}"
-
-    @staticmethod
-    def parse_number(s: str) -> int:
-        """
-        解析字符串为数字：
-        - 如果是 正整数 或 0 → 返回对应的数字
-        - 如果是空字符串 "" → 返回 -1
-        - 其他所有解析失败情况 → 返回 -2
-        """
-        # 空字符串 → 返回 -1
-        if s == "":
-            return -1
-
-        try:
-            # 尝试转整数
-            num = int(s)
-            # 是整数，但必须 >= 0 才合法
-            if num >= 0:
-                return num
-            else:
-                # 负数 → 解析错误
-                return -2
-        except (ValueError, TypeError):
-            # 无法转整数 → 解析错误
-            return -2
 
 
 class AssistantManager:
@@ -579,7 +556,7 @@ class AssistantManager:
 
     def make_switch_role(self, keyword: str) -> Tuple[str, str]:
         role_desc = self.get_role_info(self.get_role_list(), keyword)
-        role_name = extract_role_name(role_desc)
+        role_name = self.extract_role_name(role_desc)
         if role_name is None:
             logger.warning(f"加载的角色描述信息无法提取角色名: {role_desc}")
             role_name = '未知角色'
@@ -607,7 +584,7 @@ class AssistantManager:
     def get_role_info_list(self) -> Generator[str, Any, None]:
         raw_list = self.get_role_list()
         for role in raw_list:
-            name = extract_role_name(role)
+            name = self.extract_role_name(role)
             desc = role.split(",")[0]
             content = f"{name}: {desc}\n"
             yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
@@ -628,8 +605,16 @@ class AssistantManager:
         
     def compress_memory(self, relative_deadline: str, owner:str) -> Generator[str, Any, None]:
         status = self.history_manager.query_or_init_status(owner)
-        yield f"data: {json.dumps({'text': '正在处理中...\n', 'done': False})}\n\n"
-        new_memory = self.memory_manager.update_long_term_memory(role_name=status.assistant_name, role_desc=status.assistant_desc, relative_deadline=relative_deadline,  owner=owner)
+        end_day_delta = self.parse_number(relative_deadline)
+        if end_day_delta >= 0:
+            end_time = today_begin() - timedelta(days=end_day_delta)
+        else:
+            end_time = now()
+        
+        msg = f"正在压缩 {end_time.strftime("%Y-%m-%d %H:%M:%S")} 的记录...\n"
+        yield f"data: {json.dumps({'text': msg, 'done': False})}\n\n"
+        
+        new_memory = self.memory_manager.update_long_term_memory(role_name=status.assistant_name, role_desc=status.assistant_desc, end_time=end_time,  owner=owner)
         yield f"data: {json.dumps({'text': new_memory, 'done': True})}\n\n"
         
     def show_last_reason(self, owner:str) -> Generator[str, Any, None]:
@@ -682,7 +667,18 @@ class AssistantManager:
         inject_content = f'你的内心产生了一个想法: {content}'
         self.history_manager.add_user_prompt('', inject_content, owner)
         yield from self.generate(owner, enable_tools=True)
+
+    def show_day_history(self, day_str: str, owner:str) -> Generator[str, Any, None]:
+        t = parse_befeore_time_str(day_str)
+        start = the_day_begin(t)
+        end = start + timedelta(days=1)
+        status = self.history_manager.query_or_init_status(owner)
+        history = self.history_manager.select_record_between(status.assistant_name, start_time=start, end_time=end, owner=owner)
         
+        for item in history:
+            v = item.to_dump()
+            yield f"data: {json.dumps({'text': v, 'done': False})}\n\n"
+        yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
     
     def __is_zero_tomoto_task(self, name:str) -> bool:
         # 打卡类任务可瞬间完成无需番茄钟.  午间和晚间任务不占用番茄钟
@@ -810,14 +806,40 @@ class AssistantManager:
         
         yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
         
+    @staticmethod
+    def parse_number(s: str) -> int:
+        """
+        解析字符串为数字：
+        - 如果是 正整数 或 0 → 返回对应的数字
+        - 如果是空字符串 "" → 返回 -1
+        - 其他所有解析失败情况 → 返回 -2
+        """
+        # 空字符串 → 返回 -1
+        if s == "":
+            return -1
 
-def extract_role_name(text):
-    """提取角色名, 角色描述中需要包含 '名为xxx,' 的文字, 提取该部分作为角色名"""
-    # 正则表达式：匹配 名叫(任意1+字符), 捕获中间的内容
-    pattern = r"名叫(.+?),"
-    # 查找第一个匹配项
-    match = re.search(pattern, text)
-    
-    if match:
-        return match.group(1)  # 返回括号内捕获的名字
-    return None        
+        try:
+            # 尝试转整数
+            num = int(s)
+            # 是整数，但必须 >= 0 才合法
+            if num >= 0:
+                return num
+            else:
+                # 负数 → 解析错误
+                return -2
+        except (ValueError, TypeError):
+            # 无法转整数 → 解析错误
+            return -2
+        
+                
+    @staticmethod
+    def extract_role_name(text):
+        """提取角色名, 角色描述中需要包含 '名为xxx,' 的文字, 提取该部分作为角色名"""
+        # 正则表达式：匹配 名叫(任意1+字符), 捕获中间的内容
+        pattern = r"名叫(.+?),"
+        # 查找第一个匹配项
+        match = re.search(pattern, text)
+        
+        if match:
+            return match.group(1)  # 返回括号内捕获的名字
+        return None        

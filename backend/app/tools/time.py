@@ -22,10 +22,10 @@ def today_str() -> str:
 
 
 def today_begin() -> datetime:
-    now_time = now()
-    return now_time - timedelta(hours=now_time.hour, minutes=now_time.minute, seconds=now_time.second,
-                                microseconds=now_time.microsecond)
+    return the_day_begin(now())
 
+def the_day_begin(t:datetime):
+    return t - timedelta(hours=t.hour,minutes=t.minute,seconds=t.second,microseconds=t.microsecond)
 
 def this_week_begin() -> datetime:
     now_time = now()

@@ -1,7 +1,6 @@
 from typing import Dict, List
 
 from flask import Blueprint, request, Response
-from sqlalchemy import Tuple
 
 from app import assistant_manager
 from app.models.assistant import AssistantModeType
@@ -65,7 +64,10 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.rewrite(args, owner)
     elif prompt.startswith("/rumor "):
         args = prompt.removeprefix("/rumor ")
-        g = assistant_manager.rumor(args, owner)               
+        g = assistant_manager.rumor(args, owner)
+    elif prompt.startswith("/history "):
+        args = prompt.removeprefix("/history ")
+        g = assistant_manager.show_day_history(args, owner)                      
     elif prompt.startswith("/rs"):
         # reset 
         args = [arg for arg in prompt.strip().split() if arg]

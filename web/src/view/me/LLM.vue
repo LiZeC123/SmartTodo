@@ -79,11 +79,12 @@ const COMMANDS = [
   
   { command: '/inject', description: '注入数据 (参数 [数据名称] [prompt])', needsSpace: true },
 
-  { command: '/rk', description: '重新生成最后一次回答', needsSpace: false },
+  { command: '/role_list', description: '显示所有角色信息', needsSpace: false },
+  { command: '/history', description: '查看当前角色指定时间的对话 (参数 [月.日 格式时间字符串])', needsSpace: true },
   { command: '/du', description: '显示系统注入的用户信息', needsSpace: false },
   { command: '/da', description: '显示所有会话信息', needsSpace: false },
   
-  { command: '/role_list', description: '显示所有角色信息', needsSpace: false },
+  { command: '/rk', description: '重新生成最后一次回答', needsSpace: false },
   { command: '/rc', description: '替换最后一条用户消息', needsSpace: true },
   { command: '/delete', description: '删除最后一条对话 (同步后端)', needsSpace: false },
 ]
