@@ -16,3 +16,13 @@ class EventLog(Base):
     owner: Mapped[str]            = mapped_column(String(15), nullable=False)
     create_time: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now)
     msg: Mapped[str]              = mapped_column(Text, nullable=False)
+    
+
+# class CheckinLog(Base):
+#     '''打卡记录表, 记录名称中包含 打卡 文字的代办事项的完成记录'''
+#     __tablename__ = "checkin_log"
+    
+#     id: Mapped[int]               = mapped_column(Integer, primary_key=True, autoincrement=True)
+#     owner: Mapped[str]            = mapped_column(String(15), nullable=False)
+#     create_time: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=now)
+#     name: Mapped[str]             = mapped_column(Text, nullable=False)

@@ -9,9 +9,8 @@ import WeightRecord from '@/view/me/WeightRecord.vue'
 import PomodoroTimer from '@/view/me/PomodoroTimer.vue'
 import WelfarePage from '@/view/me/WelfarePage.vue'
 import CreditAdd from '@/view/me/CreditAdd.vue'
-import ShowTask from '@/view/me/ShowTask.vue'
-import LLM from '@/view/me/LLM.vue'
-import CheckDay from '@/view/me/CheckDay.vue'
+import Checkin from '@/view/Checkin.vue'
+import Assistant from '@/view/Assistant.vue'
 import Index from '@/view/Index.vue'
 
 
@@ -25,15 +24,14 @@ const router = createRouter({
     { path: '/note/:id', component: Todo },
     { path: '/log/:type', component: Message },
     { path: '/tomato', component: TomatoPage },
-    { path: '/pa', component: LLM },
+    { path: '/assistant', component: Assistant },
+    { path: '/checkin', component: Checkin },
     { path: '/summary', component: SummaryPage },
     { path: '/me/credits', component: CreditsPage },
     { path: '/me/weight', component: WeightRecord },
     { path: '/me/tomato', component: PomodoroTimer },
     { path: '/me/welfare', component: WelfarePage },
     { path: '/me/credit/add', component: CreditAdd },
-    { path: '/me/showTask', component: ShowTask },
-    { path: '/me/checkday', component: CheckDay },
   ]
 })
 

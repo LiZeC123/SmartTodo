@@ -31,16 +31,15 @@ interface CardConfig {
 // 路由列表
 const cardList: CardConfig[] = [
   { title: '待办事项', path: '/todo' },
-  { title: '番茄钟', path: '/tomato' },
-  { title: '私人助理', path: '/pa' },
+  { title: '番茄时钟', path: '/tomato' },
+  { title: '私人助理', path: '/assistant' },
+  { title: '打卡记录', path: '/checkin' },
   { title: '数据汇总', path: '/summary' },
   { title: '体重记录', path: '/me/weight' },
   { title: '积分管理', path: '/me/credits' },
   { title: '番茄计时', path: '/me/tomato' },
   { title: '福利中心', path: '/me/welfare' },
-  { title: '添加积分', path: '/me/credit/add' },
-  { title: '任务展示', path: '/me/showTask' },
-  { title: '每日打卡', path: '/me/checkday' }
+  { title: '添加积分', path: '/me/credit/add' }
 ];
 </script>
 
