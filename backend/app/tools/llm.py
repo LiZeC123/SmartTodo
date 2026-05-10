@@ -33,7 +33,7 @@ class LLMClient:
                 {"role": "system", "content": "You are a helpful assistant"},
                 {"role": "user", "content": prompt},
             ],
-            reasoning_effort="xhigh",
+            reasoning_effort="max", # type: ignore
             extra_body={"thinking": {"type": "enabled"}}
         )
         

@@ -30,7 +30,7 @@ class AssistantTagType:
     RoleSwitch = 1
     ModeSwich = 2
 
-class AssistantHistory(Base):
+class History(Base):
     __tablename__ = "assistant_history"
 
     id: Mapped[int]                     = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -82,24 +82,23 @@ class AssistantHistory(Base):
         if self.role == 'user':
             return f"{self.role}: [当前时间: {self.create_time.strftime("%Y-%m-%d %H:%M:%S %a")}\n{self.system_inject_content}]\n{self.content}\n\n"
 
-class AssistantStatus(Base):
+class Status(Base):
     __tablename__ = "assistant_status"
     
     id: Mapped[int]                 = mapped_column(Integer, primary_key=True, autoincrement=True)
     owner: Mapped[str]              = mapped_column(String(15), nullable=False)
-    start_time: Mapped[datetime]    = mapped_column(DateTime, nullable=False, default=now)  # 用户聊天记录的起始时间
     assistant_name: Mapped[str]     = mapped_column(String(15), nullable=False, default='') # 当前助理的角色名
     assistant_desc: Mapped[str]     = mapped_column(Text, nullable=False, default='')       # 助理的角色描述
     assistant_mode: Mapped[int]     = mapped_column(Integer, nullable=False, default=0)     # 助理的模式 0: 助理模式 1: 扮演模式
+    enable_tools: Mapped[int]      = mapped_column(Integer, nullable=False, default=0)      # 工具权限 0: 禁止调用工具 1: 允许调用工具
+
     
-    
-def make_assistant_status(owner: str, start_time:datetime):
-    return AssistantStatus(owner=owner, start_time=start_time)
+def make_assistant_status(owner: str):
+    return Status(owner=owner)
 
 
-
-class AssistantMemory(Base):
-    """助手记忆表, 存储用户的每一个助理的记忆"""
+class Memory(Base):
+    """助手记忆表, 流水存储用户的每一个助理的记忆, 只插入不更新"""
     __tablename__ = "assistant_memory"
     
     id: Mapped[int]                 = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -107,10 +106,15 @@ class AssistantMemory(Base):
     assistant_name: Mapped[str]     = mapped_column(String(15), nullable=False, default='') # 当前助理的角色名
     short_term_memory: Mapped[str]  = mapped_column(String(15), nullable=False, default='')
     long_term_memory: Mapped[str]   = mapped_column(String(15), nullable=False, default='')
-    processed_time: Mapped[datetime]= mapped_column(DateTime, nullable=False, default=datetime(year=2026, month=5, day=1)) # 记忆已经处理过的记录的时间
+    compression_reason: Mapped[str] = mapped_column(String(15), nullable=False, default='') # 记忆压缩的思考过程
+    processed_time: Mapped[datetime]= mapped_column(DateTime, nullable=False, default=datetime(year=2026, month=5, day=1)) # 已经处理过的记录的截止时间
     
-    def to_assistant(self):
-        pass
+    def deep_copy(self, processed_time:datetime) -> 'Memory':
+        return Memory(owner=self.owner, assistant_name=self.assistant_name, 
+                      short_term_memory='', long_term_memory='', compression_reason='', processed_time=processed_time)
+    
+    def to_assistant(self) -> str:
+        return f"你回顾了你自己的长期记忆\n{self.long_term_memory}\n"
     
     def to_dump(self) -> str:
         return f"角色名: {self.assistant_name}\n记忆处理时间: {self.processed_time}\n短期记忆:\n{self.short_term_memory}\n长期记忆:\n{self.long_term_memory}"
