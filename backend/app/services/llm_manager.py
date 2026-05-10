@@ -209,7 +209,9 @@ class AssistantHistoryManager:
         return [sp, mp] + [msg.to_openai() for msg in records]
     
     def get_web_history(self, owner: str) -> List[Dict]:
-        _, _, records = self.select_record(owner)
+        status = self.query_or_init_status(owner)
+        start = today_begin() - timedelta(days=3)
+        records = self.select_record_after(status.assistant_name, start, owner)
         return [{'role': msg.role, 'msg': msg.to_web()} for msg in records if msg.role in [AssistantType.User, AssistantType.Assistant]]
 
     def evalute_day_cost(self, owner: str) -> str:
