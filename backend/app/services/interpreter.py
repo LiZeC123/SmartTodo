@@ -1,9 +1,8 @@
 import shutil
-from typing import Optional
 
 from app.models.item import Item, ItemType, TomatoType
-from app.tools.exception import IllegalArgumentException, BaseSmartTodoException
 from app.services.item_manager import ItemManager
+from app.tools.exception import BaseSmartTodoException, IllegalArgumentException
 from app.tools.log import logger
 from app.tools.time import now_str_fn
 
@@ -12,24 +11,24 @@ class OpInterpreter:
     def __init__(self, item_manager: ItemManager):
         self.item_manager = item_manager
 
-    def batch_create_item(self, data: str, parent: Optional[int], owner: str):
+    def batch_create_item(self, data: str, parent: int | None, owner: str):
         names = [d.strip() for d in data.split("-") if not d.isspace()]
         for name in names:
             item = Item(name=name, item_type=ItemType.Single, tomato_type=TomatoType.Activate, owner=owner,
                         parent=parent)
             self.item_manager.create(item)
 
-    def instance_backup(self, parent: Optional[int], owner: str):
+    def instance_backup(self, parent: int | None, owner: str):
         name = f"SmartTodo_Database({now_str_fn()}).db"
         shutil.copy("data/data.db", f"data/filebase/{name}")
         item = Item(name=f"{name}", item_type=ItemType.File, owner=owner, parent=parent, url=f"/file/{name}")
         self.item_manager.create(item)
 
-    def split_item_with_number(self, name: str, num: int, suffix: str, parent: Optional[int], owner: str):
+    def split_item_with_number(self, name: str, num: int, suffix: str, parent: int | None, owner: str):
         subtasks = [f"第{i + 1}{suffix}" for i in range(num)]
         return self.split_item_with_subtask(name, subtasks, parent, owner)
 
-    def split_item_with_subtask(self, name, subtasks: list, parent: Optional[int], owner: str):
+    def split_item_with_subtask(self, name, subtasks: list, parent: int | None, owner: str):
         item = self.item_manager.get_unique_or_null_item_by_name(name, parent, owner)
         if item is not None:
             name = item.name
@@ -38,18 +37,18 @@ class OpInterpreter:
                             owner=owner, parent=parent)
             self.item_manager.create(sub_item)
 
-    def renew(self, name: str, renew_day: int, parent: Optional[int], owner: str):
+    def renew(self, name: str, renew_day: int, parent: int | None, owner: str):
         item = self.item_manager.get_unique_item_by_name(name, parent, owner)
         self.item_manager.renew(item.id, item.owner, renew_day)
 
-    def exec_function(self, command: str, data: str, parent: Optional[int], owner: str):
+    def exec_function(self, command: str, data: str, parent: int | None, owner: str):
         logger.info(f"执行指令: {command} 指令数据: {data} 父任务ID: {parent} 执行人: {owner}")
         try:
             self.exec_function_with_exception(command, data, parent, owner)
         except BaseSmartTodoException as e:
             logger.exception(e)
 
-    def exec_function_with_exception(self, command: str, data: str, parent: Optional[int], owner: str):
+    def exec_function_with_exception(self, command: str, data: str, parent: int | None, owner: str):
         if command == "m":
             return self.batch_create_item(data, parent, owner)
         elif command == "backup":
@@ -91,8 +90,8 @@ def parse_sn_data(data):
             return name, 3, "部分"
         else:
             raise IllegalArgumentException("解析sn指令数据失败: 参数数量不匹配")
-    except ValueError:
-        raise IllegalArgumentException("解析sn指令数据失败")
+    except ValueError as e:
+        raise IllegalArgumentException("解析sn指令数据失败") from e
 
 
 def parse_sx_data(data):
@@ -112,5 +111,5 @@ def parse_renew_data(data):
         name = elem[0]
         renew_day = int(elem[1])
         return name, renew_day
-    except (ValueError, IndexError):
-        raise IllegalArgumentException("解析renew指令数据失败")
+    except (ValueError, IndexError) as e:
+        raise IllegalArgumentException("解析renew指令数据失败") from e

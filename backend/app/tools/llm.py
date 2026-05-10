@@ -1,10 +1,17 @@
 
-from typing import Any, Callable, Dict, Generator, Iterable, List
+from collections.abc import Callable, Generator, Iterable
+from typing import Any
+
+from openai import OpenAI
+from openai.types.chat import (
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionMessageParam,
+    ChatCompletionToolMessageParam,
+    ChatCompletionToolUnionParam,
+)
 
 from app.services.config_manager import ConfigManager
 
-from openai import OpenAI
-from openai.types.chat import ChatCompletionAssistantMessageParam, ChatCompletionMessageParam, ChatCompletionToolMessageParam, ChatCompletionToolUnionParam
 
 class LLMClient:
     def __init__(self, config_manager: ConfigManager) -> None:
@@ -12,7 +19,7 @@ class LLMClient:
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.model_name = model_name
 
-    def generate_stream(self, history: List[ChatCompletionMessageParam]) -> Generator[str, Any, None]:
+    def generate_stream(self, history: list[ChatCompletionMessageParam]) -> Generator[str, Any]:
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=history,
@@ -36,23 +43,23 @@ class LLMClient:
             reasoning_effort="max", # type: ignore
             extra_body={"thinking": {"type": "enabled"}}
         )
-        
+
         reasoning_content = response.choices[0].message.reasoning_content # type: ignore
         content = response.choices[0].message.content
         return reasoning_content, content
-        
-                
-    def generate_steam_with_tools(self, history: List[ChatCompletionMessageParam], tools: Iterable[ChatCompletionToolUnionParam],
-                                  tool_map: Dict[str, Callable[[str], str]]) -> Generator[str, Any, None]:
+
+
+    def generate_steam_with_tools(self, history: list[ChatCompletionMessageParam], tools: Iterable[ChatCompletionToolUnionParam],
+                                  tool_map: dict[str, Callable[[str], str]]) -> Generator[str, Any]:
         response = self.client.chat.completions.create(
             model=self.model_name, messages=history, stream=True, tools=tools,
             extra_body={"thinking": {"type": "disabled"}}
         )
-        
+
         tool_calls_buffer = {}
         msg_buffer = []
         finish_reason = None
-                
+
         for chunk in response:
             if not chunk.choices:
                 continue
@@ -83,7 +90,7 @@ class LLMClient:
                             tool_calls_buffer[idx][
                                 "arguments"
                             ] += tool_call_delta.function.arguments
-    
+
         # 流结束后判断
         if finish_reason == "tool_calls":
             # ========== 关键修复点：构造完整的 assistant 消息（包含 tool_calls） ==========
@@ -133,4 +140,4 @@ class LLMClient:
                     continue
                 delta = chunk.choices[0].delta
                 if delta.content:
-                    yield delta.content         
+                    yield delta.content

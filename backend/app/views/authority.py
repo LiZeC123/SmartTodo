@@ -2,7 +2,7 @@ import functools
 import logging
 from typing import Any
 
-from flask import Response, jsonify, abort, session
+from flask import Response, abort, jsonify, session
 
 from app.tools.exception import UnauthorizedException
 from app.tools.log import logger

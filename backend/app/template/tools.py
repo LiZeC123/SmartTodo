@@ -2,7 +2,6 @@
 from openai.types.chat.chat_completion_function_tool_param import ChatCompletionFunctionToolParam
 from openai.types.shared_params.function_definition import FunctionDefinition
 
-
 CreatItemTool: ChatCompletionFunctionToolParam = ChatCompletionFunctionToolParam(
     type="function",
     function=FunctionDefinition(

@@ -2,8 +2,8 @@ from flask import Flask
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from app.services.config_manager import ConfigManager
 from app.models.base import Base
+from app.services.config_manager import ConfigManager
 from app.services.interpreter import OpInterpreter
 from app.services.item_manager import ItemManager
 from app.services.llm_manager import AssistantHistoryManager, AssistantManager, AssistantMemoryManager
@@ -47,16 +47,16 @@ def create_app():
     app.secret_key = generate_token_str()
 
     # 导入并注册蓝图
+    from app.views.checkin import checkin_bp
+    from app.views.credit import credit_bp
     from app.views.file import file_bp
     from app.views.item import item_bp
+    from app.views.llm import llm_bp
     from app.views.login import login_bp
     from app.views.meta import meta_bp
     from app.views.note import note_bp
     from app.views.tomato import tomato_bp
     from app.views.weight import weight_bp
-    from app.views.credit import credit_bp
-    from app.views.llm import llm_bp
-    from app.views.checkin import checkin_bp
     app.register_blueprint(file_bp)
     app.register_blueprint(item_bp)
     app.register_blueprint(login_bp)

@@ -303,7 +303,7 @@ def test_to_today_task():
     assert manager.to_today_task(item.id, owner)
     with pytest.raises(UnauthorizedException):
         manager.to_today_task(item.id + 999, owner)
-    
+
     t =  manager.select(item.id)
     assert t is not None and t.tomato_type  == TomatoType.Today
 
@@ -330,12 +330,12 @@ def test_sub_task():
     item3 = make_base_item("test_sub_task_note_sub")
     item3.parent = item2.id
     manager.create(item3)
-    
+
     assert manager.get_item_with_sub_task(owner)
 
     manager.remove(item1)
     manager.remove(item2)
-    manager.remove(item3)    
+    manager.remove(item3)
 
 
 def test_get_deadline_item():
@@ -402,7 +402,7 @@ def test_renew_sp_task():
     sp_item1.specific = 7
     sp_item1.used_tomato = 1
     manager.create(sp_item1)
-    
+
     # 已完成任务正常续期
     manager.renew_sp_task()
 
@@ -416,6 +416,6 @@ def test_renew_sp_task():
     # 未完成任务不会续期
     manager.renew_sp_task()
     item = manager.select(sp_item1.id)
-    assert item is not None 
+    assert item is not None
     assert deadline == item.deadline
 

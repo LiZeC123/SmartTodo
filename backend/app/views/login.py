@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, jsonify, request, session
 
 from app import config_manager
 from app.tools.log import logger

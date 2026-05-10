@@ -1,4 +1,3 @@
-from typing import Dict
 
 from flask import Blueprint, request
 
@@ -18,7 +17,7 @@ def query(owner: str):
 @weight_bp.post("/api/me/weight/add")
 @authority_check()
 def add(owner: str):
-    data: Dict = request.get_json()
+    data: dict = request.get_json()
     weight = float(data.get('weight', 0))
     return add_log(db, owner, weight)
 

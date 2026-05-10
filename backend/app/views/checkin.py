@@ -1,9 +1,6 @@
-from typing import Dict
 
-from flask import Blueprint, request
+from flask import Blueprint
 
-from app import db
-from app.services.credit_manager import *
 from app.views.authority import authority_check
 
 checkin_bp = Blueprint("checkin", __name__)

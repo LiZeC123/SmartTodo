@@ -1,9 +1,9 @@
+from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta
 from itertools import groupby
-from typing import Dict, Optional, Sequence, Callable, List
 
 import sqlalchemy as sal
-from sqlalchemy.orm import scoped_session, Session
+from sqlalchemy.orm import Session, scoped_session
 
 from app.models.item import Item, ItemType, TomatoType
 from app.models.tomato import TomatoStatus, TomatoTaskRecord
@@ -22,7 +22,7 @@ class TomatoManager:
     def __init__(self, db: scoped_session[Session], item_manager: ItemManager):
         self.db = db
         self.item_manager = item_manager
-        self.tomato_finished_event: List[OnTomatoFinished] = []
+        self.tomato_finished_event: list[OnTomatoFinished] = []
 
     def on_tomato_finished(self, callback: OnTomatoFinished):
         self.tomato_finished_event.append(callback)
@@ -80,16 +80,16 @@ class TomatoManager:
         self.db.flush()
         return True
 
-    def query_task(self, owner: str) -> Optional[TomatoStatus]:
+    def query_task(self, owner: str) -> TomatoStatus | None:
         stmt = sal.select(TomatoStatus).where(TomatoStatus.owner == owner)
         return self.db.scalar(stmt)
-    
-    def query_task_for_update(self, owner: str) -> Optional[TomatoStatus]:
+
+    def query_task_for_update(self, owner: str) -> TomatoStatus | None:
         # 查询番茄钟时增加for update标记, 如果后续要更新该条目, 可以保证操作互斥, 不会同时更新触发多次业务逻辑的执行
         stmt = sal.select(TomatoStatus).where(TomatoStatus.owner == owner).with_for_update()
         return self.db.scalar(stmt)
 
-    def get_task(self, owner: str) -> Dict | None:
+    def get_task(self, owner: str) -> dict | None:
         status = self.query_task(owner)
         if status:
             return status.to_dict()

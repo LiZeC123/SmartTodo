@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
@@ -10,7 +9,6 @@ from openai.types.chat import (
 )
 from sqlalchemy import DateTime, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
-
 
 from app.models.base import Base
 from app.tools.exception import IllegalArgumentException
@@ -25,7 +23,7 @@ class AssistantType:
 class AssistantModeType:
     Assistant = 0
     RolePlaying = 1
-    
+
 class AssistantTagType:
     RoleSwitch = 1
     ModeSwich = 2
@@ -40,12 +38,12 @@ class History(Base):
     system_inject_content: Mapped[str]  = mapped_column(Text, nullable=False, default='')   # 系统自动注入的待办相关信息
     tool_call_id:Mapped[str]            = mapped_column(String, nullable=False, default='') # 工具的ID
     owner: Mapped[str]                  = mapped_column(String(15), nullable=False)
-    
+
     assistant_name: Mapped[str]         = mapped_column(String(15), nullable=False, default='') # 助理的角色名
     assistant_mode: Mapped[int]         = mapped_column(Integer, nullable=False, default=0)     # 助理的模式 0: 助理模式 1: 扮演模式
-    
+
     # 扩展字段, 后续可能会对消息增加额外的标记
-    tag: Mapped[int]                    = mapped_column(Integer, nullable=False, default=0)     # 消息标记 0: 无标记 
+    tag: Mapped[int]                    = mapped_column(Integer, nullable=False, default=0)     # 消息标记 0: 无标记
 
 
     # 定义联合索引
@@ -66,15 +64,15 @@ class History(Base):
             return ChatCompletionToolMessageParam(content=self.content, role='tool', tool_call_id=self.tool_call_id)
         raise IllegalArgumentException(f"unknown role: {self.role}")
 
-    def to_web(self) -> Optional[str]:
+    def to_web(self) -> str | None:
         if self.role in ['system', 'tool']:
             return None
         if self.role in "assistant":
             return self.content
         if self.role == 'user':
             return self.content if self.content != "" else "[用户没有任何输入]"
-        
-    def to_dump(self) -> Optional[str]:
+
+    def to_dump(self) -> str | None:
         if self.role in ['system', 'tool']:
             return None
         if self.role in "assistant":
@@ -84,7 +82,7 @@ class History(Base):
 
 class Status(Base):
     __tablename__ = "assistant_status"
-    
+
     id: Mapped[int]                 = mapped_column(Integer, primary_key=True, autoincrement=True)
     owner: Mapped[str]              = mapped_column(String(15), nullable=False)
     assistant_name: Mapped[str]     = mapped_column(String(15), nullable=False, default='') # 当前助理的角色名
@@ -92,7 +90,7 @@ class Status(Base):
     assistant_mode: Mapped[int]     = mapped_column(Integer, nullable=False, default=0)     # 助理的模式 0: 助理模式 1: 扮演模式
     enable_tools: Mapped[int]      = mapped_column(Integer, nullable=False, default=0)      # 工具权限 0: 禁止调用工具 1: 允许调用工具
 
-    
+
 def make_assistant_status(owner: str):
     return Status(owner=owner)
 
@@ -100,7 +98,7 @@ def make_assistant_status(owner: str):
 class Memory(Base):
     """助手记忆表, 流水存储用户的每一个助理的记忆, 只插入不更新"""
     __tablename__ = "assistant_memory"
-    
+
     id: Mapped[int]                 = mapped_column(Integer, primary_key=True, autoincrement=True)
     owner: Mapped[str]              = mapped_column(String(15), nullable=False)
     assistant_name: Mapped[str]     = mapped_column(String(15), nullable=False, default='') # 当前助理的角色名
@@ -108,13 +106,13 @@ class Memory(Base):
     long_term_memory: Mapped[str]   = mapped_column(String(15), nullable=False, default='')
     compression_reason: Mapped[str] = mapped_column(String(15), nullable=False, default='') # 记忆压缩的思考过程
     processed_time: Mapped[datetime]= mapped_column(DateTime, nullable=False, default=datetime(year=2026, month=5, day=1)) # 已经处理过的记录的截止时间
-    
+
     def deep_copy(self, processed_time:datetime) -> 'Memory':
-        return Memory(owner=self.owner, assistant_name=self.assistant_name, 
+        return Memory(owner=self.owner, assistant_name=self.assistant_name,
                       short_term_memory='', long_term_memory='', compression_reason='', processed_time=processed_time)
-    
+
     def to_assistant(self) -> str:
         return f"你回顾了你自己的长期记忆\n{self.long_term_memory}\n"
-    
+
     def to_dump(self) -> str:
         return f"角色名: {self.assistant_name}\n记忆处理时间: {self.processed_time}\n短期记忆:\n{self.short_term_memory}\n长期记忆:\n{self.long_term_memory}"

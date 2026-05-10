@@ -1,4 +1,4 @@
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 
 
 def now() -> datetime:
@@ -76,7 +76,7 @@ def format_timedelta(delta: timedelta) -> str:
         parts.append(f"{mins}分钟")
     if sec > 0:
         parts.append(f"{sec}秒")
-    
+
     return "".join(parts) or "0秒"
 
 
@@ -99,7 +99,7 @@ def parse_deadline_str(date_str: str) -> str:
         return this_year.strftime("%Y-%m-%d %H:%M:%S")
     else:
         return next_year.strftime("%Y-%m-%d %H:%M:%S")
-    
+
 def parse_befeore_time_str(date_str: str) -> datetime:
     """解析日期字符串, 与parse_deadline_str逻辑正好相反, 始终返回过去的时间"""
     if ":" in date_str:

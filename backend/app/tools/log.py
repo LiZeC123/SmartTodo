@@ -1,8 +1,7 @@
 import logging
+from logging import handlers
 from os import mkdir
 from os.path import exists, join
-
-from logging import handlers
 
 _LOG_BASE = join("data", "log")
 if not exists(_LOG_BASE):

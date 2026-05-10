@@ -1,11 +1,10 @@
 import pytest
 
-from app.tests.services.item_test import make_base_item
 from app.services.interpreter import *
+from app.tests.services.item_test import make_base_item
 from app.tests.services.make_db import make_new_file_db
 from app.tools.exception import NotUniqueItemException
 from app.tools.time import now, the_day_after
-
 
 owner = "user"
 item_manager = ItemManager(make_new_file_db())
@@ -31,7 +30,7 @@ def test_split_sp():
     item_manager.create(base_item)
     op.exec_function(command="sn", data="split_sp 3", parent=None, owner=owner)
     op.exec_function(command="sx", data="split -补充任务1 -补充任务2", parent=None, owner=owner)
-    
+
     same_item = make_base_item("split_sp_item2")
     item_manager.create(same_item)
     op.exec_function(command="sn", data="split_sp 3", parent=None, owner=owner)

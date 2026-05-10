@@ -2,6 +2,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import DeclarativeBase
 
+
 class Base(DeclarativeBase):
     def to_dict(self):
         d = {}
@@ -12,4 +13,4 @@ class Base(DeclarativeBase):
             else:
                 d[c.name] = v
         return d
-    
+

@@ -1,8 +1,7 @@
-from typing import Dict
 
 from flask import Blueprint, request
 
-from app import op_interpreter, config_manager
+from app import config_manager, op_interpreter
 from app.tools.log import Log_File
 from app.views.authority import authority_check
 from app.views.tool import try_get_parent_from_request
@@ -26,7 +25,7 @@ def get_log(owner: str):
 @meta_bp.post("/api/admin/func")
 @authority_check("ROLE_ADMIN")
 def exec_function(owner: str):
-    f: Dict = request.get_json()
+    f: dict = request.get_json()
     command: str = f.get("cmd", "<undefined>")
     data: str = f.get("data", "")
     parent = try_get_parent_from_request()

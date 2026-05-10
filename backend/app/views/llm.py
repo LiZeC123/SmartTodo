@@ -1,6 +1,5 @@
-from typing import Dict, List
 
-from flask import Blueprint, request, Response
+from flask import Blueprint, Response, request
 
 from app import assistant_manager
 from app.models.assistant import AssistantModeType
@@ -12,7 +11,7 @@ llm_bp = Blueprint("llm", __name__)
 @llm_bp.post("/api/stream/assistant/chat")
 @authority_check()
 def assistant_chat_stream(owner: str):
-    f: Dict = request.get_json()
+    f: dict = request.get_json()
     prompt: str = f.get("prompt", "")
 
     if prompt == "/du":
@@ -96,7 +95,7 @@ def assistant_chat_stream(owner: str):
 
 def parse_switch_args(prompt) -> tuple[str, str]:
     "解析角色名关键词和用户的prompt"
-    args: List[str] = [arg for arg in prompt.strip().split() if arg]
+    args: list[str] = [arg for arg in prompt.strip().split() if arg]
     if len(args) >= 3:
         return args[1], args[2]
     elif len(args) == 2:

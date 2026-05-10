@@ -1,5 +1,5 @@
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Sequence
 
 import sqlalchemy as sal
 from sqlalchemy.orm import Session, scoped_session

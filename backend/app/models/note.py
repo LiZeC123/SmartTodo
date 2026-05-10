@@ -3,6 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
 
+
 class Note(Base):
     """便签数据表: 存储创建的便签文本"""
     __tablename__ = "note"

@@ -1,7 +1,6 @@
-from typing import List
 
 import sqlalchemy as sal
-from sqlalchemy.orm import scoped_session, Session
+from sqlalchemy.orm import Session, scoped_session
 
 from app.models.weight import WeightLog
 from app.tools.exception import UnauthorizedException
@@ -9,7 +8,7 @@ from app.tools.exception import UnauthorizedException
 Database = scoped_session[Session]
 
 
-def query_log(db: Database, owner: str) -> List[dict]:
+def query_log(db: Database, owner: str) -> list[dict]:
     stmt = sal.select(WeightLog).where(WeightLog.owner == owner).order_by(WeightLog.id.desc()).limit(30)
     logs = db.execute(stmt).scalars().all()
     return [log.to_dict() for log in logs]

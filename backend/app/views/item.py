@@ -1,4 +1,4 @@
-from typing import Dict, Sequence
+from collections.abc import Sequence
 
 from flask import Blueprint, request
 
@@ -15,7 +15,7 @@ item_bp = Blueprint('item', __name__)
 @item_bp.post("/api/item/create")
 @authority_check()
 def create_item(owner: str):
-    f: Dict = request.get_json()
+    f: dict = request.get_json()
     item = Item(name=f['name'], item_type=f['itemType'], owner=owner)
 
     if "deadline" in f:
@@ -26,7 +26,7 @@ def create_item(owner: str):
 
     if "specific" in f:
         item.specific = int(f["specific"])
-    
+
     if "priority" in f:
         item.priority = str(f['priority'])
 
@@ -113,7 +113,7 @@ def get_deadline_item(owner: str):
     return item_manager.get_deadline_item(owner)
 
 
-def get_required_value_from_request(f: Dict, names: Sequence[str]) -> tuple:
+def get_required_value_from_request(f: dict, names: Sequence[str]) -> tuple:
     rst = []
     for name in names:
         v = f.get(name)

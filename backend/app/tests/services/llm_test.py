@@ -1,14 +1,10 @@
-from typing import Any, Callable, Dict, Generator, Iterable, List
-
-from app.services.config_manager import ConfigManager
-from app.services.item_manager import ItemManager
-from app.services.llm_manager import AssistantHistoryManager, AssistantManager
-from app.services.tomato_manager import TomatoManager, TomatoRecordManager
-from app.tests.services.make_db import make_new_db
-from app.tools.llm import LLMClient
+from collections.abc import Callable, Generator, Iterable
+from typing import Any
 
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionToolUnionParam
 
+from app.services.config_manager import ConfigManager
+from app.tools.llm import LLMClient
 
 MockResponse = "MockLLMClient Response"
 
@@ -18,12 +14,12 @@ class MockLLMClient(LLMClient):
         super().__init__(config_manager)
 
     def generate_stream(
-        self, history: List[ChatCompletionMessageParam]
-    ) -> Generator[str, Any, None]:
+        self, history: list[ChatCompletionMessageParam]
+    ) -> Generator[str, Any]:
         yield MockResponse
-    
-    def generate_steam_with_tools(self, history: List[ChatCompletionMessageParam], tools: Iterable[ChatCompletionToolUnionParam],
-                                  tool_map: Dict[str, Callable[[str], str]]) -> Generator[str, Any, None]:
+
+    def generate_steam_with_tools(self, history: list[ChatCompletionMessageParam], tools: Iterable[ChatCompletionToolUnionParam],
+                                  tool_map: dict[str, Callable[[str], str]]) -> Generator[str, Any]:
         yield MockResponse
 
 

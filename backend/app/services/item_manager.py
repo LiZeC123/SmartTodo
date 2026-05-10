@@ -1,17 +1,17 @@
 from collections import defaultdict
+from collections.abc import Callable, Sequence
 from datetime import datetime
 from itertools import groupby
-from typing import Optional, Dict, List, Sequence, Callable
 
 import sqlalchemy as sal
-from sqlalchemy.orm import scoped_session, Session
+from sqlalchemy.orm import Session, scoped_session
 
 from app.models.item import Item, ItemType, TomatoType
 from app.models.note import Note
 from app.services.credit_manager import update_credit
 from app.services.event_log_manager import add_event_log
-from app.tools.exception import UnauthorizedException, NotUniqueItemException, UnmatchedException
-from app.tools.file import create_download_file, delete_file_from_url, create_upload_file
+from app.tools.exception import NotUniqueItemException, UnauthorizedException, UnmatchedException
+from app.tools.file import create_download_file, create_upload_file, delete_file_from_url
 from app.tools.log import logger
 from app.tools.time import now, the_day_after, today_begin
 from app.tools.web import extract_title
@@ -62,10 +62,10 @@ class ItemManager:
     def __init__(self, db: scoped_session[Session]):
         self.db = db
 
-        self.before_create_event: List[ItemEvent] = [http_url_handler, download_file_handler]
-        self.after_create_event: List[ItemEvent] = [create_note_handler]
-        self.on_done_event: List[ItemEvent] = [done_item_handler]
-        self.on_delete_event: List[ItemEvent] = [remove_file_handler, remove_note_handler]
+        self.before_create_event: list[ItemEvent] = [http_url_handler, download_file_handler]
+        self.after_create_event: list[ItemEvent] = [create_note_handler]
+        self.on_done_event: list[ItemEvent] = [done_item_handler]
+        self.on_delete_event: list[ItemEvent] = [remove_file_handler, remove_note_handler]
 
     def create(self, item: Item) -> Item:
         for f in self.before_create_event:
@@ -95,12 +95,12 @@ class ItemManager:
         logger.info(f"删除任务: {item.name}")
 
 
-    def create_upload_file(self, f, parent: Optional[int], owner: str) -> Item:
+    def create_upload_file(self, f, parent: int | None, owner: str) -> Item:
         name, url = create_upload_file(f)
         item = Item(name=name, item_type=ItemType.File, owner=owner, parent=parent, url=url)
         return self.create(item)
 
-    def select(self, iid: int) -> Optional[Item]:
+    def select(self, iid: int) -> Item | None:
         return self.db.scalar(sal.select(Item).where(Item.id == iid))
 
     def select_with_authority(self, xid: int, owner: str) -> Item:
@@ -112,29 +112,29 @@ class ItemManager:
 
         return item
 
-    def select_all(self, owner: str, parent: Optional[int]):
+    def select_all(self, owner: str, parent: int | None):
         return {
             "todayTask": self.select_today(owner, parent),
             "activeTask": self.select_activate(owner, parent)
         }
 
-    def select_today(self, owner: str, parent: Optional[int]) -> List:
+    def select_today(self, owner: str, parent: int | None) -> list:
         stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
                                       Item.tomato_type == TomatoType.Today)
         today_items = self.db.execute(stmt).scalars().all()
         return [i.to_dict() for i in today_items]
 
-    def select_activate(self, owner: str, parent: Optional[int]) -> List:
+    def select_activate(self, owner: str, parent: int | None) -> list:
         stmt = sal.select(Item).where(Item.owner == owner, Item.parent == parent,
                                       Item.tomato_type == TomatoType.Activate)
         activates = self.db.execute(stmt).scalars().all()
         return [i.to_dict() for i in activates]
 
-    def get_item_by_name(self, name: str, parent: Optional[int], owner: str) -> Sequence[Item]:
+    def get_item_by_name(self, name: str, parent: int | None, owner: str) -> Sequence[Item]:
         stmt = sal.select(Item).where(Item.name.like(f"%{name}%"), Item.parent == parent, Item.owner == owner)
         return self.db.execute(stmt).scalars().all()
 
-    def get_unique_item_by_name(self, name: str, parent: Optional[int], owner: str) -> Item:
+    def get_unique_item_by_name(self, name: str, parent: int | None, owner: str) -> Item:
         items = self.get_item_by_name(name, parent, owner)
         if len(items) == 1:
             return items[0]
@@ -142,7 +142,7 @@ class ItemManager:
         item_str = ' '.join([item.name for item in items])
         raise NotUniqueItemException(f"[{item_str}]均查询条件(name={name}, parent={parent}, owner={owner})")
 
-    def get_unique_or_null_item_by_name(self, name: str, parent: Optional[int], owner: str) -> Optional[Item]:
+    def get_unique_or_null_item_by_name(self, name: str, parent: int | None, owner: str) -> Item | None:
         items = self.get_item_by_name(name, parent, owner)
         if len(items) == 0:
             return None
@@ -216,7 +216,7 @@ class ItemManager:
         item.used_tomato += 1
         item.update_time = now()
         self.db.flush()
-    
+
         add_event_log(self.db, owner, f'用户完成番茄钟任务[{item.name}], 该任务预计需要{item.expected_tomato}个番茄钟, 已完成{item.used_tomato}个番茄钟')
         return True
 
@@ -270,13 +270,13 @@ class ItemManager:
         item.deadline = the_day_after(item.deadline, renew_day)
         self.update(item)
 
-    def get_tomato_item(self, owner: str) -> List[Dict]:
+    def get_tomato_item(self, owner: str) -> list[dict]:
         stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today,
                                       Item.item_type == ItemType.Single)
         items = self.db.execute(stmt).scalars().all()
         return self.__group_sub_task(items, owner)
 
-    def get_item_with_sub_task(self, owner: str) -> List[Dict]:
+    def get_item_with_sub_task(self, owner: str) -> list[dict]:
         stmt = sal.select(Item).where(Item.owner == owner, Item.tomato_type == TomatoType.Today,
                                       Item.item_type == ItemType.Single)
         items = self.db.execute(stmt).scalars().all()
@@ -287,7 +287,7 @@ class ItemManager:
         globalItem = Item(id=0, name="全局任务", item_type=ItemType.Single, tomato_type=TomatoType.Today, owner=owner)
         for parent_id, g in groupby(sorted(items, key=lambda x: x.parent if x.parent is not None else 0),
                               key=lambda x: x.parent):
-            
+
             parent_item = self.select(parent_id) if parent_id is not None else None
             if parent_item is not None:
                 groups.append({"self": parent_item.to_dict(), "children": [i.to_dict() for i in g]})
@@ -296,7 +296,7 @@ class ItemManager:
 
         return groups
 
-    def get_deadline_item(self, owner: str) -> Sequence[Dict]:
+    def get_deadline_item(self, owner: str) -> Sequence[dict]:
         next_week = the_day_after(now(), 7)
         stmt = sal.select(Item).where(Item.owner == owner, Item.expected_tomato > Item.used_tomato,
                                       Item.deadline != None)

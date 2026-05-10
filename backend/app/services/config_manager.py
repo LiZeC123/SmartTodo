@@ -1,6 +1,6 @@
 import json
+from collections.abc import Iterable
 from os.path import exists, join
-from typing import Iterable, List
 
 from app.tools.log import logger
 
@@ -21,7 +21,7 @@ class ConfigManager:
         users = self.config['USER_INFO']
         return username in users and users[username]['password'] == password
 
-    def get_roles(self, username: str) -> List[str]:
+    def get_roles(self, username: str) -> list[str]:
         users: dict = self.config['USER_INFO']
         if username in users:
             return users[username]['role']
@@ -42,7 +42,7 @@ class ConfigManager:
     def get_llm_info(self):
         info = self.config["LLM_INFO"]
         return info["BASE_URL"], info["API_KEY"], info["MODEL_NAME"]
-    
+
     def get_all_users(self) -> Iterable[str]:
         users: dict = self.config['USER_INFO']
         return users.keys()

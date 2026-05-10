@@ -14,7 +14,7 @@ def make_base_item(name, expected_tomato=1):
     return Item(name=name, item_type=ItemType.Single, tomato_type=TomatoType.Today, expected_tomato=expected_tomato,owner=owner)
 
 def test_start_and_query():
-    item = make_base_item(name=f"Test")
+    item = make_base_item(name="Test")
     item_manager.create(item)
 
     query = tomato_manager.get_task(owner)
@@ -37,13 +37,13 @@ def test_start_and_query():
 
 
 def test_finish():
-    item = make_base_item(name=f"Test")
+    item = make_base_item(name="Test")
     item_manager.create(item)
 
     tomato_manager.start_task(item.id, owner)
     task = tomato_manager.query_task(owner)
     assert task is not None
-    
+
     # 用户名不匹配, 无法完成
     assert tomato_manager.finish_task(task.item_id, fake_owner) == False
     # ID不匹配
@@ -55,18 +55,18 @@ def test_finish():
 
 
 def test_clean():
-    item = make_base_item(name=f"Test")
+    item = make_base_item(name="Test")
     item_manager.create(item)
     reason = "测试"
 
     tomato_manager.start_task(item.id, owner)
     task = tomato_manager.query_task(owner)
     assert task is not None
-    
+
     # 用户名不匹配, 无法完成
     assert tomato_manager.clear_task(task.item_id, reason=reason, owner=fake_owner) == False
     # ID不匹配
-    assert tomato_manager.clear_task(task.item_id+2, reason=reason, owner=owner) == False    
+    assert tomato_manager.clear_task(task.item_id+2, reason=reason, owner=owner) == False
     # 正常完成
     assert tomato_manager.clear_task(task.item_id, reason=reason, owner=owner) == True
     # 已完成不可再次完成
@@ -80,7 +80,7 @@ def test_start_twice():
 
     assert tomato_manager.start_task(items[0].id, owner) == ""
     assert tomato_manager.start_task(items[1].id, owner) == '启动失败: 当前存在正在执行的番茄钟'
-    
+
     assert tomato_manager.finish_task(items[0].id, owner)
 
     # 可以启动已经完成的番茄钟, 自动扩展预计时间
