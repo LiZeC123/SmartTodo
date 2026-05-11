@@ -238,10 +238,23 @@ class AssistantHistoryManager:
         return [sp, mp] + [msg.to_openai() for msg in records]
 
     def get_web_history(self, owner: str) -> list[dict]:
-        status = self.query_or_init_status(owner)
-        start = today_begin() - timedelta(days=3)
-        records = self.select_record_after(status.assistant_name, start, owner)
-        return [{'role': msg.role, 'msg': msg.to_web()} for msg in records if msg.role in [AssistantType.User, AssistantType.Assistant]]
+        status, memory, records = self.select_record(owner)
+        if memory is None:
+            return self.to_web_json_list(records)
+
+        start = memory.processed_time - timedelta(days=3)
+        records_before = self.select_record_between(status.assistant_name, start, memory.processed_time, owner)
+        data_before = self.to_web_json_list(records_before)
+        data_after = self.to_web_json_list(records)
+        div = [{'type': 'divider', 'label': '以上对话已压缩至记忆'}]
+        return data_before + div + data_after
+
+    @staticmethod
+    def to_web_json(msg: History):
+        return {'role': msg.role, 'content': msg.to_web(), 'createTime': msg.create_time.strftime("%Y-%m-%d %H:%M:%S")}
+
+    def to_web_json_list(self, records: Iterable[History]):
+        return [self.to_web_json(msg) for msg in records if msg.role in [AssistantType.User, AssistantType.Assistant]]
 
     def evalute_day_cost(self, owner: str) -> str:
         status = self.query_or_init_status(owner)

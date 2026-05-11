@@ -2,14 +2,31 @@
 <template>
   <div class="chat-container">
     <div class="chat-history" ref="chatHistoryRef">
-      <div v-for="(message, index) in messages" :key="index" :class="['message', message.role]">
-        <div class="message-content">
-          <!-- 流式消息显示 -->
-          <span v-if="message.isStreaming" class="streaming-text">
-            {{ message.content }}
-            <span class="cursor">|</span>
-          </span>
-          <span v-else>{{ message.content }}</span>
+      <!-- 渲染显示列表（包含日期分割线和后台分割线） -->
+      <div v-for="(item, idx) in displayMessages" :key="idx">
+        <!-- 普通文本消息 -->
+        <div v-if="item.type === 'text'" :class="['message', item.role]">
+          <div class="message-content">
+            <span v-if="item.isStreaming" class="streaming-text">
+              {{ item.content }}
+              <span class="cursor">|</span>
+            </span>
+            <span v-else>{{ item.content }}</span>
+          </div>
+        </div>
+
+        <!-- 后台主动返回的分割线（中间带文字） -->
+        <div v-else-if="item.type === 'divider'" class="divider-wrapper">
+          <div class="divider-line"></div>
+          <div class="divider-text">{{ item.label }}</div>
+          <div class="divider-line"></div>
+        </div>
+
+        <!-- 日期分割线（不同天时自动插入） -->
+        <div v-else-if="item.type === 'dateDivider'" class="date-divider">
+          <div class="date-divider-line"></div>
+          <div class="date-divider-text">{{ item.date }}</div>
+          <div class="date-divider-line"></div>
         </div>
       </div>
     </div>
@@ -55,11 +72,28 @@
 import axios from 'axios'
 import { ref, reactive, onMounted, onUnmounted, nextTick, watch, computed } from 'vue'
 
-interface Message {
+// ---------- 类型定义 ----------
+interface TextMessage {
+  type: 'text'
   role: 'user' | 'assistant'
   content: string
   isStreaming?: boolean
+  createTime?: string   // 格式 '%Y-%m-%d %H:%M:%S'
 }
+
+interface DividerMessage {
+  type: 'divider'
+  label: string
+}
+
+// 显示用（日期分割线只出现在展示列表中，不存储在原始消息数组）
+interface DateDivider {
+  type: 'dateDivider'
+  date: string
+}
+
+type ChatMessage = TextMessage | DividerMessage
+type DisplayItem = ChatMessage | DateDivider
 
 // 指令列表定义
 const COMMANDS = [
@@ -89,10 +123,11 @@ const COMMANDS = [
   { command: '/delete', description: '删除最后一条对话 (同步后端)', needsSpace: false },
 ]
 
+// ---------- 响应式数据 ----------
 const inputText = ref('')
 const isLoading = ref(false)
 const error = ref('')
-const messages = reactive<Message[]>([])
+const messages = reactive<ChatMessage[]>([])   // 存储原始消息（文本 + 后台分割线）
 let controller: AbortController | null = null
 
 // DOM 引用
@@ -104,104 +139,109 @@ const completionPanelRef = ref<HTMLDivElement | null>(null)
 // 指令补全状态
 const showCompletion = ref(false)
 const selectedIndex = ref(0)
-let lastFilterWord = '' // 用于过滤时的缓存
+let lastFilterWord = ''
 
-// 根据用户输入过滤指令（取 '/' 后面的部分作为过滤词）
-const filteredCommands = computed(() => {
-  if (!inputText.value.startsWith('/')) return []
-  const filterPart = inputText.value.slice(1) // 去掉开头的 '/'
-  lastFilterWord = filterPart
-  if (!filterPart) return COMMANDS
-  return COMMANDS.filter(cmd => 
-    cmd.command.slice(1).toLowerCase().startsWith(filterPart.toLowerCase())
-  )
-})
-
-// 处理输入事件，控制补全面板显示/隐藏
-const handleInput = () => {
-  if (inputText.value && inputText.value[0] === '/') {
-    showCompletion.value = true
-    selectedIndex.value = 0
-  } else {
-    showCompletion.value = false
-  }
+// ---------- 辅助函数 ----------
+// 获取当前时间的格式化字符串
+const getCurrentTimeStr = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const hours = String(now.getHours()).padStart(2, '0')
+  const minutes = String(now.getMinutes()).padStart(2, '0')
+  const seconds = String(now.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
-// 选择指令并填入输入框
-const selectCommand = (cmd: { command: string; description: string; needsSpace: boolean }) => {
-  let newValue = cmd.command
-  if (cmd.needsSpace) {
-    newValue += ' '
-  }
-  inputText.value = newValue
-  showCompletion.value = false
-  // 让 textarea 重新获得焦点
-  nextTick(() => {
-    textareaRef.value?.focus()
+// 添加文本消息
+const addTextMessage = (role: 'user' | 'assistant', content: string, isStreaming = false, createTime?: string) => {
+  const time = createTime || (role === 'user' ? getCurrentTimeStr() : undefined)
+  messages.push({
+    type: 'text',
+    role,
+    content,
+    isStreaming,
+    createTime: time
   })
 }
 
-const handleKeydown = (e: KeyboardEvent) => {
-  // 处理补全面板的键盘导航（上下箭头、Esc）
-  if (showCompletion.value && filteredCommands.value.length) {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      selectedIndex.value = (selectedIndex.value + 1) % filteredCommands.value.length
-      return
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      selectedIndex.value = (selectedIndex.value - 1 + filteredCommands.value.length) % filteredCommands.value.length
-      return
-    } else if (e.key === 'Escape') {
-      e.preventDefault()
-      showCompletion.value = false
-      return
-    }
-  }
-
-  // 统一处理 Enter 键
-  if (e.key === 'Enter') {
-    // Shift+Enter: 允许默认换行行为，不做任何处理
-    if (e.shiftKey) return
-
-    e.preventDefault()
-
-    // 如果补全显示并且有选中的指令：填入指令，不发送
-    if (showCompletion.value && filteredCommands.value.length && filteredCommands.value[selectedIndex.value]) {
-      selectCommand(filteredCommands.value[selectedIndex.value])
-      return
-    }
-
-    // 否则直接发送消息
-    sendMessage()
-  }
-}
-
-// 点击外部关闭补全面板
-const handleClickOutside = (e: MouseEvent) => {
-  if (!showCompletion.value) return
-  const target = e.target as HTMLElement
-  const isClickInside = 
-    textareaRef.value?.contains(target) ||
-    completionPanelRef.value?.contains(target)
-  if (!isClickInside) {
-    showCompletion.value = false
-  }
-}
-
-// 原有功能：添加消息、流式对话等保持不变
-const addMessage = (role: 'user' | 'assistant', content: string, isStreaming = false) => {
-  messages.push({ role, content, isStreaming })
-}
-
-const updateLastMessage = (content: string, isStreaming = false) => {
-  if (messages.length > 0) {
-    const lastMsg = messages[messages.length - 1]
+// 更新最后一条文本消息的内容（流式场景）
+const updateLastTextMessage = (content: string, isStreaming = false) => {
+  const lastMsg = messages[messages.length - 1]
+  if (lastMsg && lastMsg.type === 'text') {
     lastMsg.content += content
     lastMsg.isStreaming = isStreaming
   }
 }
 
+// 设置最后一条文本消息的创建时间（流式完成时）
+const setLastTextMessageTime = (createTime: string) => {
+  const lastMsg = messages[messages.length - 1]
+  if (lastMsg && lastMsg.type === 'text' && lastMsg.role === 'assistant') {
+    lastMsg.createTime = createTime
+  }
+}
+
+// 添加后台分割线消息
+const addDividerMessage = (label: string) => {
+  messages.push({
+    type: 'divider',
+    label: label
+  })
+}
+
+// ---------- 日期分割线逻辑（生成展示列表） ----------
+// 提取日期部分（yyyy-mm-dd）
+const getDatePart = (dateTimeStr?: string) => {
+  if (!dateTimeStr) return null
+  return dateTimeStr.split(' ')[0]
+}
+
+// 格式化日期显示（如 "2025年1月15日"）
+const formatDisplayDate = (dateStr: string) => {
+  const [year, month, day] = dateStr.split('-')
+  return `${year}年${parseInt(month)}月${parseInt(day)}日`
+}
+
+// 生成最终显示的列表（自动插入日期分割线）
+const displayMessages = computed<DisplayItem[]>(() => {
+  const result: DisplayItem[] = []
+  let lastDate: string | null = null
+
+  for (const msg of messages) {
+    // 后台分割线：直接加入，不影响日期比较
+    if (msg.type === 'divider') {
+      result.push(msg)
+      continue
+    }
+
+    // 文本消息
+    if (msg.type === 'text') {
+      const currentDate = getDatePart(msg.createTime)
+      
+      // 如果当前消息有创建时间，并且与上一条消息不是同一天，则插入日期分割线
+      if (currentDate && lastDate !== currentDate) {
+        result.push({
+          type: 'dateDivider',
+          date: formatDisplayDate(currentDate)
+        })
+        lastDate = currentDate
+      }
+      
+      result.push(msg)
+      
+      // 对于没有创建时间的消息，不更新 lastDate，避免干扰后续比较
+      if (!currentDate) {
+        // 保持 lastDate 不变
+      }
+    }
+  }
+  
+  return result
+})
+
+// ---------- 流式对话核心（支持分隔符和 create_time）----------
 const streamChat = async (prompt: string) => {
   controller = new AbortController()
 
@@ -227,7 +267,8 @@ const streamChat = async (prompt: string) => {
     const decoder = new TextDecoder('utf-8')
     let buffer = ''
 
-    addMessage('assistant', '', true)
+    // 先添加一个空的助手消息用于流式更新
+    addTextMessage('assistant', '', true)
 
     while (true) {
       const { done, value } = await reader.read()
@@ -244,16 +285,33 @@ const streamChat = async (prompt: string) => {
 
           try {
             const data = JSON.parse(dataStr)
+            
+            // 处理后台错误
             if (data.error) {
               error.value = data.error
               break
             }
-            if (data.text) {
-              updateLastMessage(data.text, !data.done)
+
+            // 处理分隔符类型消息
+            if (data.type === 'divider') {
+              const label = data.label || data.text || '分隔线'
+              addDividerMessage(label)
+              continue
             }
+
+            // 普通文本消息（文本块）
+            if (data.text !== undefined) {
+              updateLastTextMessage(data.text, !data.done)
+            }
+
+            // 流式完成，设置创建时间
             if (data.done) {
+              // 从后端返回的 create_time 字段中获取时间（如果没有则使用当前时间）
+              const createTime = data.create_time || getCurrentTimeStr()
+              setLastTextMessageTime(createTime)
+              // 确保消息流式标记关闭
               const lastMsg = messages[messages.length - 1]
-              if (lastMsg) {
+              if (lastMsg && lastMsg.type === 'text') {
                 lastMsg.isStreaming = false
               }
               return
@@ -274,7 +332,43 @@ const streamChat = async (prompt: string) => {
   }
 }
 
-// 修改 sendMessage，在最后调用 focus
+
+
+function loadHistory() {
+  axios.post<ChatMessage[]>('assistant/history', {}).then(res => {
+    messages.length = 0   // 清空原有消息
+    for (let i = 0; i < res.data.length; i++) {
+      const data = res.data[i]
+      if (data.type === 'divider') {
+        addDividerMessage(data.label)
+      } else {
+        // 确保时间字段存在，若没有则置为 undefined（不影响日期分割线逻辑）
+        const createTime = data.createTime || undefined
+        addTextMessage(data.role, data.content, false, createTime)
+      }
+      
+    }
+  }).catch(err => {
+    console.error('加载历史失败:', err)
+    error.value = '加载历史记录失败'
+  })
+}
+
+// ---------- 删除最后一条对话 ----------
+async function deleteLastChat() {
+  await axios.post('assistant/delete', {})
+  // 删除最后两条消息（用户消息 + 助手消息）
+  let removedCount = 0
+  for (let i = messages.length - 1; i >= 0 && removedCount < 2; i--) {
+    if (messages[i].type === 'text') {
+      messages.splice(i, 1)
+      removedCount++
+    }
+  }
+  isLoading.value = false
+}
+
+// ---------- 发送消息（支持指令）----------
 const sendMessage = async () => {
   if (!inputText.value.trim() || isLoading.value) return
 
@@ -287,78 +381,161 @@ const sendMessage = async () => {
   // 根据指令分支处理
   if (prompt === '/') {
     prompt = ''
-    addMessage('user', '[用户没有输入]')
+    addTextMessage('user', '[用户没有输入]', false, getCurrentTimeStr())
     await streamChat(prompt)
   } else if (prompt.startsWith('/switch_work ') || prompt.startsWith('/switch_talk ')) {
-    addMessage('user', '[用户切换了助理角色]')
+    addTextMessage('user', '[用户切换了助理角色]', false, getCurrentTimeStr())
     await streamChat(prompt)
-    loadHistory()
-  } else if (prompt === '/rk') {
-    messages.pop()
-    await streamChat(prompt)
-  // } else if (prompt.startsWith('/rs')) {
-  //   messages.length = 0
-  //   addMessage('user', '[用户重置了会话]')
-  //   await streamChat(prompt)
+    loadHistory()   // 切换角色后刷新历史
+
+// 修复 /rk 指令：删除最后一条 assistant 类型的文本消息
+} else if (prompt === '/rk') {
+  // 从后往前找最后一条角色为 assistant 的文本消息
+  let lastAssistantIndex = -1
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i]
+    if (msg.type === 'text' && msg.role === 'assistant') {
+      lastAssistantIndex = i
+      break
+    }
+  }
+  if (lastAssistantIndex !== -1) {
+    messages.splice(lastAssistantIndex, 1)
+  }
+  await streamChat(prompt)
+
+  // 修复 /rc 指令：替换最后一条用户消息（同时删除对应的助手消息）
   } else if (prompt.startsWith("/rc ")) {
-    messages.pop()
-    messages.pop()
-    addMessage('user', prompt.replace(/^\/replace\s*/, ''))
+    // 删除最后一条 user 文本消息
+    let lastUserIndex = -1
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i]
+      if (msg.type === 'text' && msg.role === 'user') {
+        lastUserIndex = i
+        break
+      }
+    }
+    if (lastUserIndex !== -1) {
+      messages.splice(lastUserIndex, 1)
+    }
+
+    // 删除最后一条 assistant 文本消息（可能位于被删除的用户消息之后，但需要重新查找）
+    let lastAssistantIndex = -1
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i]
+      if (msg.type === 'text' && msg.role === 'assistant') {
+        lastAssistantIndex = i
+        break
+      }
+    }
+    if (lastAssistantIndex !== -1) {
+      messages.splice(lastAssistantIndex, 1)
+    }
+
+    // 提取新的用户消息内容（去掉 "/rc " 前缀）
+    const newUserMsg = prompt.replace(/^\/rc\s*/, '')
+    addTextMessage('user', newUserMsg, false, getCurrentTimeStr())
     await streamChat(prompt)
   } else if (prompt === '/delete') {
-    messages.pop()
-    messages.pop()
     await deleteLastChat()
   } else {
-    addMessage('user', prompt)
+    // 普通消息：添加用户消息（带当前时间），然后发起流式请求
+    addTextMessage('user', prompt, false, getCurrentTimeStr())
     await streamChat(prompt)
   }
 
-  // 发送完成后（流式结束或指令执行完毕）将焦点重新设置到文本框
-  // 使用 nextTick 确保 DOM 更新完成且输入框未被禁用
+  // 发送完成后重新聚焦
   await nextTick()
   if (!isMobile()) {
     textareaRef.value?.focus()
   }
 }
 
-// 辅助函数：检测是否为移动端
-const isMobile = () => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    || ('ontouchstart' in window) // 触摸屏设备
-}
-
-interface AssistantMsg {
-  role: 'user' | 'assistant'
-  msg: string
-}
-
-function loadHistory() {
-  axios.post<AssistantMsg[]>('assistant/history', {}).then(res => {
-    messages.length = 0
-    for (let i = 0; i < res.data.length; i++) {
-      const data = res.data[i]
-      addMessage(data.role, data.msg)
-    }
-  })
-}
-
-async function deleteLastChat() {
-  await axios.post('assistant/delete', {})
-  isLoading.value = false
-}
-
+// ---------- 停止生成 ----------
 const stopGeneration = () => {
   if (controller) {
     controller.abort()
     controller = null
   }
   isLoading.value = false
-  if (messages.length > 0) {
-    const lastMsg = messages[messages.length - 1]
-    if (lastMsg.isStreaming) {
-      lastMsg.isStreaming = false
+  const lastMsg = messages[messages.length - 1]
+  if (lastMsg && lastMsg.type === 'text' && lastMsg.isStreaming) {
+    lastMsg.isStreaming = false
+    // 若停止时没有时间，补充一个当前时间
+    if (!lastMsg.createTime) {
+      lastMsg.createTime = getCurrentTimeStr()
     }
+  }
+}
+
+// ---------- 指令补全相关逻辑 ----------
+const filteredCommands = computed(() => {
+  if (!inputText.value.startsWith('/')) return []
+  const filterPart = inputText.value.slice(1)
+  lastFilterWord = filterPart
+  if (!filterPart) return COMMANDS
+  return COMMANDS.filter(cmd => 
+    cmd.command.slice(1).toLowerCase().startsWith(filterPart.toLowerCase())
+  )
+})
+
+const handleInput = () => {
+  if (inputText.value && inputText.value[0] === '/') {
+    showCompletion.value = true
+    selectedIndex.value = 0
+  } else {
+    showCompletion.value = false
+  }
+}
+
+const selectCommand = (cmd: { command: string; description: string; needsSpace: boolean }) => {
+  let newValue = cmd.command
+  if (cmd.needsSpace) {
+    newValue += ' '
+  }
+  inputText.value = newValue
+  showCompletion.value = false
+  nextTick(() => {
+    textareaRef.value?.focus()
+  })
+}
+
+const handleKeydown = (e: KeyboardEvent) => {
+  if (showCompletion.value && filteredCommands.value.length) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      selectedIndex.value = (selectedIndex.value + 1) % filteredCommands.value.length
+      return
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      selectedIndex.value = (selectedIndex.value - 1 + filteredCommands.value.length) % filteredCommands.value.length
+      return
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      showCompletion.value = false
+      return
+    }
+  }
+
+  if (e.key === 'Enter') {
+    if (e.shiftKey) return
+    e.preventDefault()
+    if (showCompletion.value && filteredCommands.value.length && filteredCommands.value[selectedIndex.value]) {
+      selectCommand(filteredCommands.value[selectedIndex.value])
+      return
+    }
+    sendMessage()
+  }
+}
+
+const handleClickOutside = (e: MouseEvent) => {
+  if (!showCompletion.value) return
+  const target = e.target as HTMLElement
+  const isClickInside = 
+    textareaRef.value?.contains(target) ||
+    completionPanelRef.value?.contains(target)
+  if (!isClickInside) {
+    showCompletion.value = false
   }
 }
 
@@ -369,14 +546,23 @@ const scrollToBottom = async () => {
   }
 }
 
-watch(messages, () => {
+// 监听消息变化，滚动到底部
+watch(() => messages.length, () => {
   scrollToBottom()
 }, { deep: true })
 
+watch(displayMessages, () => {
+  scrollToBottom()
+}, { deep: true })
+
+const isMobile = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    || ('ontouchstart' in window)
+}
+
+// ---------- 生命周期 ----------
 onMounted(() => {
   document.title = '私人助理'
-  
-  // 全局点击外部关闭补全
   document.addEventListener('click', handleClickOutside)
   
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -424,6 +610,7 @@ onUnmounted(() => {
   min-height: 0;           /* flex 子项防止溢出关键 */
 }
 
+/* 普通消息样式 */
 .message {
   margin-bottom: 15px;
   padding: 10px;
@@ -455,9 +642,56 @@ onUnmounted(() => {
   50% { opacity: 0; }
 }
 
-/* 输入区域保持自动高度 */
+/* 后台主动分割线样式（中间带文字） */
+.divider-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16px 0;
+  gap: 12px;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: #ddd;
+}
+
+.divider-text {
+  font-size: 13px;
+  color: #888;
+  background: #f9f9f9;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+/* 日期分割线样式（不同天自动插入） */
+.date-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 40px 0;
+  gap: 12px;
+}
+
+.date-divider-line {
+  flex: 1;
+  height: 1px;
+  background: #ccc;
+}
+
+.date-divider-text {
+  font-size: 14px;
+  color: #666;
+  background: #f9f9f9;
+  padding: 0 12px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+/* 输入区域样式 */
 .input-area {
-  flex-shrink: 0;          /* 不被压缩 */
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
