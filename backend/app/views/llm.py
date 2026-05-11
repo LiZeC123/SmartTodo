@@ -55,30 +55,20 @@ def assistant_chat_stream(owner: str):
         args = [arg for arg in prompt.strip().split() if arg]
         g = assistant_manager.replace(args[1], owner)
     elif prompt.startswith("/compress"):
-        # 压缩记忆需要指定一个相当于今天的处理截止时间, 0表示截止今日零点, 1表示截止昨日0点, 依次类推
-        # 也可以不指定, 此时等于截止到当前时刻
-        # 因此该指令后面可以没有空格
-        args = prompt.removeprefix("/compress")
-        g = assistant_manager.compress_memory(args, owner)
+        # 调试指令: 全局记忆压缩
+        g = assistant_manager.auto_compress_memory()
     elif prompt.startswith("/set_memory "):
         args = prompt.removeprefix("/set_memory ")
         g = assistant_manager.set_memory(args, owner)
     elif prompt.startswith("/set_time "):
         args = prompt.removeprefix("/set_time ")
         g = assistant_manager.set_time(args, owner)
-    elif prompt.startswith("/rumor "):
-        args = prompt.removeprefix("/rumor ")
-        g = assistant_manager.rumor(args, owner)
+    elif prompt.startswith("/rumor"):
+        # 调试指令: 全局生成流言
+        g = assistant_manager.rumor_propagation(owner)
     elif prompt.startswith("/history "):
         args = prompt.removeprefix("/history ")
         g = assistant_manager.show_day_history(args, owner)
-    elif prompt.startswith("/rs"):
-        # reset
-        args = [arg for arg in prompt.strip().split() if arg]
-        if len(args) >= 2:
-            g = assistant_manager.reset(owner, args[1])
-        else:
-            g = assistant_manager.reset(owner)
     else:
         g = assistant_manager.chat(prompt, owner)
 

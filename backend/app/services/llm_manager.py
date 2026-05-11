@@ -22,7 +22,14 @@ from app.services.config_manager import ConfigManager
 from app.services.event_log_manager import get_event_log_after
 from app.services.item_manager import ItemManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
-from app.template.prompt import AssistantSp, EnableToolDesc, LongTermMemoryPrompt, RolePalyingSp, RumorMillPrompt
+from app.template.prompt import (
+    AssistantSp,
+    EnableToolDesc,
+    LongTermMemoryPrompt,
+    RolePalyingSp,
+    RumorMemoryPrompt,
+    RumorMillPrompt,
+)
 from app.template.tools import CreatItemTool
 from app.tools.llm import LLMClient
 from app.tools.log import logger
@@ -39,10 +46,16 @@ from app.tools.time import (
 
 @dataclass
 class RoleConfig:
-    name: str
-    enable_tools: bool
-    memory_compress: str
-    desc: str
+    name: str               # 角色姓名
+    enable_tools: bool      # 是否允许调用工具
+    memory_compress: str    # 记忆压缩策略
+    enable_rumor: bool      # 是否启用流言蜚语系统(获得流言蜚语信息)
+    visible_in_rumor: bool  # 是否在流言蜚语系统中可见(可以产生传闻并被其他角色获知)
+    short_desc: str         # 角色的简短描述
+    long_desc: str          # 角色的详细设定
+
+    def get_desc(self):
+        return f"你是一位{self.short_desc}, 名叫{self.name}. {self.long_desc}"
 
 @dataclass
 class CompressionPolicy:
@@ -72,17 +85,20 @@ class RoleManager:
             # 文件不存在时, 直接返回空即可, 相当于没有额外的角色设定
             return []
 
+    def get_role_map(self) -> dict[str, RoleConfig]:
+        return {item.name: item for item in self.get_role_list()}
+
     def get_role(self, role_keyword: str) -> RoleConfig:
         roles =self.get_role_list()
         if len(roles) == 0:
             logger.warning('角色列表为空, 加载默认角色')
-            return RoleConfig(name='默认角色', enable_tools=False, memory_compress='No', desc='你是一个有用的助手.')
+            return RoleConfig(name='默认助手', enable_tools=False, memory_compress='No', enable_rumor=False, visible_in_rumor=False, short_desc='有用的助手.', long_desc='')
 
         random_role = random.choice(roles)
         if role_keyword == "":
             return random_role
 
-        it = (role for role in roles if role_keyword in role.desc)
+        it = (role for role in roles if role_keyword in role.get_desc())
         return next(it, random_role)
 
     def get_compression_policy(self, policy: str) -> CompressionPolicy:
@@ -118,7 +134,7 @@ class AssistantHistoryManager:
     def switch(self, /, role_config: RoleConfig, role_mode: int, owner:str):
         status = self.query_or_init_status(owner)
         status.assistant_name = role_config.name
-        status.assistant_desc = role_config.desc
+        status.assistant_desc = role_config.get_desc()
         status.enable_tools = role_config.enable_tools
         status.assistant_mode = role_mode
         self.db.flush()
@@ -284,7 +300,7 @@ class AssistantMemoryManager:
             return False
 
         new_content = "\n".join([json.dumps(r.to_openai(), ensure_ascii=False) for r in records])
-        prompt = LongTermMemoryPrompt.format(role_desc=config.desc, old_memory=memory.long_term_memory, new_content=new_content)
+        prompt = LongTermMemoryPrompt.format(role_desc=config.get_desc(), old_memory=memory.long_term_memory, new_content=new_content)
         reason, content = self.cliet.generate_one_shot(prompt)
 
         new_memory = memory.deep_copy(processed_time=end_time)
@@ -295,7 +311,7 @@ class AssistantMemoryManager:
             new_memory.long_term_memory = content
             self.db.add(new_memory)
             self.db.commit()
-            logger.info(f"[{owner}:{config.name}]: 记忆压缩完毕, 新记忆长度为 {len(content)/KB:.2f} KB")
+            logger.info(f"[{owner}:{config.name}] 记忆压缩完毕, 新记忆长度为 {len(content)/KB:.2f} KB")
             return True
         else:
             logger.warning(f'模型返回记忆为空. 用户:{owner} 助手:{config.name}')
@@ -304,11 +320,80 @@ class AssistantMemoryManager:
     #TODO: 记忆压缩任务定时开启
     def auto_update_long_term_memory(self):
         users = self.config_manager.get_all_users()
-        g = ((u, r) for u in users for r in self.get_recent_assistant_list(u))
+        g = ((u, r) for u in users for r in self.get_activate_assistant_names(u))
         for user, role in g:
             config = self.role_manager.get_role(role)
             self.update_long_term_memory(config=config, owner=user)
-        pass
+
+
+    def rumor_propagation(self, owner: str):
+        roles = self.get_activate_assistant_names(owner)
+        configs = self.role_manager.get_role_map()
+
+        # 第一轮提取公共池数据
+        names = []
+        for role in roles:
+            config = configs.get(role)
+            if config is None:
+                logger.warning(f'[{owner}:{role}] 无法获取角色配置')
+                continue
+            if not config.visible_in_rumor:
+                logger.info(f'[{owner}:{role}] 当前角色不产生流言蜚语')
+                continue
+            names.append(role)
+
+        idea_pool = self.get_memory_pool(names, configs, owner)
+
+        # 第二轮逐个角色扩散流言蜚语
+        for role in roles:
+            config = configs.get(role)
+            if config is None:
+                logger.warning(f'[{owner}:{role}] 无法获取角色配置')
+                continue
+            if not config.enable_rumor:
+                logger.info(f'[{owner}:{role}] 当前角色不接受流言蜚语')
+                continue
+
+            prompt = RumorMemoryPrompt.format(idea_pool=idea_pool, role_desc=config.get_desc())
+            reason, content = self.cliet.generate_one_shot(prompt)
+
+            # 直接修改当前角色的短期记忆, 避免冗余太多信息
+            memory = self.query_or_init_memory(config.name, owner)
+            memory.rumor_reason = reason if reason else ''
+            memory.short_term_memory = content if content else ''
+            self.db.flush()
+            self.db.commit()
+
+    def get_memory_pool(self, role_names: list[str], configs: dict[str, RoleConfig], owner: str) -> str:
+        # 子查询：按 assistant_name 分组，取每组最大 id
+        sub =  sal.select(Memory.assistant_name, sal.func.max(Memory.id).label("max_id")) \
+                  .where(Memory.assistant_name.in_(role_names), Memory.owner==owner) \
+                  .group_by(Memory.assistant_name).subquery()
+
+        stmt = sal.select(Memory).where(Memory.id == sub.c.max_id)
+
+        lines = [
+            f"{config.name}({config.short_desc}): {self.extract_inner_thoughts(memory.long_term_memory)}"
+            for memory in self.db.scalars(stmt)
+            if (config:=configs.get(memory.assistant_name)) is not None
+        ]
+        return "\n".join(lines)
+
+
+    @staticmethod
+    def extract_inner_thoughts(text: str) -> str:
+        """
+        从包含 '# 助手内心想法' 和 '# 新增设定' 的文本中提取中间内容。
+        """
+        # 非贪婪匹配两个标题之间的任意字符（包括换行）
+        pattern = r'#\s*助手内心想法\s*(.*?)\s*#\s*新增设定'
+        match = re.search(pattern, text, re.DOTALL)
+        if match:
+            content = match.group(1).strip()
+            return content
+        return ""
+
+
 
     # TODO: 实现
     def rollback_long_term_memory(self, *, role_name: str, owner: str) -> bool:
@@ -325,18 +410,28 @@ class AssistantMemoryManager:
     def inject_long_term_memory(self, *, memory_content: str,  role_name: str, owner: str):
         """从外部直接注入记忆"""
         memory = self.query_or_init_memory(role_name, owner)
-        memory.long_term_memory = memory_content
-        self.db.flush()
+        new_memory = memory.deep_copy(memory.processed_time)
+        new_memory.long_term_memory = memory_content
+        self.db.add(new_memory)
         self.db.commit()
 
     def reset_process_time(self, new_time: datetime,  role_name:str, owner:str) -> bool:
+        # 修改处理时间未改动内容, 为了减少冗余直接修改当前记录
+        # 因此无法直接回滚对时间的修改操作, 但是可以手动再次修改时间来恢复
         memory = self.query_or_init_memory(role_name, owner)
         memory.processed_time = new_time
         self.db.flush()
         self.db.commit()
         return True
 
+    def get_activate_assistant_names(self, owner: str) -> Iterable[str]:
+        """最近一天活跃的助理列表"""
+        start = now() - timedelta(days=1)
+        stmt = sal.select(History.assistant_name.distinct()).where(History.owner==owner, History.create_time > start)
+        return self.db.scalars(stmt)
+
     def get_recent_assistant_list(self, owner: str) -> Iterable[str]:
+        """按照最后活动顺序获得所有交互过的助理列表"""
         sql = sal.text("""
             SELECT assistant_name
             FROM (
@@ -450,9 +545,7 @@ class AssistantManager:
         self.history_manager.remove_last_pair(owner)
         return self.chat(prompt, owner)
 
-    def reset(self, owner: str, role_keyword: str = '') -> Generator[str, Any]:
-        # reset功能不存在了, 先不删除, 后续看有无必要实现
-        raise Exception('reset not implemented')
+
 
     def switch(self, *, role_keyword: str, role_mode: int, owner:str)-> Generator[str, Any]:
         config = self.role_manager.get_role(role_keyword)
@@ -483,7 +576,7 @@ class AssistantManager:
         raw_list = self.role_manager.get_role_list()
         for role in raw_list:
             name = role.name
-            desc = role.desc.split(",")[0]
+            desc = role.short_desc
             content = f"{name}: {desc}\n"
             yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
         yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
@@ -514,10 +607,16 @@ class AssistantManager:
         else:
             yield f"data: {json.dumps({'text': '记忆压缩未成功, 具体原因可查看日志', 'done': True})}\n\n"
 
+    def auto_compress_memory(self) -> Generator[str, Any]:
+        yield f"data: {json.dumps({'text': '正在执行自动记忆压缩, 耗时较长请稍等\n', 'done': False})}\n\n"
+        self.memory_manager.auto_update_long_term_memory()
+        yield f"data: {json.dumps({'text': '自动记忆压缩执行完毕\n', 'done': True})}\n\n"
+
     def show_last_reason(self, owner:str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
         memory = self.memory_manager.query_or_init_memory(status.assistant_name, owner)
-        yield f"data: {json.dumps({'text': memory.compression_reason, 'done': True})}\n\n"
+        content = f"压缩记忆: \n{memory.compression_reason}\n\n流言蜚语: \n{memory.rumor_reason}"
+        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
     def set_memory(self, memory_content: str, owner: str) -> Generator[str, Any]:
         memory_content = memory_content.strip()
@@ -546,9 +645,7 @@ class AssistantManager:
             new_content += json.dumps(r, ensure_ascii=False)
             new_content += "\n"
 
-
-        prompt = RumorMillPrompt.format(visitor_desc=status.assistant_desc, role_desc=target.desc, new_content=new_content)
-
+        prompt = RumorMillPrompt.format(visitor_desc=status.assistant_desc, role_desc=target.get_desc(), new_content=new_content)
         reason, content = self.llm_manager.generate_one_shot(prompt)
         if reason is not None:
             content = f'\n---\n\n{reason}\n\n---\n\n'
@@ -561,6 +658,11 @@ class AssistantManager:
         inject_content = f'你的内心产生了一个想法: {content}'
         self.history_manager.add_user_prompt('', inject_content, owner)
         yield from self.generate(owner, enable_tools=bool(status.enable_tools))
+
+    def rumor_propagation(self, owner: str) -> Generator[str, Any]:
+        yield f"data: {json.dumps({'text': '正在生成流言蜚语, 耗时较长请稍等\n', 'done': False})}\n\n"
+        self.memory_manager.rumor_propagation(owner)
+        yield f"data: {json.dumps({'text': '流言蜚语生成完毕\n', 'done': True})}\n\n"
 
     def show_day_history(self, day_str: str, owner:str) -> Generator[str, Any]:
         t = parse_befeore_time_str(day_str)
@@ -700,40 +802,3 @@ class AssistantManager:
 
         yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
 
-    @staticmethod
-    def parse_number(s: str) -> int:
-        """
-        解析字符串为数字：
-        - 如果是 正整数 或 0 → 返回对应的数字
-        - 如果是空字符串 "" → 返回 -1
-        - 其他所有解析失败情况 → 返回 -2
-        """
-        # 空字符串 → 返回 -1
-        if s == "":
-            return -1
-
-        try:
-            # 尝试转整数
-            num = int(s)
-            # 是整数，但必须 >= 0 才合法
-            if num >= 0:
-                return num
-            else:
-                # 负数 → 解析错误
-                return -2
-        except (ValueError, TypeError):
-            # 无法转整数 → 解析错误
-            return -2
-
-
-    @staticmethod
-    def extract_role_name(text):
-        """提取角色名, 角色描述中需要包含 '名为xxx,' 的文字, 提取该部分作为角色名"""
-        # 正则表达式：匹配 名叫(任意1+字符), 捕获中间的内容
-        pattern = r"名叫(.+?),"
-        # 查找第一个匹配项
-        match = re.search(pattern, text)
-
-        if match:
-            return match.group(1)  # 返回括号内捕获的名字
-        return None

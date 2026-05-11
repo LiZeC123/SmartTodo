@@ -104,12 +104,13 @@ class Memory(Base):
     assistant_name: Mapped[str]     = mapped_column(String(15), nullable=False, default='') # 当前助理的角色名
     short_term_memory: Mapped[str]  = mapped_column(String(15), nullable=False, default='')
     long_term_memory: Mapped[str]   = mapped_column(String(15), nullable=False, default='')
-    compression_reason: Mapped[str] = mapped_column(String(15), nullable=False, default='') # 记忆压缩的思考过程
+    compression_reason: Mapped[str] = mapped_column(Text, nullable=False, default='') # 记忆压缩的思考过程
+    rumor_reason: Mapped[str]       = mapped_column(Text, nullable=False, default='') # 流言蜚语扩散的思考过程
     processed_time: Mapped[datetime]= mapped_column(DateTime, nullable=False, default=datetime(year=2026, month=5, day=1)) # 已经处理过的记录的截止时间
 
     def deep_copy(self, processed_time:datetime) -> 'Memory':
         return Memory(owner=self.owner, assistant_name=self.assistant_name,
-                      short_term_memory='', long_term_memory='', compression_reason='', processed_time=processed_time)
+                      short_term_memory='', long_term_memory='', compression_reason='', rumor_reason='', processed_time=processed_time)
 
     def to_assistant(self) -> str:
         return f"你回顾了你自己的长期记忆\n{self.long_term_memory}\n"
