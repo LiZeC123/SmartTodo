@@ -1,3 +1,4 @@
+import calendar
 from datetime import date, datetime, timedelta
 
 
@@ -27,10 +28,26 @@ def today_begin() -> datetime:
 def the_day_begin(t:datetime):
     return t - timedelta(hours=t.hour,minutes=t.minute,seconds=t.second,microseconds=t.microsecond)
 
+def the_month_begin() -> datetime:
+    t = now()
+    return datetime(year=t.year, month=t.month, day=1)
+
 def this_week_begin() -> datetime:
     now_time = now()
     # 按照周统计的指标粒度可以粗一点， 大致对应7天之前即可
     return now_time - timedelta(days=7)
+
+
+def get_month_bounds(t: datetime):
+    # 当月第一天 00:00:00
+    first_day = datetime(t.year, t.month, 1, 0, 0, 0)
+
+    # 当月最后一天 23:59:59
+    # 使用 calendar 获取当月天数
+    last_day_num = calendar.monthrange(t.year, t.month)[1]  # 当月最后一天的日期数字
+    last_day = datetime(t.year, t.month, last_day_num, 23, 59, 59)
+
+    return first_day, last_day
 
 
 def this_year_str() -> str:
@@ -40,6 +57,8 @@ def this_year_str() -> str:
 def get_datetime_from_str(t: str) -> datetime:
     return datetime.strptime(t, '%Y-%m-%d %H:%M:%S')
 
+def get_datetime_from_month_str(t: str):
+    return datetime.strptime(t, '%Y-%m')
 
 def get_day_from_str(t: str) -> date:
     return get_datetime_from_str(t).date()

@@ -8,7 +8,7 @@ class Base(DeclarativeBase):
         d = {}
         for c in self.__table__.columns:
             v = getattr(self, c.name, None)
-            if type(v) == datetime:
+            if type(v) is datetime:
                 d[c.name] = v.strftime("%Y-%m-%d %H:%M:%S")
             else:
                 d[c.name] = v

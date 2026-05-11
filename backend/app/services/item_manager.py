@@ -188,6 +188,10 @@ class ItemManager:
                                            Item.item_type != ItemType.Note)
         return self.db.execute(stmt).scalars().all()
 
+    def select_checkin_item(self, owner: str) -> Sequence[str]:
+        stmt = sal.select(Item.name).where(Item.owner == owner, Item.name.like("每日%"))
+        return self.db.scalars(stmt).all()
+
     def undo(self, xid: int, owner: str):
         item = self.select_with_authority(xid=xid, owner=owner)
         self._undo(item)
@@ -299,7 +303,7 @@ class ItemManager:
     def get_deadline_item(self, owner: str) -> Sequence[dict]:
         next_week = the_day_after(now(), 7)
         stmt = sal.select(Item).where(Item.owner == owner, Item.expected_tomato > Item.used_tomato,
-                                      Item.deadline != None)
+                                      Item.deadline != None)  # noqa: E711
         items = self.db.execute(stmt).scalars().all()
         return [i.to_dict() for i in items if i.deadline and i.deadline < next_week]
 
@@ -336,7 +340,7 @@ class ItemManager:
     def garbage_collection(self):
         # 1. 不是不可回收的特殊类型
         # 2. 处于完成状态
-        stmt = sal.select(Item).where(Item.repeatable == False, Item.specific == 0,
+        stmt = sal.select(Item).where(Item.repeatable == False, Item.specific == 0,  # noqa: E712
                                       Item.used_tomato == Item.expected_tomato)
         items = self.db.execute(stmt).scalars().all()
         for item in items:
@@ -354,7 +358,7 @@ class ItemManager:
         self.db.commit()  # 定时器触发任务, 必须commit, 否则操作会被回滚
 
     def reset_daily_task(self):
-        stmt = sal.select(Item).where(Item.repeatable == True)
+        stmt = sal.select(Item).where(Item.repeatable == True)  # noqa: E712
         items = self.db.execute(stmt).scalars().all()
         for item in items:
             item.used_tomato = 0
@@ -365,7 +369,7 @@ class ItemManager:
         self.db.commit()  # 定时器触发任务, 必须commit, 否则操作会被回滚
 
     def reset_today_task(self):
-        stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today, Item.repeatable == False,
+        stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today, Item.repeatable == False,  # noqa: E712
                                       Item.item_type != ItemType.Note)
         items = self.db.execute(stmt).scalars().all()
         for item in items:

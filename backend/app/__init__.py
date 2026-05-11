@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from app.models.base import Base
+from app.services.checkin_manager import CheckinManager
 from app.services.config_manager import ConfigManager
 from app.services.interpreter import OpInterpreter
 from app.services.item_manager import ItemManager
@@ -27,6 +28,7 @@ item_manager = ItemManager(db)
 op_interpreter = OpInterpreter(item_manager)
 tomato_manager = TomatoManager(db, item_manager)
 tomato_record_manager = TomatoRecordManager(db, item_manager)
+checkin_manager = CheckinManager(db, item_manager)
 
 llm_client =LLMClient(config_manager)
 memory_manager = AssistantMemoryManager(db, llm_client)
