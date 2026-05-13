@@ -123,7 +123,7 @@ class CheckinManager:
                 "continuous_count": state.consecutive_days + 1,
                 "achievement_count": state.achievement_count,
                 "remaining_make_up": state.make_up_count,
-                "process": state.progress,
+                "process": state.progress+1,
             }
         else:
             return {
