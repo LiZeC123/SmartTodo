@@ -1,7 +1,7 @@
 import json
 import random
 import re
-from collections.abc import Callable, Generator, Iterable
+from collections.abc import Callable, Generator, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
@@ -64,9 +64,9 @@ class CompressionPolicy:
 
 KB = 1024
 
-AggressivePolicy = CompressionPolicy(day_delta=1, char_cost=20*KB)
-ModeratePolicy = CompressionPolicy(day_delta=2, char_cost=20*KB)
-LazyPolicy = CompressionPolicy(day_delta=3, char_cost=20*KB)
+AggressivePolicy = CompressionPolicy(day_delta=1, char_cost=5*KB)
+ModeratePolicy = CompressionPolicy(day_delta=1, char_cost=10*KB)
+LazyPolicy = CompressionPolicy(day_delta=1, char_cost=20*KB)
 
 
 
@@ -76,7 +76,7 @@ class RoleManager:
 
     def __load_file(self) -> list[RoleConfig]:
         with open("config/role/Assistant.jsonl") as f:
-            return [RoleConfig(**json.loads(s)) for role in f if (s:=role.strip()) != ""]
+            return [RoleConfig(**json.loads(s)) for role in f if (s:=role.strip()) != "" and not s.startswith("//")]
 
     def get_role_list(self) -> list[RoleConfig]:
         try:
@@ -202,7 +202,7 @@ class AssistantHistoryManager:
         # 查询当前角色自从上次记忆压缩后的聊天记录
         status = self.query_or_init_status(owner)
 
-        stmt = sal.select(Memory).where(Memory.assistant_name==status.assistant_name,Memory.owner==owner)
+        stmt = sal.select(Memory).where(Memory.assistant_name==status.assistant_name,Memory.owner==owner).order_by(Memory.id.desc()).limit(1)
         memory = self.db.scalar(stmt)
 
         if memory is not None:
@@ -220,12 +220,11 @@ class AssistantHistoryManager:
                          History.assistant_name == role_name)
         return self.db.scalars(stmt)
 
-    def select_record_between(self, role_name: str, start_time:datetime, end_time:datetime, owner: str):
+    def select_record_between(self, role_name: str, start_time:datetime, end_time:datetime, owner: str) -> Sequence[History]:
         stmt = sal.select(History)\
-                  .where(History.owner == owner,
-                         History.create_time > start_time, History.create_time < end_time,
-                         History.assistant_name == role_name)
-        return self.db.scalars(stmt)
+                  .where(History.owner == owner, History.assistant_name == role_name,
+                         History.create_time > start_time, History.create_time < end_time)
+        return self.db.scalars(stmt).all()
 
     def get_history(self, owner:str)-> list[ChatCompletionMessageParam]:
         status, memory, records = self.select_record(owner)
@@ -281,11 +280,12 @@ class AssistantHistoryManager:
 
 
 class AssistantMemoryManager:
-    def __init__(self, db: scoped_session[Session], llm_client: LLMClient) -> None:
+    def __init__(self, db: scoped_session[Session], llm_client: LLMClient, history_manager: AssistantHistoryManager) -> None:
         self.db = db
         self.config_manager = ConfigManager()
         self.role_manager = RoleManager()
         self.cliet = llm_client
+        self.history_manager = history_manager
 
     def query_or_init_memory(self, role_name:str, owner:str) -> Memory:
         stmt = sal.select(Memory).where(Memory.assistant_name==role_name,Memory.owner==owner).order_by(Memory.id.desc()).limit(1)
@@ -300,47 +300,52 @@ class AssistantMemoryManager:
     def update_long_term_memory(self, *, config: RoleConfig, owner: str) -> bool:
         policy = self.role_manager.get_compression_policy(config.memory_compress)
         end_time = now() - timedelta(days=policy.day_delta)
-        memory = self.query_or_init_memory(config.name, owner)
-        stmt = sal.select(History) \
-                  .where(History.owner == owner, History.assistant_name == config.name,
-                         History.create_time > memory.processed_time, History.create_time < end_time)
-        records = self.db.scalars(stmt).all()
 
-
-        cost = sum(len(s) for r in records if (s := r.to_dump()) is not None)
-        if cost < policy.char_cost:
-            logger.info(f"[{owner}:{config.name}]: 跳过压缩, 当前费用 {cost / KB:.2f} KB < 目标阈值 {policy.char_cost / KB:.2f} KB")
+        # 判断如果压缩后是否还有对话, 即最后一条消息是否大于压缩截止时间
+        last_msg = self.history_manager.select_last_msg(owner)
+        if last_msg is None or last_msg.create_time < end_time:
+            logger.info(f"[{owner}:{config.name}]: 跳过压缩, 当前角色剩余对话数量不足")
             return False
 
+        # 查询需要压缩的记录, 判断是否满足记忆压缩策略
+        memory = self.query_or_init_memory(config.name, owner)
+        records = self.history_manager.select_record_between(config.name, memory.processed_time, end_time, owner)
+        cost = sum(len(s) for r in records if (s := r.to_dump()) is not None)
+        if cost < policy.char_cost:
+            logger.info(f"[{owner}:{config.name}]: 跳过压缩, 当前累计对话长度 {cost / KB:.2f} KB < 目标阈值 {policy.char_cost / KB:.2f} KB")
+            return False
+
+        # 执行压缩操作
+        logger.info(f"[{owner}:{config.name}]: 执行压缩, 当前累计对话长度 {cost / KB:.2f} KB > 目标阈值 {policy.char_cost / KB:.2f} KB")
         new_content = "\n".join([json.dumps(r.to_openai(), ensure_ascii=False) for r in records])
         prompt = LongTermMemoryPrompt.format(role_desc=config.get_desc(), old_memory=memory.long_term_memory, new_content=new_content)
         reason, content = self.cliet.generate_one_shot(prompt)
 
+        # 更新记忆
         new_memory = memory.deep_copy(processed_time=end_time)
-        if reason is not None:
-            new_memory.compression_reason = reason
-
+        new_memory.compression_reason = reason if reason else ''
         if content is not None:
             new_memory.long_term_memory = content
             self.db.add(new_memory)
             self.db.commit()
-            logger.info(f"[{owner}:{config.name}] 记忆压缩完毕, 新记忆长度为 {len(content)/KB:.2f} KB")
+            logger.info(f"[{owner}:{config.name}] 记忆压缩完毕, 新记忆长度为 {len(content)/KB:.2f} KB, 思考长度为 {len(new_memory.compression_reason) / KB:.2f} KB")
             return True
         else:
-            logger.warning(f'模型返回记忆为空. 用户:{owner} 助手:{config.name}')
+            logger.warning(f'[{owner}:{config.name}]: 模型返回记忆为空')
             return False
 
-    #TODO: 记忆压缩任务定时开启
-    def auto_update_long_term_memory(self):
+    def auto_update_memory(self):
         users = self.config_manager.get_all_users()
-        g = ((u, r) for u in users for r in self.get_activate_assistant_names(u))
-        for user, role in g:
-            config = self.role_manager.get_role(role)
-            self.update_long_term_memory(config=config, owner=user)
-
+        for user in users:
+            # 检查该用户所有助理的历史对话长度, 更新满足要求的助理的记忆
+            for role in self.get_recent_assistant_list(user):
+                config = self.role_manager.get_role(role)
+                self.update_long_term_memory(config=config, owner=user)
+            # 基于已经更新的记忆和最近的活跃助理, 传播流言蜚语
+            self.rumor_propagation(owner=user)
 
     def rumor_propagation(self, owner: str):
-        roles = self.get_activate_assistant_names(owner)
+        roles = self.get_recent_assistant_list(owner)
         configs = self.role_manager.get_role_map()
 
         # 第一轮提取公共池数据
@@ -357,7 +362,8 @@ class AssistantMemoryManager:
 
         idea_pool = self.get_memory_pool(names, configs, owner)
 
-        # 第二轮逐个角色扩散流言蜚语
+        # 第二轮计算昨日活跃角色扩散的流言蜚语
+        roles = self.get_activate_assistant_names(owner)
         for role in roles:
             config = configs.get(role)
             if config is None:
@@ -374,6 +380,7 @@ class AssistantMemoryManager:
             memory = self.query_or_init_memory(config.name, owner)
             memory.rumor_reason = reason if reason else ''
             memory.short_term_memory = content if content else ''
+            logger.info(f'[{owner}:{role}] 流言蜚语计算完毕, 长度为{len(memory.short_term_memory) / KB:.2f} KB, 思考长度为 {len(memory.rumor_reason) / KB:.2f} KB')
             self.db.flush()
             self.db.commit()
 
@@ -385,11 +392,18 @@ class AssistantMemoryManager:
 
         stmt = sal.select(Memory).where(Memory.id == sub.c.max_id)
 
-        lines = [
-            f"{config.name}({config.short_desc}): {self.extract_inner_thoughts(memory.long_term_memory)}"
-            for memory in self.db.scalars(stmt)
-            if (config:=configs.get(memory.assistant_name)) is not None
-        ]
+        lines = []
+        for memory in self.db.scalars(stmt):
+            config =configs.get(memory.assistant_name)
+            if config is None:
+                continue
+
+            idea = self.extract_inner_thoughts(memory.long_term_memory)
+            if idea == '':
+                continue
+            lines.append(f"{config.name}({config.short_desc}): {idea}")
+
+
         return "\n".join(lines)
 
 
@@ -622,7 +636,7 @@ class AssistantManager:
 
     def auto_compress_memory(self) -> Generator[str, Any]:
         yield f"data: {json.dumps({'text': '正在执行自动记忆压缩, 耗时较长请稍等\n', 'done': False})}\n\n"
-        self.memory_manager.auto_update_long_term_memory()
+        self.memory_manager.auto_update_memory()
         yield f"data: {json.dumps({'text': '自动记忆压缩执行完毕\n', 'done': True})}\n\n"
 
     def show_last_reason(self, owner:str) -> Generator[str, Any]:

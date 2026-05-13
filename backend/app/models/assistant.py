@@ -113,7 +113,10 @@ class Memory(Base):
                       short_term_memory='', long_term_memory='', compression_reason='', rumor_reason='', processed_time=processed_time)
 
     def to_assistant(self) -> str:
-        return f"你回顾了你自己的长期记忆\n{self.long_term_memory}\n"
+        content = f"你回顾了你自己的长期记忆\n{self.long_term_memory}\n"
+        if self.short_term_memory:
+            content += f"\n你查看了你自己的日记, 其中记录了一些你打算在适当的时候聊起的你听到的传闻:\n{self.short_term_memory}"
+        return content
 
     def to_dump(self) -> str:
         return f"角色名: {self.assistant_name}\n记忆处理时间: {self.processed_time}\n短期记忆:\n{self.short_term_memory}\n长期记忆:\n{self.long_term_memory}"

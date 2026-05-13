@@ -31,8 +31,8 @@ tomato_record_manager = TomatoRecordManager(db, item_manager)
 checkin_manager = CheckinManager(db, item_manager)
 
 llm_client =LLMClient(config_manager)
-memory_manager = AssistantMemoryManager(db, llm_client)
 history_manager = AssistantHistoryManager(db)
+memory_manager = AssistantMemoryManager(db, llm_client, history_manager)
 assistant_manager = AssistantManager(llm_client, item_manager, tomato_manager, tomato_record_manager, history_manager, memory_manager)
 
 # 初始化定时任务
@@ -42,6 +42,8 @@ task_manager.add_daily_task("重置可重复任务", item_manager.reset_daily_ta
 task_manager.add_daily_task("重置未完成的今日任务", item_manager.reset_today_task, "01:20")
 task_manager.add_daily_task("重置已完成的周期性任务", item_manager.renew_sp_task, "01:30")
 
+# 注意此任务可能需要执行较长时间
+task_manager.add_daily_task("个人助理记忆压缩与流言扩散", memory_manager.auto_update_memory, "02:30")
 
 def create_app():
     # 创建Flask应用实例

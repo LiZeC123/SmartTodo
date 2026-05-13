@@ -40,7 +40,8 @@ class LLMClient:
                 {"role": "system", "content": "You are a helpful assistant"},
                 {"role": "user", "content": prompt},
             ],
-            reasoning_effort="max", # type: ignore
+            # 由于max模式Token消耗极大, 因此考虑先使用默认的模式
+            # reasoning_effort="max", # type: ignore
             extra_body={"thinking": {"type": "enabled"}}
         )
 
