@@ -87,6 +87,11 @@ def to_today_task(owner: str) -> bool:
     xid = get_xid_from_request()
     return item_manager.to_today_task(xid=xid, owner=owner)
 
+@item_bp.post('/api/item/recentNote')
+@authority_check()
+def select_recent_note(owner: str) -> list[dict]:
+    return item_manager.select_recent_note_config(owner=owner)
+
 
 @item_bp.post("/api/item/getTitle")
 @authority_check()

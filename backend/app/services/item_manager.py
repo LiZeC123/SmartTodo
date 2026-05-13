@@ -192,6 +192,13 @@ class ItemManager:
         stmt = sal.select(Item.name).where(Item.owner == owner, Item.name.like("每日%"))
         return self.db.scalars(stmt).all()
 
+    def select_recent_note_config(self, owner: str) -> list[dict]:
+        # 生成一个标量子查询, 可以用于in等条件中. 默认的字查询仅可用于FROM语句中
+        sub = sal.select(Item.parent.distinct()).where(Item.owner==owner, Item.parent.is_not(None)).order_by(Item.id.desc()).limit(4).scalar_subquery()
+        stmt = sal.select(Item).where(Item.id.in_(sub))
+        items = self.db.scalars(stmt).all()
+        return [{'title': item.name, 'path': f"note/{item.id}"} for item in items ]
+
     def undo(self, xid: int, owner: str):
         item = self.select_with_authority(xid=xid, owner=owner)
         self._undo(item)
