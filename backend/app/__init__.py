@@ -28,7 +28,7 @@ item_manager = ItemManager(db)
 op_interpreter = OpInterpreter(item_manager)
 tomato_manager = TomatoManager(db, item_manager)
 tomato_record_manager = TomatoRecordManager(db, item_manager)
-checkin_manager = CheckinManager(db, item_manager)
+checkin_manager = CheckinManager(db, config_manager, item_manager)
 
 llm_client =LLMClient(config_manager)
 history_manager = AssistantHistoryManager(db)
@@ -41,8 +41,8 @@ task_manager.add_daily_task("垃圾回收", item_manager.garbage_collection, "01
 task_manager.add_daily_task("重置可重复任务", item_manager.reset_daily_task, "01:10")
 task_manager.add_daily_task("重置未完成的今日任务", item_manager.reset_today_task, "01:20")
 task_manager.add_daily_task("重置已完成的周期性任务", item_manager.renew_sp_task, "01:30")
-
-# 注意此任务可能需要执行较长时间
+task_manager.add_daily_task("计算打卡相关统计数据", checkin_manager.update_all_checkin_state, "01:40")
+# 注意以下任务可能需要执行较长时间, 需要确保间隔时间充足
 task_manager.add_daily_task("个人助理记忆压缩与流言扩散", memory_manager.auto_update_memory, "02:30")
 
 def create_app():

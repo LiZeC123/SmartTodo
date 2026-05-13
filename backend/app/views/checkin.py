@@ -21,7 +21,9 @@ def month_record(owner: str):
 @checkin_bp.post("/api/checkin/stat")
 @authority_check()
 def stat(owner: str):
-    return {'total_count': 0, 'continuous_count': 0, 'achievement_count': 0, 'remaining_make_up': 0}
+    f: dict = request.get_json()
+    item_name: str = f.get('item_name', '')
+    return checkin_manager.get_stat(item_name, owner)
 
 @checkin_bp.post("/api/checkin/record")
 @authority_check()

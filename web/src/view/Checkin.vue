@@ -180,7 +180,6 @@ interface Achievement {
 
 interface ProjectInfo {
   record: string[];
-  process: number;
   emoji: string;
   new_achievements?: Achievement[];
 }
@@ -190,6 +189,7 @@ interface StatData {
   continuous_count: number;
   achievement_count: number;
   remaining_make_up: number;
+  process: number;
 }
 
 interface CalendarCell {
@@ -217,6 +217,7 @@ const statData = ref<StatData>({
   continuous_count: 0,
   achievement_count: 0,
   remaining_make_up: 0,
+  process: 0,
 });
 
 const showAchievementModal = ref<boolean>(false);
@@ -229,8 +230,7 @@ const weekDayLabels = ['日', '一', '二', '三', '四', '五', '六'];
 
 // ==================== 计算属性 ====================
 const currentProjectProcess = computed<number>(() => {
-  const info = allItemsData.value[currentItemName.value];
-  return info ? info.process : 0;
+  return statData.value.process
 });
 
 const progressPercent = computed<number>(() => {
@@ -493,6 +493,7 @@ async function fetchStatData(itemName: string): Promise<void> {
         continuous_count: res.data.continuous_count ?? 0,
         achievement_count: res.data.achievement_count ?? 0,
         remaining_make_up: res.data.remaining_make_up ?? 0,
+        process: res.data.process ?? 0,
       };
     }
   } catch (err) {

@@ -20,9 +20,3 @@ def get_event_log_after(db: Database, time: datetime, owner: str) -> Sequence[Ev
     stmt = sal.select(EventLog).where(EventLog.owner == owner, EventLog.create_time > time)
     return db.execute(stmt).scalars().all()
 
-def get_checkin_datetime(db: Database, name: str, start: datetime, end:datetime, owner: str)-> Sequence[datetime]:
-    stmt = sal.select(EventLog.create_time) \
-              .where(EventLog.owner == owner,
-                     EventLog.create_time > start, EventLog.create_time < end,
-                     EventLog.msg.like(f"%完成%{name}%"))
-    return db.scalars(stmt).all()
