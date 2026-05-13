@@ -68,6 +68,7 @@ AggressivePolicy = CompressionPolicy(day_delta=1, char_cost=5*KB)
 ModeratePolicy = CompressionPolicy(day_delta=1, char_cost=10*KB)
 LazyPolicy = CompressionPolicy(day_delta=1, char_cost=20*KB)
 
+MinCompressionSize = 5*KB
 
 
 class RoleManager:
@@ -183,6 +184,7 @@ class AssistantHistoryManager:
 
 
     def select_last_msg(self, owner: str) -> History | None:
+        """查询当前角色最后一条消息"""
         status = self.query_or_init_status(owner)
         stmt = sal.select(History).where(History.owner==owner, History.assistant_name==status.assistant_name).order_by(History.id.desc()).limit(1)
         return self.db.scalar(stmt)
@@ -246,7 +248,11 @@ class AssistantHistoryManager:
         data_before = self.to_web_json_list(records_before)
         data_after = self.to_web_json_list(records)
         div = [{'type': 'divider', 'label': '以上对话已压缩至记忆'}]
-        return data_before + div + data_after
+
+        if data_before:
+            return data_before + div + data_after
+        else:
+            return data_after
 
     @staticmethod
     def to_web_json(msg: History):
@@ -255,17 +261,21 @@ class AssistantHistoryManager:
     def to_web_json_list(self, records: Iterable[History]):
         return [self.to_web_json(msg) for msg in records if msg.role in [AssistantType.User, AssistantType.Assistant]]
 
-    def evalute_day_cost(self, owner: str) -> str:
-        status = self.query_or_init_status(owner)
-        start_day = now() - timedelta(days=14)
+    def evalute_day_cost(self, role_name: str, start_day: datetime, owner: str) -> list[tuple[str, int, int]]:
         stmt = sal.select(sal.func.date(History.create_time).label("stat_date"),
                           sal.func.sum(sal.func.length(History.content) +sal.func.length(History.system_inject_content)).label("total_chars"),
                           sal.func.count().label('msg_count')) \
-                  .where(History.owner == owner,History.assistant_name == status.assistant_name, History.create_time > start_day) \
+                  .where(History.owner == owner,History.assistant_name == role_name, History.create_time > start_day) \
                   .group_by(sal.func.date(History.create_time)) \
-                  .order_by("stat_date")
+                  .order_by(sal.desc("stat_date"))
         records = self.db.execute(stmt)
-        return "\n".join([f"{r.stat_date}: {r.total_chars / 1024:6.2f} KB / {r.msg_count // 2:4d} Msg" for r in records])
+        return [(r.stat_date, r.total_chars, r.msg_count) for r in records]
+
+
+    def day_cost_report(self, role: str,  owner: str) -> str:
+        start_day = now() - timedelta(days=14)
+        rows = self.evalute_day_cost(role, start_day, owner)
+        return "\n".join([f"{d}: {total_cnt / KB:6.2f} KB / {msg_cnt // 2:4d} Msg" for d, total_cnt, msg_cnt in rows])
 
     def make_system_prompt(self, status: Status) -> ChatCompletionSystemMessageParam:
         if status.assistant_mode == AssistantModeType.RolePlaying:
@@ -299,24 +309,31 @@ class AssistantMemoryManager:
 
     def update_long_term_memory(self, *, config: RoleConfig, owner: str) -> bool:
         policy = self.role_manager.get_compression_policy(config.memory_compress)
-        end_time = now() - timedelta(days=policy.day_delta)
+        memory = self.query_or_init_memory(config.name, owner)
 
-        # 判断如果压缩后是否还有对话, 即最后一条消息是否大于压缩截止时间
-        last_msg = self.history_manager.select_last_msg(owner)
-        if last_msg is None or last_msg.create_time < end_time:
-            logger.info(f"[{owner}:{config.name}]: 跳过压缩, 当前角色剩余对话数量不足")
+        # 获取当前角色按照天统计的成本, 计算累计值达到阈值的日期
+        acc_count = 0
+        end_time = None
+        cost_records = self.history_manager.evalute_day_cost(config.name, memory.processed_time, owner)
+        for day, day_cost, _ in cost_records:
+            acc_count += day_cost
+            if acc_count > policy.char_cost:
+                t = datetime.strptime(day, '%Y-%m-%d')
+                end_time = datetime(year=t.year, month=t.month, day=t.day)
+                break
+        if end_time is None:
+            logger.info(f"[{owner}:{config.name}]: 跳过压缩, 当前角色剩余对话长度 {acc_count / KB:.2f} KB < 目标阈值 {policy.char_cost / KB:.2f} KB")
             return False
 
         # 查询需要压缩的记录, 判断是否满足记忆压缩策略
-        memory = self.query_or_init_memory(config.name, owner)
         records = self.history_manager.select_record_between(config.name, memory.processed_time, end_time, owner)
         cost = sum(len(s) for r in records if (s := r.to_dump()) is not None)
-        if cost < policy.char_cost:
-            logger.info(f"[{owner}:{config.name}]: 跳过压缩, 当前累计对话长度 {cost / KB:.2f} KB < 目标阈值 {policy.char_cost / KB:.2f} KB")
+        if cost < MinCompressionSize:
+            logger.info(f"[{owner}:{config.name}]: 跳过压缩, 当前待压缩对话长度 {cost / KB:.2f} KB < 最小压缩长度 {MinCompressionSize / KB:.2f} KB")
             return False
 
         # 执行压缩操作
-        logger.info(f"[{owner}:{config.name}]: 执行压缩, 当前累计对话长度 {cost / KB:.2f} KB > 目标阈值 {policy.char_cost / KB:.2f} KB")
+        logger.info(f"[{owner}:{config.name}]: 执行压缩, 当前角色剩余对话长度 {acc_count / KB:.2f} KB , 待压缩对话长度 {cost / KB:.2f} KB")
         new_content = "\n".join([json.dumps(r.to_openai(), ensure_ascii=False) for r in records])
         prompt = LongTermMemoryPrompt.format(role_desc=config.get_desc(), old_memory=memory.long_term_memory, new_content=new_content)
         reason, content = self.cliet.generate_one_shot(prompt)
@@ -361,6 +378,9 @@ class AssistantMemoryManager:
             names.append(role)
 
         idea_pool = self.get_memory_pool(names, configs, owner)
+        if len(idea_pool) == 0:
+            logger.warning("由于没有公共记忆, 流言蜚语传播计算取消")
+            return False
 
         # 第二轮计算昨日活跃角色扩散的流言蜚语
         roles = self.get_activate_assistant_names(owner)
@@ -613,7 +633,8 @@ class AssistantManager:
         yield f"data: {json.dumps({'text': cost_report, 'done': True})}\n\n"
 
     def show_day_cost(self, owner: str) -> Generator[str, Any]:
-        cost_report = self.history_manager.evalute_day_cost(owner)
+        state = self.history_manager.query_or_init_status(owner)
+        cost_report: str = self.history_manager.day_cost_report(state.assistant_name, owner)
         yield f"data: {json.dumps({'text': cost_report, 'done': True})}\n\n"
 
     def show_memory(self, owner:str) -> Generator[str, Any]:
