@@ -2,17 +2,18 @@
 from openai.types.chat.chat_completion_function_tool_param import ChatCompletionFunctionToolParam
 from openai.types.shared_params.function_definition import FunctionDefinition
 
+# 从实际效果来看, 在工具中说明格式比在SP中说明格式效果更稳定
 CreatItemTool = ChatCompletionFunctionToolParam(
     type="function",
     function=FunctionDefinition(
         name="create_item",
-        description="创建一个新的待办事项",
+        description="为用户创建一个待办事项",
         parameters={
             "type": "object",
             "properties": {
                 "name": {
                     "type": "string",
-                    "description": "待办事项的名称",
+                    "description": "待办事项的名称, 格式为[助手名称]:[事项主题]",
                 },
                 "deadline": {
                     "type": "string",

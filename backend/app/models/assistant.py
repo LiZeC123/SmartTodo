@@ -59,7 +59,7 @@ class History(Base):
     assistant_mode: Mapped[int]         = mapped_column(Integer, nullable=False, default=0)     # 助理的模式 0: 助理模式 1: 扮演模式
 
     # 扩展字段, 后续可能会对消息增加额外的标记
-    tag: Mapped[int]                    = mapped_column(Integer, nullable=False, default=0)     # 消息标记 0: 无标记
+    tag: Mapped[int]                    = mapped_column(Integer, nullable=False, default=0)     # 消息标记 0: 无标记 1: 流言蜚语
 
 
     # 定义联合索引
@@ -129,9 +129,7 @@ class Memory(Base):
                       short_term_memory='', long_term_memory='', compression_reason='', rumor_reason='', processed_time=processed_time)
 
     def to_assistant(self) -> str:
-        content = f"你回顾了你自己的长期记忆\n{self.long_term_memory}\n"
-        if self.short_term_memory:
-            content += f"\n你查看了你自己的日记, 其中记录了一些你打算在适当的时候聊起的你听到的传闻:\n{self.short_term_memory}"
+        content = f"#内容说明\n这是你之前梳理的截止对话开始前你与用户之间的已经发生过的重要事件信息\n{self.long_term_memory}"
         return content
 
     def to_dump(self) -> str:

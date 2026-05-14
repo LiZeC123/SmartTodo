@@ -33,7 +33,6 @@ from app.services.tomato_manager import TomatoManager, TomatoRecordManager
 from app.template.prompt import (
     AnyQueryPrompt,
     AssistantSp,
-    EnableToolDesc,
     LongTermMemoryPrompt,
     RolePalyingSp,
     RumorMemoryPrompt,
@@ -125,7 +124,7 @@ class AssistantHistoryManager:
     def __init__(self, db: scoped_session[Session]) -> None:
         self.db = db
 
-    def add_user_prompt(self, prompt: str, inject: str, owner:str, /, tag:int=0):
+    def add_user_prompt(self, prompt: str, inject: str, owner:str, *, tag:int=0):
         status = self.query_or_init_status(owner)
         msg = History(role='user', content=prompt, system_inject_content=inject, owner=owner,
                                assistant_name=status.assistant_name, assistant_mode=status.assistant_mode, tag=tag)
@@ -133,7 +132,7 @@ class AssistantHistoryManager:
         self.db.flush()
         self.db.commit()
 
-    def add_assistant_prompt(self, content: str,owner:str, /, tag:int=0):
+    def add_assistant_answer(self, content: str,owner:str, *, tag:int=0):
         status = self.query_or_init_status(owner)
         msg = History(role='assistant', content=content, owner=owner,
                                assistant_name=status.assistant_name, assistant_mode=status.assistant_mode, tag=tag)
@@ -157,6 +156,16 @@ class AssistantHistoryManager:
     def change_mode(self, role_mode: int, owner: str):
         status = self.query_or_init_status(owner)
         status.assistant_mode = role_mode
+        self.db.flush()
+        self.db.commit()
+
+    def add_user_inject(self, content: str, role_name: str, owner: str):
+        last_msg = self.select_last_msg(role_name, owner)
+        role_mode = last_msg.assistant_mode if last_msg  else AssistantModeType.RolePlaying
+
+        msg = History(role='user', content='', system_inject_content=content, owner=owner,
+                               assistant_name=role_name, assistant_mode=role_mode, tag=1)
+        self.db.add(msg)
         self.db.flush()
         self.db.commit()
 
@@ -301,10 +310,9 @@ class AssistantHistoryManager:
         if status.assistant_mode == AssistantModeType.RolePlaying:
             return ChatCompletionSystemMessageParam(role="system", content=RolePalyingSp.format(role_desc=status.assistant_desc))
 
-        tool_desc = EnableToolDesc if status.enable_tools else ''
         return ChatCompletionSystemMessageParam(
             role="system",
-            content=AssistantSp.format(role_desc=status.assistant_desc, tool_desc=tool_desc)
+            content=AssistantSp.format(role_desc=status.assistant_desc)
         )
 
 
@@ -402,7 +410,7 @@ class AssistantMemoryManager:
 
         idea_pool = self.get_memory_pool(names, configs, owner)
         if len(idea_pool) == 0:
-            logger.warning("[{owner}:{role}] 由于没有公共记忆, 流言蜚语传播计算取消")
+            logger.warning(f"[{owner}] 由于没有公共记忆, 流言蜚语传播计算取消")
             return False
 
         # 第二轮计算昨日活跃角色扩散的流言蜚语
@@ -419,11 +427,15 @@ class AssistantMemoryManager:
             prompt = RumorMemoryPrompt.format(idea_pool=idea_pool, role_desc=config.get_desc())
             reason, content = self.cliet.generate_one_shot(prompt)
 
-            # 直接修改当前角色的短期记忆, 避免冗余太多信息
+            # 直接将流言蜚语作为一条消息注入到对话历史中而不使用短期记忆字段, 否则由于权重太低将无法有效触发
             memory = self.query_or_init_memory(config.name, owner)
             memory.rumor_reason = reason if reason else ''
-            memory.short_term_memory = content if content else ''
-            logger.info(f'[{owner}:{role}] 流言蜚语计算完毕, 长度为{len(memory.short_term_memory) / KB:.2f} KB, 思考长度为 {len(memory.rumor_reason) / KB:.2f} KB')
+            if content:
+                inject_content = f'你听到了一些流言蜚语: {content}'
+                self.history_manager.add_user_inject(inject_content, role, owner)
+                logger.info(f'[{owner}:{role}] 流言蜚语计算完毕, 长度为{len(memory.short_term_memory) / KB:.2f} KB, 思考长度为 {len(memory.rumor_reason) / KB:.2f} KB')
+            else:
+                logger.warning(f'[{owner}:{role}] 流言蜚语计算返回为空, 思考长度为 {len(memory.rumor_reason) / KB:.2f} KB')
             self.db.flush()
             self.db.commit()
 
@@ -496,9 +508,9 @@ class AssistantMemoryManager:
         return True
 
     def get_activate_assistant_names(self, owner: str) -> Iterable[str]:
-        """最近一天活跃的助理列表"""
+        """最近一天活跃的助理列表, 可能存在用户单方面插入的信息, 如果助手还未回复则不视为活跃"""
         start = now() - timedelta(days=1)
-        stmt = sal.select(History.assistant_name.distinct()).where(History.owner==owner, History.create_time > start)
+        stmt = sal.select(History.assistant_name.distinct()).where(History.owner==owner, History.create_time > start, History.role=='assistant')
         return self.db.scalars(stmt)
 
     def get_recent_assistant_list(self, owner: str) -> Sequence[str]:
@@ -577,7 +589,7 @@ class AssistantManager:
             yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
         finally:
             content = "".join(full_answer)
-            self.history_manager.add_assistant_prompt(content, owner)
+            self.history_manager.add_assistant_answer(content, owner)
 
 
     def make_tools(self, owner:str) -> tuple[Iterable[ChatCompletionToolUnionParam], dict[str, Callable[[str], str]]]:
