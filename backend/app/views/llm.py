@@ -1,8 +1,7 @@
-
 from flask import Blueprint, Response, request
 
 from app import assistant_manager
-from app.models.assistant import AssistantModeType
+from app.models.assistant import parse_assistant_mode
 from app.views.authority import authority_check
 
 llm_bp = Blueprint("llm", __name__)
@@ -27,29 +26,18 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.get_role_info_list()
     elif prompt == "/cost":
         g = assistant_manager.show_cost(owner)
-    elif prompt == "/day_cost":
-        g = assistant_manager.show_day_cost(owner)
     elif prompt == "/memory":
         g = assistant_manager.show_memory(owner)
-
     elif prompt == "/reason":
         g = assistant_manager.show_last_reason(owner)
-    elif prompt.startswith("/switch_work "):
-        # 切换指定角色到聊天模式
-        role_keyword, _ = parse_switch_args(prompt)
-        g = assistant_manager.switch(
-            role_keyword=role_keyword,
-            role_mode=AssistantModeType.Assistant,
-            owner=owner,
-        )
-    elif prompt.startswith("/switch_talk "):
-        # 切换指定角色到扮演模式
-        role_keyword, _ = parse_switch_args(prompt)
-        g = assistant_manager.switch(
-            role_keyword=role_keyword,
-            role_mode=AssistantModeType.RolePlaying,
-            owner=owner,
-        )
+    elif prompt.startswith("/switch "):
+        # 切换助理角色, 自动维持上一次使用的模式
+        args = prompt.removeprefix("/switch ")
+        g = assistant_manager.auto_switch(role_keyword=args, owner=owner)
+    elif prompt.startswith("/change_mode "):
+        # 切换当前助理角色的模式
+        args = prompt.removeprefix("/change_mode ")
+        g = assistant_manager.change_mode(role_mode=parse_assistant_mode(args), owner=owner)
     elif prompt.startswith("/rc "):
         # replace content
         args = [arg for arg in prompt.strip().split() if arg]

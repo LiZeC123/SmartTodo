@@ -97,22 +97,22 @@ type DisplayItem = ChatMessage | DateDivider
 
 // 指令列表定义
 const COMMANDS = [
-  { command: '/switch_work', description: '切换助理到工作模式 (参数 [角色名])', needsSpace: true },
-  { command: '/switch_talk', description: '切换助理到扮演模式 (参数 [角色名])', needsSpace: true },  
-
+  { command: '/switch', description: '切换助理 (参数 [角色名])', needsSpace: true },
+  
   { command: '/cost', description: '查看所有角色会话成本', needsSpace: false },
-  { command: '/day_cost', description: '查看当前角色按天统计会话成本', needsSpace: false },
   { command: '/memory', description: '查看当前角色的记忆', needsSpace: false },
-  { command: '/compress', description: '压缩当前角色记忆 (参数 [相对截止时间])', needsSpace: true },
+
   { command: '/reason', description: '查看上一次模型思考内容', needsSpace: false },
   { command: '/set_memory', description: '覆盖当前角色的记忆 (参数 [记忆文本])', needsSpace: true },
   { command: '/set_time', description: '修改记忆截止时间 (参数 [月.日:时 格式时间字符串])', needsSpace: true },
   { command: '/rewrite', description: '重写当前角色的记忆 (参数 [重写要求])', needsSpace: true },
 
+  // { command: '/compress', description: '压缩当前角色记忆 (参数 [相对截止时间])', needsSpace: true },
   { command: '/rumor', description: '对当前角色生成一条关于目标角色的流言 (参数 [目标角色名])', needsSpace: true }, 
   
   { command: '/inject', description: '注入数据 (参数 [数据名称] [prompt])', needsSpace: true },
 
+  { command: '/change_mode', description: '切换助理模式 (参数 [模式名("助理"或"扮演")])', needsSpace: true },
   { command: '/role_list', description: '显示所有角色信息', needsSpace: false },
   { command: '/history', description: '查看当前角色指定时间的对话 (参数 [月.日 格式时间字符串])', needsSpace: true },
   { command: '/du', description: '显示系统注入的用户信息', needsSpace: false },
@@ -383,7 +383,7 @@ const sendMessage = async () => {
     prompt = ''
     addTextMessage('user', '[用户没有输入]', false, getCurrentTimeStr())
     await streamChat(prompt)
-  } else if (prompt.startsWith('/switch_work ') || prompt.startsWith('/switch_talk ')) {
+  } else if (prompt.startsWith('/switch ')) {
     addTextMessage('user', '[用户切换了助理角色]', false, getCurrentTimeStr())
     await streamChat(prompt)
     loadHistory()   // 切换角色后刷新历史

@@ -28,6 +28,22 @@ class AssistantTagType:
     RoleSwitch = 1
     ModeSwich = 2
 
+def assistant_mode_str(mode: int) -> str:
+    if mode == AssistantModeType.Assistant:
+        return "助理模式"
+    if mode == AssistantModeType.RolePlaying:
+        return "扮演模式"
+
+    return "未知模式"
+
+def parse_assistant_mode(mode: str) -> int:
+    if mode in ['助理', '助理模式']:
+        return AssistantModeType.Assistant
+    if mode in ['扮演', '扮演模式']:
+        return AssistantModeType.RolePlaying
+
+    return AssistantModeType.RolePlaying
+
 class History(Base):
     __tablename__ = "assistant_history"
 

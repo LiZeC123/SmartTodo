@@ -15,7 +15,15 @@ from openai.types.chat import (
 )
 from sqlalchemy.orm import Session, scoped_session
 
-from app.models.assistant import AssistantModeType, AssistantType, History, Memory, Status, make_assistant_status
+from app.models.assistant import (
+    AssistantModeType,
+    AssistantType,
+    History,
+    Memory,
+    Status,
+    assistant_mode_str,
+    make_assistant_status,
+)
 from app.models.item import Item
 from app.models.tomato import TomatoTaskRecord
 from app.services.config_manager import ConfigManager
@@ -133,17 +141,28 @@ class AssistantHistoryManager:
         self.db.flush()
         self.db.commit()
 
-    def switch(self, /, role_config: RoleConfig, role_mode: int, owner:str):
+    def switch(self, /, role_config: RoleConfig, owner:str):
         status = self.query_or_init_status(owner)
         status.assistant_name = role_config.name
         status.assistant_desc = role_config.get_desc()
         status.enable_tools = role_config.enable_tools
+
+        msg = self.select_last_msg(role_config.name, owner)
+        role_mode = msg.assistant_mode if msg  else AssistantModeType.RolePlaying
+        status.assistant_mode = role_mode
+
+        self.db.flush()
+        self.db.commit()
+
+    def change_mode(self, role_mode: int, owner: str):
+        status = self.query_or_init_status(owner)
         status.assistant_mode = role_mode
         self.db.flush()
         self.db.commit()
 
     def remove_last_assistant(self, owner: str) -> bool:
-        last =  self.select_last_msg(owner)
+        status = self.query_or_init_status(owner)
+        last =  self.select_last_msg(status.assistant_name, owner)
         if last is None:
             return False
 
@@ -156,7 +175,8 @@ class AssistantHistoryManager:
         return True
 
     def remove_last_user(self, owner: str) -> bool:
-        last =  self.select_last_msg(owner)
+        status = self.query_or_init_status(owner)
+        last =  self.select_last_msg(status.assistant_name, owner)
         if last is None:
             return False
 
@@ -184,10 +204,9 @@ class AssistantHistoryManager:
         return t
 
 
-    def select_last_msg(self, owner: str) -> History | None:
-        """查询当前角色最后一条消息"""
-        status = self.query_or_init_status(owner)
-        stmt = sal.select(History).where(History.owner==owner, History.assistant_name==status.assistant_name).order_by(History.id.desc()).limit(1)
+    def select_last_msg(self, assistant_name: str,  owner: str) -> History | None:
+        """查询指定角色最后一条消息"""
+        stmt = sal.select(History).where(History.owner==owner, History.assistant_name==assistant_name).order_by(History.id.desc()).limit(1)
         return self.db.scalar(stmt)
 
     def get_last_assistant_mode_time(self, status:Status) -> datetime:
@@ -364,6 +383,9 @@ class AssistantMemoryManager:
 
     def rumor_propagation(self, owner: str):
         roles = self.get_recent_assistant_list(owner)
+        if len(roles) == 0:
+            return
+
         configs = self.role_manager.get_role_map()
 
         # 第一轮提取公共池数据
@@ -380,7 +402,7 @@ class AssistantMemoryManager:
 
         idea_pool = self.get_memory_pool(names, configs, owner)
         if len(idea_pool) == 0:
-            logger.warning("由于没有公共记忆, 流言蜚语传播计算取消")
+            logger.warning("[{owner}:{role}] 由于没有公共记忆, 流言蜚语传播计算取消")
             return False
 
         # 第二轮计算昨日活跃角色扩散的流言蜚语
@@ -479,7 +501,7 @@ class AssistantMemoryManager:
         stmt = sal.select(History.assistant_name.distinct()).where(History.owner==owner, History.create_time > start)
         return self.db.scalars(stmt)
 
-    def get_recent_assistant_list(self, owner: str) -> Iterable[str]:
+    def get_recent_assistant_list(self, owner: str) -> Sequence[str]:
         """按照最后活动顺序获得所有交互过的助理列表"""
         sql = sal.text("""
             SELECT assistant_name
@@ -608,12 +630,15 @@ class AssistantManager:
         self.history_manager.remove_last_pair(owner)
         return self.chat(prompt, owner)
 
-
-
-    def switch(self, *, role_keyword: str, role_mode: int, owner:str)-> Generator[str, Any]:
+    def auto_switch(self, *, role_keyword: str, owner:str) -> Generator[str, Any]:
         config = self.role_manager.get_role(role_keyword)
-        self.history_manager.switch(role_config=config, role_mode=role_mode, owner=owner)
+        self.history_manager.switch(role_config=config, owner=owner)
         content = f"切换到角色: {config.name}"
+        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
+
+    def change_mode(self, role_mode: int, owner:str) -> Generator[str, Any]:
+        self.history_manager.change_mode(role_mode, owner)
+        content = f"切换到模式: {assistant_mode_str(role_mode)}"
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
     def make_user_inject_content(self, status: Status, owner:str) -> str:
@@ -646,9 +671,9 @@ class AssistantManager:
 
     def show_cost(self, owner:str) -> Generator[str, Any]:
         cost_report = self.memory_manager.evaluate_cost(owner)
-        yield f"data: {json.dumps({'text': cost_report, 'done': True})}\n\n"
+        yield f"data: {json.dumps({'text': cost_report, 'done': False})}\n\n"
 
-    def show_day_cost(self, owner: str) -> Generator[str, Any]:
+        yield f"data: {json.dumps({'text': '\n\n当前角色成本明细:\n', 'done': False})}\n\n"
         state = self.history_manager.query_or_init_status(owner)
         cost_report: str = self.history_manager.day_cost_report(state.assistant_name, owner)
         yield f"data: {json.dumps({'text': cost_report, 'done': True})}\n\n"
@@ -864,7 +889,7 @@ class AssistantManager:
         content = self.make_user_inject_content(status, owner)
         yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
 
-        mode = '扮演模式' if status.assistant_mode == AssistantModeType.RolePlaying else '助理模式'
+        mode =  assistant_mode_str(status.assistant_mode)
         content = f"\n当前状态信息\n 角色名: {status.assistant_name}\n 角色模式: {mode}\n 角色描述: {status.assistant_desc}\n"
         yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
 
