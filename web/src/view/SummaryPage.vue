@@ -6,10 +6,7 @@
     <SmartAnalysis :report="smartReport"></SmartAnalysis>
     <ItemGroupedList title="" :data="tTask"></ItemGroupedList> 
     <ItemList title="临期任务汇总" :data="dlTask" ></ItemList>
-    <h2>今日总结</h2>
-    <NoteEditor :init-content="initContent" @save="saveNote"></NoteEditor>
     <Footer :is-admin="false" :config="footerConfig"></Footer>
-    <AlertBox :text="alertText"></AlertBox>
   </div>
 </template>
 
@@ -24,9 +21,7 @@ import EventTime from '@/components/eventline/EventLine.vue'
 import SmartAnalysis from '@/components/analysis/SmartAnalysis.vue'
 import ItemGroupedList from '@/components/item/ItemGroupedList.vue'
 import ItemList from '@/components/item/ItemList.vue'
-import NoteEditor from '@/components/editor/NoteEditor.vue'
 import Footer from '@/components/footer/TodoFooter.vue'
-import AlertBox from '@/components/AlertBox.vue'
 
 import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/types'
 import type { EventItem } from '@/components/eventline/types'
@@ -41,7 +36,6 @@ onMounted(() => {
   loadAnalysisReport()
   loadItemWithSubTask()
   loadDLItem()
-  loadNote()
   document.title = '总结列表'
 })
 
@@ -94,27 +88,11 @@ function loadDLItem() {
 }
 
 
-// ========================================================== NoteEditor 相关配置 ==========================================================
-let initContent = ref("")
 
-function loadNote() {
-  axios.post<string>("/summary/getNote").then(res => initContent.value = res.data)
-}
-
-function saveNote(content: string) {
-  axios.post("/summary/updateNode", { content }).then(() => {
-    alertText.value = '文档已保存'
-    setTimeout(() => (alertText.value = undefined), 500)
-  })
-}
 
 
 // ========================================================== Footer 相关配置 ==========================================================
 let footerConfig: FooterConfig[] = []
-
-
-// ========================================================== Alert 相关配置 ==========================================================
-let alertText: Ref<string | undefined> = ref('')
 
 </script>
 
