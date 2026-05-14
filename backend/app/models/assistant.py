@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from openai.types.chat import (
@@ -52,6 +53,7 @@ class History(Base):
     content: Mapped[str]                = mapped_column(Text, nullable=False, default='')
     create_time: Mapped[datetime]       = mapped_column(DateTime, nullable=False, default=now)
     system_inject_content: Mapped[str]  = mapped_column(Text, nullable=False, default='')   # 系统自动注入的待办相关信息
+    tool_call_list_json:Mapped[str]     = mapped_column(String, nullable=False, default='') # 模型请求工具调用信息序列化为JSON
     tool_call_id:Mapped[str]            = mapped_column(String, nullable=False, default='') # 工具的ID
     owner: Mapped[str]                  = mapped_column(String(15), nullable=False)
 
@@ -75,7 +77,11 @@ class History(Base):
             content = f"当前时间: {self.create_time.strftime("%Y-%m-%d %H:%M:%S %a")}\n{self.system_inject_content}\n\n---\n\n{self.content}"
             return ChatCompletionUserMessageParam(content=content, role="user")
         if self.role == 'assistant':
-            return ChatCompletionAssistantMessageParam(content=self.content, role='assistant')
+            if self.tool_call_list_json == '':
+                return ChatCompletionAssistantMessageParam(content=self.content, role='assistant')
+            else:
+                tool_call_list = json.loads(self.tool_call_list_json)
+                return ChatCompletionAssistantMessageParam(content=self.content, role='assistant', tool_calls=tool_call_list)
         if self.role == 'tool':
             return ChatCompletionToolMessageParam(content=self.content, role='tool', tool_call_id=self.tool_call_id)
         raise IllegalArgumentException(f"unknown role: {self.role}")

@@ -15,16 +15,16 @@ class ConfigManager:
             logger.warning("Load Default Config")
 
         with open(config_file) as f:
-            self.config = json.load(f)
+            self.config: dict = json.load(f)
 
     def try_login(self, username: str, password: str) -> bool:
-        users = self.config['USER_INFO']
-        return username in users and users[username]['password'] == password
+        users = self.config["USER_INFO"]
+        return username in users and users[username]["password"] == password
 
     def get_roles(self, username: str) -> list[str]:
-        users: dict = self.config['USER_INFO']
+        users: dict = self.config["USER_INFO"]
         if username in users:
-            return users[username]['role']
+            return users[username]["role"]
         else:
             return []
 
@@ -43,6 +43,13 @@ class ConfigManager:
         info = self.config["LLM_INFO"]
         return info["BASE_URL"], info["API_KEY"], info["MODEL_NAME"]
 
+    def get_tool_llm_info(self):
+        info = self.config.get("LLM_TOOL_INFO")
+        if info is None:
+            logger.warning("配置文件不包含简单工具LLM服务配置, 自动降级使用主模型配置")
+            info = self.config["LLM_INFO"]
+        return info["BASE_URL"], info["API_KEY"], info["MODEL_NAME"]
+
     def get_all_users(self) -> Iterable[str]:
-        users: dict = self.config['USER_INFO']
+        users: dict = self.config["USER_INFO"]
         return users.keys()

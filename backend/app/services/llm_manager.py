@@ -132,10 +132,20 @@ class AssistantHistoryManager:
         self.db.flush()
         self.db.commit()
 
-    def add_assistant_answer(self, content: str,owner:str, *, tag:int=0):
+    def add_assistant_answer(self, content: str,owner:str, *, tool_call_list_json='', tag:int=0):
         status = self.query_or_init_status(owner)
         msg = History(role='assistant', content=content, owner=owner,
-                               assistant_name=status.assistant_name, assistant_mode=status.assistant_mode, tag=tag)
+                               assistant_name=status.assistant_name, assistant_mode=status.assistant_mode,
+                               tool_call_list_json=tool_call_list_json, tag=tag)
+        self.db.add(msg)
+        self.db.flush()
+        self.db.commit()
+
+    def add_tool_call_msg(self, tool_call_id: str, content: str, *, owner: str, tag:int=0):
+        status = self.query_or_init_status(owner)
+        msg = History(role='tool', tool_call_id=tool_call_id, content=content, owner=owner,
+                               assistant_name=status.assistant_name, assistant_mode=status.assistant_mode,
+                               tag=tag)
         self.db.add(msg)
         self.db.flush()
         self.db.commit()
@@ -198,9 +208,20 @@ class AssistantHistoryManager:
         return True
 
     def remove_last_pair(self, owner: str) -> bool:
-        a = self.remove_last_assistant(owner)
-        u = self.remove_last_user(owner)
-        return a and u
+        status = self.query_or_init_status(owner)
+        while True:
+            last =  self.select_last_msg(status.assistant_name, owner)
+            if last is None:
+                break
+
+            if last.role == AssistantType.User:
+                self.db.delete(last)
+                break
+            else:
+                self.db.delete(last)
+        self.db.flush()
+        self.db.commit()
+        return True
 
     def query_or_init_status(self, owner: str) -> Status:
         stmt = sal.select(Status).where(Status.owner == owner)
@@ -565,14 +586,17 @@ class AssistantManager:
 
     def generate(self, owner: str, *, enable_tools=False) -> Generator[str, Any]:
         """流式生成回复：后台消费 LLM 流并保存，前台推送给客户端"""
-        history = self.history_manager.get_history(owner)
-        if enable_tools:
-            tool_desc, tool_map = self.make_tools(owner)
-            stream = self.llm_manager.generate_steam_with_tools(history, tool_desc, tool_map)
-        else:
+        if not enable_tools:
+            history = self.history_manager.get_history(owner)
             stream = self.llm_manager.generate_stream(history)
-        full_answer = []
+            yield from self._consume_simple_stream(stream, owner)
+        else:
+            yield from self._comsume_tool_stream(owner)
+            yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
 
+    def _consume_simple_stream(self, stream: Generator[str, Any], owner: str) -> Generator[str, Any]:
+        """消费简单模式的流"""
+        full_answer = []
         try:
             for token in stream:
                 full_answer.append(token)
@@ -591,6 +615,35 @@ class AssistantManager:
             content = "".join(full_answer)
             self.history_manager.add_assistant_answer(content, owner)
 
+    def _comsume_tool_stream(self, owner: str) -> Generator[str, Any]:
+        tool_desc, tool_map = self.make_tools(owner)
+
+        while True:
+            tool_calls_list = []
+            full_answer = []
+            history = self.history_manager.get_history(owner)
+            stream = self.llm_manager.generate_steam_with_tools(history, tool_desc, tool_calls_list)
+            for token in stream:
+                full_answer.append(token)
+                yield f"data: {json.dumps({'text': token, 'done': False})}\n\n"
+            if not full_answer:
+                return
+
+            content = "".join(full_answer)
+            if tool_calls_list:
+                list_josn = json.dumps(tool_calls_list)
+                self.history_manager.add_assistant_answer(content, owner, tool_call_list_json=list_josn)
+                # 执行工具调用
+                for tc in tool_calls_list:
+                    name = tc["function"]["name"]
+                    if name in tool_map:
+                        result = tool_map[name](tc["function"]["arguments"])
+                        self.history_manager.add_tool_call_msg(tc["id"], result, owner=owner)
+                # 继续循环
+            else:
+                # 没有工具调用可以结束循环
+                self.history_manager.add_assistant_answer(content, owner)
+                return
 
     def make_tools(self, owner:str) -> tuple[Iterable[ChatCompletionToolUnionParam], dict[str, Callable[[str], str]]]:
         def create_f(arg_json:str) -> str:
@@ -615,7 +668,7 @@ class AssistantManager:
                 config = self.role_manager.get_role(role_name)
                 short_info = f"{config.name}({config.short_desc})"
                 prompt = AnyQueryPrompt.format(role_short_info=short_info, question=question)
-                _, content = self.llm_manager.generate_one_shot(prompt)
+                content = self.llm_manager.generate_one_shot_with_history(prompt,f'{owner}_AnyQ', simple_client=True)
                 logger.info(f'[{config.name}] 提问 [{question}] 获得回答 [{content}]')
                 return content or '查询结果为空'
             except Exception as e:
