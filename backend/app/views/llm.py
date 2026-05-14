@@ -69,6 +69,10 @@ def assistant_chat_stream(owner: str):
     elif prompt.startswith("/history "):
         args = prompt.removeprefix("/history ")
         g = assistant_manager.show_day_history(args, owner)
+    elif prompt.startswith("/inject "):
+        args = prompt.removeprefix("/inject ")
+        inject_data, up = parse_switch_args(prompt)
+        g = assistant_manager.inject(inject_data=inject_data, user_prompt=up, owner=owner)
     else:
         g = assistant_manager.chat(prompt, owner)
 

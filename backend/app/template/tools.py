@@ -2,7 +2,7 @@
 from openai.types.chat.chat_completion_function_tool_param import ChatCompletionFunctionToolParam
 from openai.types.shared_params.function_definition import FunctionDefinition
 
-CreatItemTool: ChatCompletionFunctionToolParam = ChatCompletionFunctionToolParam(
+CreatItemTool = ChatCompletionFunctionToolParam(
     type="function",
     function=FunctionDefinition(
         name="create_item",
@@ -27,6 +27,28 @@ CreatItemTool: ChatCompletionFunctionToolParam = ChatCompletionFunctionToolParam
                 },
             },
             "required": ["name", "deadline", "priority"],
+        },
+    ),
+)
+
+AnyQueryTool = ChatCompletionFunctionToolParam(
+    type="function",
+    function=FunctionDefinition(
+        name="query_info",
+        description="向系统查询需要的信息",
+        parameters={
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "你的名字, 该字段用于权限检查",
+                },
+                "question": {
+                    "type": "string",
+                    "description": "查询的问题, 使用自然语言清晰准确的描述背景和你要问的问题",
+                },
+            },
+            "required": ["name", "question"],
         },
     ),
 )

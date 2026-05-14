@@ -23,6 +23,7 @@ from app.services.event_log_manager import get_event_log_after
 from app.services.item_manager import ItemManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
 from app.template.prompt import (
+    AnyQueryPrompt,
     AssistantSp,
     EnableToolDesc,
     LongTermMemoryPrompt,
@@ -30,7 +31,7 @@ from app.template.prompt import (
     RumorMemoryPrompt,
     RumorMillPrompt,
 )
-from app.template.tools import CreatItemTool
+from app.template.tools import AnyQueryTool, CreatItemTool
 from app.tools.llm import LLMClient
 from app.tools.log import logger
 from app.tools.time import (
@@ -64,9 +65,9 @@ class CompressionPolicy:
 
 KB = 1024
 
-AggressivePolicy = CompressionPolicy(day_delta=1, char_cost=5*KB)
-ModeratePolicy = CompressionPolicy(day_delta=1, char_cost=10*KB)
-LazyPolicy = CompressionPolicy(day_delta=1, char_cost=20*KB)
+AggressivePolicy = CompressionPolicy(day_delta=1, char_cost=3*KB)
+ModeratePolicy = CompressionPolicy(day_delta=1, char_cost=6*KB)
+LazyPolicy = CompressionPolicy(day_delta=1, char_cost=10*KB)
 
 MinCompressionSize = 5*KB
 
@@ -459,6 +460,7 @@ class AssistantMemoryManager:
         memory = self.query_or_init_memory(role_name, owner)
         new_memory = memory.deep_copy(memory.processed_time)
         new_memory.long_term_memory = memory_content
+        new_memory.compression_reason = '手动注入记忆'
         self.db.add(new_memory)
         self.db.commit()
 
@@ -531,7 +533,6 @@ class AssistantManager:
         """流式生成回复：后台消费 LLM 流并保存，前台推送给客户端"""
         history = self.history_manager.get_history(owner)
         if enable_tools:
-            # print("历史内容", history)
             tool_desc, tool_map = self.make_tools(owner)
             stream = self.llm_manager.generate_steam_with_tools(history, tool_desc, tool_map)
         else:
@@ -560,7 +561,6 @@ class AssistantManager:
     def make_tools(self, owner:str) -> tuple[Iterable[ChatCompletionToolUnionParam], dict[str, Callable[[str], str]]]:
         def create_f(arg_json:str) -> str:
             try:
-                print(f"执行创建事项函数: {arg_json}")
                 args:dict[str,str] = json.loads(arg_json)
                 item = Item(name=args.get('name'), item_type='single', owner=owner,
                             deadline=get_datetime_from_str(args.get('deadline', '')),
@@ -571,7 +571,23 @@ class AssistantManager:
                 return f"error: {e}"
             return "success"
 
-        return [CreatItemTool], {"create_item": create_f}
+        def query_f(arg_json:str) -> str:
+            try:
+                args:dict[str,str] = json.loads(arg_json)
+                role_name = args.get('name', '')
+                question = args.get('question', '')
+                if role_name == '' or question == '':
+                    return f'查询信息不完整. name={role_name}, question={question}'
+                config = self.role_manager.get_role(role_name)
+                short_info = f"{config.name}({config.short_desc})"
+                prompt = AnyQueryPrompt.format(role_short_info=short_info, question=question)
+                _, content = self.llm_manager.generate_one_shot(prompt)
+                logger.info(f'[{config.name}] 提问 [{question}] 获得回答 [{content}]')
+                return content or '查询结果为空'
+            except Exception as e:
+                return f'error: {e}'
+
+        return [CreatItemTool, AnyQueryTool], {"create_item": create_f, 'query_info': query_f}
 
 
     def chat(self, prompt: str, owner: str) ->  Generator[str, Any]:
@@ -723,6 +739,10 @@ class AssistantManager:
             v = item.to_dump()
             yield f"data: {json.dumps({'text': v, 'done': False})}\n\n"
         yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
+
+    def inject(self, inject_data:str, user_prompt:str, owner:str) -> Generator[str, Any]:
+        self.history_manager.add_user_prompt(user_prompt, inject_data, owner)
+        yield from self.generate(owner, enable_tools=False)
 
     def __is_zero_tomoto_task(self, name:str) -> bool:
         # 打卡类任务可瞬间完成无需番茄钟.  午间和晚间任务不占用番茄钟

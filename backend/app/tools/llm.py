@@ -12,6 +12,8 @@ from openai.types.chat import (
 
 from app.services.config_manager import ConfigManager
 
+thinking_enable = {"thinking": {"type": "enabled"}}
+thinking_disable = {"thinking": {"type": "disabled"}}
 
 class LLMClient:
     def __init__(self, config_manager: ConfigManager) -> None:
@@ -24,7 +26,7 @@ class LLMClient:
             model=self.model_name,
             messages=history,
             stream=True,
-            extra_body={"thinking": {"type": "disabled"}}
+            extra_body=thinking_disable
         )
 
         for chunk in response:
@@ -32,7 +34,12 @@ class LLMClient:
                 data = chunk.choices[0].delta.content
                 yield data
 
-    def generate_one_shot(self, prompt:str):
+    def generate_one_shot(self, prompt:str, *, thinking=True):
+        if thinking:
+            extra_body = thinking_enable
+        else:
+            extra_body = thinking_disable
+
         """单次非流式请求模型, 返回思考内容和模型回复"""
         response = self.client.chat.completions.create(
             model=self.model_name,
@@ -42,10 +49,10 @@ class LLMClient:
             ],
             # 由于max模式Token消耗极大, 因此考虑先使用默认的模式
             # reasoning_effort="max", # type: ignore
-            extra_body={"thinking": {"type": "enabled"}}
+            extra_body=extra_body
         )
 
-        reasoning_content = response.choices[0].message.reasoning_content # type: ignore
+        reasoning_content = response.choices[0].message.reasoning_content if thinking else '' # type: ignore
         content = response.choices[0].message.content
         return reasoning_content, content
 
@@ -54,7 +61,7 @@ class LLMClient:
                                   tool_map: dict[str, Callable[[str], str]]) -> Generator[str, Any]:
         response = self.client.chat.completions.create(
             model=self.model_name, messages=history, stream=True, tools=tools,
-            extra_body={"thinking": {"type": "disabled"}}
+            extra_body=thinking_disable
         )
 
         tool_calls_buffer = {}
