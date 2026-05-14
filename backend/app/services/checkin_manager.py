@@ -63,7 +63,7 @@ class CheckinManager:
 
     def update_all_checkin_state(self):
         users = self.config_manager.get_all_users()
-        end_day = today_begin() - timedelta(days=1)
+        end_day = today() - timedelta(days=1)
         for user in users:
             names = self.item_manager.select_checkin_item(user)
             for name in names:
@@ -71,8 +71,9 @@ class CheckinManager:
 
 
     def update_checkin_state(self, name: str, end_day: date, owner: str):
+        """注意: 不要混用datetime和date类型, 两者具有继承关系, 但无法进行比较"""
         start = datetime(year=2025, month=1, day=1)
-        end = now()
+        end = today_begin()
         records = self.get_checkin_datetime(name, start, end, owner)
 
         total_count = len(records)
