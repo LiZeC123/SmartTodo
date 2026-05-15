@@ -736,6 +736,8 @@ class AssistantManager:
         content = f"番茄钟状态: {state}\n"
 
         # 事件信息, 可能没有事件
+        # 如果已经跨越了1天时间, 则昨天产生的信息不再继续追加到当前会话中
+        start = tb if (tb:=today_begin()) > start else start
         event_info = self.get_event_info(owner, start)
         if event_info != "":
             content += "用户新增的事件记录:\n" + event_info
