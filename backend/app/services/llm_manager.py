@@ -309,7 +309,22 @@ class AssistantHistoryManager:
         return {'role': msg.role, 'content': msg.to_web(), 'createTime': msg.create_time.strftime("%Y-%m-%d %H:%M:%S")}
 
     def to_web_json_list(self, records: Iterable[History]):
-        return [self.to_web_json(msg) for msg in records if msg.role in [AssistantType.User, AssistantType.Assistant]]
+        return self.post_merging([self.to_web_json(msg) for msg in records if msg.role in [AssistantType.User, AssistantType.Assistant]])
+
+    def post_merging(self, records: list[dict]):
+        if len(records) == 0:
+            return records
+
+        last = records[0]
+        rst = [last]
+        for rec in records[1:]:
+            this_role = rec.get('role')
+            if this_role == AssistantType.Assistant and last.get('role') == AssistantType.Assistant:
+                last['content'] += rec.get('content')
+            else:
+                rst.append(rec)
+                last = rec
+        return rst
 
     def evalute_day_cost(self, role_name: str, start_day: datetime, owner: str) -> list[tuple[str, int, int]]:
         stmt = sal.select(sal.func.date(History.create_time).label("stat_date"),
@@ -449,10 +464,12 @@ class AssistantMemoryManager:
             reason, content = self.cliet.generate_one_shot(prompt)
 
             # 直接将流言蜚语作为一条消息注入到对话历史中而不使用短期记忆字段, 否则由于权重太低将无法有效触发
+            # 但还是将内容存储到短期记忆中, 以便后续使用
             memory = self.query_or_init_memory(config.name, owner)
             memory.rumor_reason = reason if reason else ''
             if content:
-                inject_content = f'你听到了一些流言蜚语: {content}'
+                memory.short_term_memory = content
+                inject_content = f'你收到了一些传闻: {content}'
                 self.history_manager.add_user_inject(inject_content, role, owner)
                 logger.info(f'[{owner}:{role}] 流言蜚语计算完毕, 长度为{len(memory.short_term_memory) / KB:.2f} KB, 思考长度为 {len(memory.rumor_reason) / KB:.2f} KB')
             else:

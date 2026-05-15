@@ -92,7 +92,9 @@ class History(Base):
         if self.role in "assistant":
             return self.content
         if self.role == 'user':
-            return self.content if self.content != "" else "[用户没有任何输入]"
+            if self.content != "":
+                return self.content
+            return "[助手收到了一些传闻]" if self.tag == 1 else "[用户没有任何输入]"
 
     def to_dump(self) -> str | None:
         if self.role in ['system', 'tool']:
