@@ -463,14 +463,12 @@ class AssistantMemoryManager:
             prompt = RumorMemoryPrompt.format(idea_pool=idea_pool, role_desc=config.get_desc())
             reason, content = self.cliet.generate_one_shot(prompt)
 
-            # 直接将流言蜚语作为一条消息注入到对话历史中而不使用短期记忆字段, 否则由于权重太低将无法有效触发
-            # 但还是将内容存储到短期记忆中, 以便后续使用
             memory = self.query_or_init_memory(config.name, owner)
             memory.rumor_reason = reason if reason else ''
             if content:
+                # 流言蜚语存储到短期记忆字段中, 默认不注入到对话之中
+                # 还需要实验合理的触发时机
                 memory.short_term_memory = content
-                inject_content = f'你收到了一些传闻: {content}'
-                self.history_manager.add_user_inject(inject_content, role, owner)
                 logger.info(f'[{owner}:{role}] 流言蜚语计算完毕, 长度为{len(memory.short_term_memory) / KB:.2f} KB, 思考长度为 {len(memory.rumor_reason) / KB:.2f} KB')
             else:
                 logger.warning(f'[{owner}:{role}] 流言蜚语计算返回为空, 思考长度为 {len(memory.rumor_reason) / KB:.2f} KB')
@@ -833,9 +831,14 @@ class AssistantManager:
         yield from self.generate(owner, enable_tools=bool(status.enable_tools))
 
     def rumor_propagation(self, owner: str) -> Generator[str, Any]:
-        yield f"data: {json.dumps({'text': '正在生成流言蜚语, 耗时较长请稍等\n', 'done': False})}\n\n"
-        self.memory_manager.rumor_propagation(owner)
-        yield f"data: {json.dumps({'text': '流言蜚语生成完毕\n', 'done': True})}\n\n"
+        status = self.history_manager.query_or_init_status(owner)
+        memory = self.memory_manager.query_or_init_memory(status.assistant_name, owner)
+        if not memory.short_term_memory:
+            yield f"data: {json.dumps({'text': '当前没有可用的流言蜚语\n', 'done': True})}\n\n"
+
+        inject_content = f'你收到了一些传闻: {memory.short_term_memory}'
+        self.history_manager.add_user_inject(inject_content, status.assistant_name, owner)
+        yield from self.generate(owner, enable_tools=bool(status.enable_tools))
 
     def show_day_history(self, day_str: str, owner:str) -> Generator[str, Any]:
         t = parse_befeore_time_str(day_str)
