@@ -15,5 +15,4 @@ def remove_session(exception=None):
 
 
 if __name__ == '__main__':
-        # init_task_manager()
     app.run("localhost", 4231, threaded=True)

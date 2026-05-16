@@ -14,7 +14,7 @@ from app.tools.gen import generate_token_str
 from app.tools.llm import LLMClient
 
 # 初始化数据库对象
-engine = create_engine(url='sqlite:///data/data.db', echo=True, future=True)
+engine = create_engine(url='sqlite:///data/data.db', future=True)
 
 # 定义一个基于线程的Session: https://docs.sqlalchemy.org/en/20/orm/contextual.html
 # scoped_session内部使用线程局部变量对每个线程维护一个独立的Session对象. 通常将scoped_session的返回值视为一个函数, 通过函数调用获得内部维护的属于当前线程的Session对象
