@@ -71,9 +71,11 @@ class CompressionPolicy:
 
 KB = 1024
 
-AggressivePolicy = CompressionPolicy(day_delta=1, char_cost=3*KB)
-ModeratePolicy = CompressionPolicy(day_delta=1, char_cost=6*KB)
-LazyPolicy = CompressionPolicy(day_delta=1, char_cost=10*KB)
+# 如果剩余的聊天内容太短, 会对聊天风格产生明显的影响, 导致一些难以量化但是可以察觉出来的微妙变化
+# 因此即使是最激进的压缩模式, 也需要保留一些内容
+AggressivePolicy = CompressionPolicy(day_delta=1, char_cost=6*KB)
+ModeratePolicy = CompressionPolicy(day_delta=1, char_cost=10*KB)
+LazyPolicy = CompressionPolicy(day_delta=1, char_cost=14*KB)
 
 MinCompressionSize = 5*KB
 
@@ -430,7 +432,7 @@ class AssistantMemoryManager:
                 config = self.role_manager.get_role(role)
                 self.update_long_term_memory(config=config, owner=user)
             # 基于已经更新的记忆和最近的活跃助理, 传播流言蜚语
-            self.rumor_propagation(owner=user)
+            # self.rumor_propagation(owner=user)
 
     def rumor_propagation(self, owner: str):
         roles = self.get_recent_assistant_list(owner)
