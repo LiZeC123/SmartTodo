@@ -107,8 +107,7 @@ const COMMANDS = [
   { command: '/set_time', description: '修改记忆截止时间 (参数 [月.日:时 格式时间字符串])', needsSpace: true },
   { command: '/rewrite', description: '重写当前角色的记忆 (参数 [重写要求])', needsSpace: true },
 
-  // { command: '/compress', description: '压缩当前角色记忆 (参数 [相对截止时间])', needsSpace: true },
-  { command: '/rumor', description: '对当前角色生成一条关于目标角色的流言 (参数 [目标角色名])', needsSpace: true }, 
+  { command: '/rumor', description: '对当前角色注入流言蜚语', needsSpace: false }, 
   
   { command: '/inject', description: '注入数据 (参数 [数据名称] [prompt])', needsSpace: true },
 
@@ -120,7 +119,7 @@ const COMMANDS = [
   
   { command: '/rk', description: '重新生成最后一次回答', needsSpace: false },
   { command: '/rc', description: '替换最后一条用户消息', needsSpace: true },
-  { command: '/delete', description: '删除最后一条对话 (同步后端)', needsSpace: false },
+  { command: '/delete', description: '删除n轮对话 (参数 [对话轮数])', needsSpace: true },
 ]
 
 // ---------- 响应式数据 ----------
@@ -355,17 +354,9 @@ function loadHistory() {
 }
 
 // ---------- 删除最后一条对话 ----------
-async function deleteLastChat() {
-  await axios.post('assistant/delete', {})
-  // 删除最后两条消息（用户消息 + 助手消息）
-  let removedCount = 0
-  for (let i = messages.length - 1; i >= 0 && removedCount < 2; i--) {
-    if (messages[i].type === 'text') {
-      messages.splice(i, 1)
-      removedCount++
-    }
-  }
-  isLoading.value = false
+async function deleteLastChat(num: number) {
+  await axios.post('assistant/delete', {"num": num})
+  loadHistory()
 }
 
 // ---------- 发送消息（支持指令）----------
@@ -436,8 +427,14 @@ const sendMessage = async () => {
     const newUserMsg = prompt.replace(/^\/rc\s*/, '')
     addTextMessage('user', newUserMsg, false, getCurrentTimeStr())
     await streamChat(prompt)
-  } else if (prompt === '/delete') {
-    await deleteLastChat()
+  } else if (prompt.startsWith("/delete")) {
+    const num_str = prompt.replace(/^\/delete\s*/, '')
+    let num = parseInt(num_str, 10)
+    if (isNaN(num)) {
+      num = 1
+    }
+
+    await deleteLastChat(num)
   } else {
     // 普通消息：添加用户消息（带当前时间），然后发起流式请求
     addTextMessage('user', prompt, false, getCurrentTimeStr())

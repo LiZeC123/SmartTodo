@@ -95,4 +95,6 @@ def assistant_history(owner: str):
 @llm_bp.post("/api/assistant/delete")
 @authority_check()
 def assistant_delete(owner: str):
-    return assistant_manager.delete(owner)
+    f: dict = request.get_json()
+    num = int(f.get("num", "1"))
+    return assistant_manager.delete(num, owner)

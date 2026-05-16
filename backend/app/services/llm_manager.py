@@ -703,8 +703,13 @@ class AssistantManager:
         self.history_manager.remove_last_assistant(owner)
         return self.generate(owner, enable_tools=bool(status.enable_tools))
 
-    def delete(self, owner: str) -> bool:
-        return self.history_manager.remove_last_pair(owner)
+    def delete(self, num: int,  owner: str) -> bool:
+        if num < 1:
+            return False
+
+        for _ in range(num):
+            self.history_manager.remove_last_pair(owner)
+        return True
 
     def replace(self, prompt: str, owner: str) ->  Generator[str, Any]:
         self.history_manager.remove_last_pair(owner)
