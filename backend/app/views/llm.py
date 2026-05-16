@@ -42,9 +42,6 @@ def assistant_chat_stream(owner: str):
         # replace content
         args = [arg for arg in prompt.strip().split() if arg]
         g = assistant_manager.replace(args[1], owner)
-    elif prompt.startswith("/compress"):
-        # 调试指令: 全局记忆压缩
-        g = assistant_manager.auto_compress_memory()
     elif prompt.startswith("/set_memory "):
         args = prompt.removeprefix("/set_memory ")
         g = assistant_manager.set_memory(args, owner)
@@ -52,11 +49,8 @@ def assistant_chat_stream(owner: str):
         args = prompt.removeprefix("/set_time ")
         g = assistant_manager.set_time(args, owner)
     elif prompt.startswith("/rumor"):
-        # 调试指令: 全局生成流言
+        # 调试指令: 注入流言
         g = assistant_manager.rumor_propagation(owner)
-    elif prompt.startswith("/history "):
-        args = prompt.removeprefix("/history ")
-        g = assistant_manager.show_day_history(args, owner)
     elif prompt.startswith("/inject "):
         args = prompt.removeprefix("/inject ")
         inject_data, up = parse_switch_args(prompt)
@@ -91,6 +85,12 @@ def parse_switch_args(prompt) -> tuple[str, str]:
 def assistant_history(owner: str):
     return assistant_manager.get_web_history(owner)
 
+@llm_bp.post("/api/assistant/history/more")
+@authority_check()
+def more_assistant_history(owner: str):
+    f: dict = request.get_json()
+    end_time_str = f.get('before_time', '')
+    return assistant_manager.get_more_web_history(end_time_str, owner)
 
 @llm_bp.post("/api/assistant/delete")
 @authority_check()

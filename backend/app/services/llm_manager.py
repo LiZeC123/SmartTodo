@@ -293,7 +293,7 @@ class AssistantHistoryManager:
         if memory is None:
             return self.to_web_json_list(records)
 
-        start = memory.processed_time - timedelta(days=3)
+        start = memory.processed_time - timedelta(days=1)
         records_before = self.select_record_between(status.assistant_name, start, memory.processed_time, owner)
         data_before = self.to_web_json_list(records_before)
         data_after = self.to_web_json_list(records)
@@ -303,6 +303,14 @@ class AssistantHistoryManager:
             return data_before + div + data_after
         else:
             return data_after
+
+    def get_more_web_history(self, end_time: datetime,  owner: str) -> list[dict]:
+        status = self.query_or_init_status(owner)
+        stmt = sal.select(History)\
+                  .where(History.owner == owner, History.create_time < end_time,
+                         History.assistant_name == status.assistant_name).order_by(History.id.desc()).limit(20)
+        records = reversed(self.db.scalars(stmt).all())
+        return self.to_web_json_list(records)
 
     @staticmethod
     def to_web_json(msg: History):
@@ -770,24 +778,6 @@ class AssistantManager:
         memory = self.memory_manager.query_or_init_memory(status.assistant_name, owner)
         yield f"data: {json.dumps({'text': memory.to_dump(), 'done': True})}\n\n"
 
-    def compress_memory(self, _: str, owner:str) -> Generator[str, Any]:
-        status = self.history_manager.query_or_init_status(owner)
-        config=self.role_manager.get_role(status.assistant_name)
-
-        msg = f"正在压缩 {config.name} 的记忆, 记忆策略: {config.memory_compress} ...\n"
-        yield f"data: {json.dumps({'text': msg, 'done': False})}\n\n"
-
-        ok = self.memory_manager.update_long_term_memory(config=config, owner=owner)
-        if ok:
-            yield from self.show_memory(owner)
-        else:
-            yield f"data: {json.dumps({'text': '记忆压缩未成功, 具体原因可查看日志', 'done': True})}\n\n"
-
-    def auto_compress_memory(self) -> Generator[str, Any]:
-        yield f"data: {json.dumps({'text': '正在执行自动记忆压缩, 耗时较长请稍等\n', 'done': False})}\n\n"
-        self.memory_manager.auto_update_memory()
-        yield f"data: {json.dumps({'text': '自动记忆压缩执行完毕\n', 'done': True})}\n\n"
-
     def show_last_reason(self, owner:str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
         memory = self.memory_manager.query_or_init_memory(status.assistant_name, owner)
@@ -844,18 +834,6 @@ class AssistantManager:
         inject_content = f'你收到了一些传闻: {memory.short_term_memory}'
         self.history_manager.add_user_inject(inject_content, status.assistant_name, owner)
         yield from self.generate(owner, enable_tools=bool(status.enable_tools))
-
-    def show_day_history(self, day_str: str, owner:str) -> Generator[str, Any]:
-        t = parse_befeore_time_str(day_str)
-        start = the_day_begin(t)
-        end = start + timedelta(days=1)
-        status = self.history_manager.query_or_init_status(owner)
-        history = self.history_manager.select_record_between(status.assistant_name, start_time=start, end_time=end, owner=owner)
-
-        for item in history:
-            v = item.to_dump()
-            yield f"data: {json.dumps({'text': v, 'done': False})}\n\n"
-        yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
 
     def inject(self, inject_data:str, user_prompt:str, owner:str) -> Generator[str, Any]:
         self.history_manager.add_user_prompt(user_prompt, inject_data, owner)
@@ -965,6 +943,12 @@ class AssistantManager:
     def get_web_history(self, owner:str) -> list[dict]:
         return self.history_manager.get_web_history(owner)
 
+    def get_more_web_history(self, end_time_str: str,  owner: str) -> list[dict]:
+        if end_time_str == '':
+            return []
+
+        end_time = get_datetime_from_str(end_time_str)
+        return self.history_manager.get_more_web_history(end_time=end_time, owner=owner)
 
     def dump_history(self, owner:str) -> Generator[str, Any]:
         _, memory, record = self.history_manager.select_record(owner)

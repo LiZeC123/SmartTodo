@@ -1,7 +1,16 @@
 <!-- components/ChatComponent.vue -->
 <template>
   <div class="chat-container">
-    <div class="chat-history" ref="chatHistoryRef">
+    <div class="chat-history" ref="chatHistoryRef" @scroll="handleScroll">
+      <!-- 顶部：加载更多指示器 -->
+      <div v-if="isLoadingMore" class="loading-more">
+        <span class="loading-spinner"></span>
+        <span>加载中...</span>
+      </div>
+      <div v-else-if="!hasMore && messages.length > 0" class="no-more">
+        —— 没有更多历史记录 ——
+      </div>
+
       <!-- 渲染显示列表（包含日期分割线和后台分割线） -->
       <div v-for="(item, idx) in displayMessages" :key="idx">
         <!-- 普通文本消息 -->
@@ -32,8 +41,8 @@
     </div>
 
     <div class="input-area" ref="inputAreaRef">
-      <textarea 
-        v-model="inputText" 
+      <textarea
+        v-model="inputText"
         @keydown="handleKeydown"
         @input="handleInput"
         placeholder="输入消息... (以 / 开头可查看指令补全)"
@@ -42,13 +51,13 @@
       ></textarea>
 
       <!-- 指令补全面板 -->
-      <div 
-        v-if="showCompletion && filteredCommands.length" 
+      <div
+        v-if="showCompletion && filteredCommands.length"
         class="completion-panel"
         ref="completionPanelRef"
       >
-        <div 
-          v-for="(cmd, idx) in filteredCommands" 
+        <div
+          v-for="(cmd, idx) in filteredCommands"
           :key="cmd.command"
           :class="['completion-item', { selected: idx === selectedIndex }]"
           @click="selectCommand(cmd)"
@@ -78,7 +87,7 @@ interface TextMessage {
   role: 'user' | 'assistant'
   content: string
   isStreaming?: boolean
-  createTime?: string   // 格式 '%Y-%m-%d %H:%M:%S'
+  createTime?: string // 格式 '%Y-%m-%d %H:%M:%S'
 }
 
 interface DividerMessage {
@@ -98,7 +107,7 @@ type DisplayItem = ChatMessage | DateDivider
 // 指令列表定义
 const COMMANDS = [
   { command: '/switch', description: '切换助理 (参数 [角色名])', needsSpace: true },
-  
+
   { command: '/cost', description: '查看所有角色会话成本', needsSpace: false },
   { command: '/memory', description: '查看当前角色的记忆', needsSpace: false },
 
@@ -107,16 +116,15 @@ const COMMANDS = [
   { command: '/set_time', description: '修改记忆截止时间 (参数 [月.日:时 格式时间字符串])', needsSpace: true },
   { command: '/rewrite', description: '重写当前角色的记忆 (参数 [重写要求])', needsSpace: true },
 
-  { command: '/rumor', description: '对当前角色注入流言蜚语', needsSpace: false }, 
-  
+  { command: '/rumor', description: '对当前角色注入流言蜚语', needsSpace: false },
+
   { command: '/inject', description: '注入数据 (参数 [数据名称] [prompt])', needsSpace: true },
 
   { command: '/change_mode', description: '切换助理模式 (参数 [模式名("助理"或"扮演")])', needsSpace: true },
   { command: '/role_list', description: '显示所有角色信息', needsSpace: false },
-  { command: '/history', description: '查看当前角色指定时间的对话 (参数 [月.日 格式时间字符串])', needsSpace: true },
   { command: '/du', description: '显示系统注入的用户信息', needsSpace: false },
   { command: '/da', description: '显示所有会话信息', needsSpace: false },
-  
+
   { command: '/rk', description: '重新生成最后一次回答', needsSpace: false },
   { command: '/rc', description: '替换最后一条用户消息', needsSpace: true },
   { command: '/delete', description: '删除n轮对话 (参数 [对话轮数])', needsSpace: true },
@@ -126,8 +134,13 @@ const COMMANDS = [
 const inputText = ref('')
 const isLoading = ref(false)
 const error = ref('')
-const messages = reactive<ChatMessage[]>([])   // 存储原始消息（文本 + 后台分割线）
+const messages = reactive<ChatMessage[]>([]) // 存储原始消息（文本 + 后台分割线）
 let controller: AbortController | null = null
+
+// 加载更多相关状态
+const isLoadingMore = ref(false)
+const hasMore = ref(true)
+const skipAutoScroll = ref(false)
 
 // DOM 引用
 const chatHistoryRef = ref<HTMLDivElement | null>(null)
@@ -161,7 +174,7 @@ const addTextMessage = (role: 'user' | 'assistant', content: string, isStreaming
     role,
     content,
     isStreaming,
-    createTime: time
+    createTime: time,
   })
 }
 
@@ -186,7 +199,7 @@ const setLastTextMessageTime = (createTime: string) => {
 const addDividerMessage = (label: string) => {
   messages.push({
     type: 'divider',
-    label: label
+    label: label,
   })
 }
 
@@ -218,27 +231,111 @@ const displayMessages = computed<DisplayItem[]>(() => {
     // 文本消息
     if (msg.type === 'text') {
       const currentDate = getDatePart(msg.createTime)
-      
+
       // 如果当前消息有创建时间，并且与上一条消息不是同一天，则插入日期分割线
       if (currentDate && lastDate !== currentDate) {
         result.push({
           type: 'dateDivider',
-          date: formatDisplayDate(currentDate)
+          date: formatDisplayDate(currentDate),
         })
         lastDate = currentDate
       }
-      
+
       result.push(msg)
-      
+
       // 对于没有创建时间的消息，不更新 lastDate，避免干扰后续比较
       if (!currentDate) {
         // 保持 lastDate 不变
       }
     }
   }
-  
+
   return result
 })
+
+// ---------- 获取当前第一条有 createTime 的消息时间 ----------
+// 用于加载更多时作为入参；如果第一条没有则顺延使用第二条，以此类推
+const getFirstMessageTime = (): string | null => {
+  for (const msg of messages) {
+    if (msg.type === 'text' && msg.createTime) {
+      return msg.createTime
+    }
+  }
+  return null
+}
+
+// ---------- 加载更多历史记录 ----------
+const loadMoreHistory = async () => {
+  // 防止重复加载
+  if (isLoadingMore.value || !hasMore.value) return
+
+  const beforeTime = getFirstMessageTime()
+  if (!beforeTime) return // 没有任何带时间的消息，无法定位
+
+  isLoadingMore.value = true
+  skipAutoScroll.value = true
+
+  // 记录加载前滚动容器的 scrollHeight，用于后续恢复位置
+  const container = chatHistoryRef.value
+  const prevScrollHeight = container?.scrollHeight || 0
+
+  try {
+    const res = await axios.post<ChatMessage[]>('assistant/history/more', {
+      before_time: beforeTime,
+    })
+    const newMessages = res.data
+
+    // 如果返回空数组，说明没有更多历史记录了
+    if (!newMessages || newMessages.length === 0) {
+      hasMore.value = false
+      return
+    }
+
+    // 将新消息插入到数组前面（保持从旧到新的顺序）
+    // 新消息按时间升序排列（最旧的在前），从后往前遍历并用 unshift 插入
+    for (let i = newMessages.length - 1; i >= 0; i--) {
+      const data = newMessages[i]
+      if (data.type === 'divider') {
+        messages.unshift({ type: 'divider', label: data.label })
+      } else {
+        const createTime = (data as TextMessage).createTime || undefined
+        messages.unshift({
+          type: 'text',
+          role: (data as TextMessage).role,
+          content: (data as TextMessage).content,
+          isStreaming: false,
+          createTime: createTime,
+        })
+      }
+    }
+
+    // 恢复滚动位置：新 scrollHeight - 旧 scrollHeight = 新增内容的高度
+    await nextTick()
+    if (container) {
+      const newScrollHeight = container.scrollHeight
+      container.scrollTop = newScrollHeight - prevScrollHeight
+    }
+  } catch (err) {
+    console.error('加载更多历史失败:', err)
+    // 网络错误不设置 hasMore = false，允许用户重试
+  } finally {
+    isLoadingMore.value = false
+    // 延迟重置 skipAutoScroll，确保 watch 回调在标志有效期内执行
+    await nextTick()
+    skipAutoScroll.value = false
+  }
+}
+
+// ---------- 滚动事件处理 ----------
+const handleScroll = () => {
+  const container = chatHistoryRef.value
+  if (!container) return
+
+  // 当滚动到距离顶部 50px 以内时触发加载更多
+  if (container.scrollTop <= 50) {
+    loadMoreHistory()
+  }
+}
 
 // ---------- 流式对话核心（支持分隔符和 create_time）----------
 const streamChat = async (prompt: string) => {
@@ -251,7 +348,7 @@ const streamChat = async (prompt: string) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ prompt }),
-      signal: controller.signal
+      signal: controller.signal,
     })
 
     if (!response.ok) {
@@ -284,7 +381,7 @@ const streamChat = async (prompt: string) => {
 
           try {
             const data = JSON.parse(dataStr)
-            
+
             // 处理后台错误
             if (data.error) {
               error.value = data.error
@@ -331,31 +428,34 @@ const streamChat = async (prompt: string) => {
   }
 }
 
-
-
 function loadHistory() {
-  axios.post<ChatMessage[]>('assistant/history', {}).then(res => {
-    messages.length = 0   // 清空原有消息
-    for (let i = 0; i < res.data.length; i++) {
-      const data = res.data[i]
-      if (data.type === 'divider') {
-        addDividerMessage(data.label)
-      } else {
-        // 确保时间字段存在，若没有则置为 undefined（不影响日期分割线逻辑）
-        const createTime = data.createTime || undefined
-        addTextMessage(data.role, data.content, false, createTime)
+  // 重置加载更多状态
+  hasMore.value = true
+
+  axios
+    .post<ChatMessage[]>('assistant/history', {})
+    .then((res) => {
+      messages.length = 0 // 清空原有消息
+      for (let i = 0; i < res.data.length; i++) {
+        const data = res.data[i]
+        if (data.type === 'divider') {
+          addDividerMessage(data.label)
+        } else {
+          // 确保时间字段存在，若没有则置为 undefined（不影响日期分割线逻辑）
+          const createTime = (data as TextMessage).createTime || undefined
+          addTextMessage((data as TextMessage).role, (data as TextMessage).content, false, createTime)
+        }
       }
-      
-    }
-  }).catch(err => {
-    console.error('加载历史失败:', err)
-    error.value = '加载历史记录失败'
-  })
+    })
+    .catch((err) => {
+      console.error('加载历史失败:', err)
+      error.value = '加载历史记录失败'
+    })
 }
 
 // ---------- 删除最后一条对话 ----------
 async function deleteLastChat(num: number) {
-  await axios.post('assistant/delete', {"num": num})
+  await axios.post('assistant/delete', { num: num })
   loadHistory()
 }
 
@@ -377,26 +477,24 @@ const sendMessage = async () => {
   } else if (prompt.startsWith('/switch ')) {
     addTextMessage('user', '[用户切换了助理角色]', false, getCurrentTimeStr())
     await streamChat(prompt)
-    loadHistory()   // 切换角色后刷新历史
-
-// 修复 /rk 指令：删除最后一条 assistant 类型的文本消息
-} else if (prompt === '/rk') {
-  // 从后往前找最后一条角色为 assistant 的文本消息
-  let lastAssistantIndex = -1
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i]
-    if (msg.type === 'text' && msg.role === 'assistant') {
-      lastAssistantIndex = i
-      break
+    loadHistory() // 切换角色后刷新历史
+  } else if (prompt === '/rk') {
+    // 修复 /rk 指令：删除最后一条 assistant 类型的文本消息
+    // 从后往前找最后一条角色为 assistant 的文本消息
+    let lastAssistantIndex = -1
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i]
+      if (msg.type === 'text' && msg.role === 'assistant') {
+        lastAssistantIndex = i
+        break
+      }
     }
-  }
-  if (lastAssistantIndex !== -1) {
-    messages.splice(lastAssistantIndex, 1)
-  }
-  await streamChat(prompt)
-
-  // 修复 /rc 指令：替换最后一条用户消息（同时删除对应的助手消息）
-  } else if (prompt.startsWith("/rc ")) {
+    if (lastAssistantIndex !== -1) {
+      messages.splice(lastAssistantIndex, 1)
+    }
+    await streamChat(prompt)
+  } else if (prompt.startsWith('/rc ')) {
+    // 修复 /rc 指令：替换最后一条用户消息（同时删除对应的助手消息）
     // 删除最后一条 user 文本消息
     let lastUserIndex = -1
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -427,7 +525,7 @@ const sendMessage = async () => {
     const newUserMsg = prompt.replace(/^\/rc\s*/, '')
     addTextMessage('user', newUserMsg, false, getCurrentTimeStr())
     await streamChat(prompt)
-  } else if (prompt.startsWith("/delete")) {
+  } else if (prompt.startsWith('/delete')) {
     const num_str = prompt.replace(/^\/delete\s*/, '')
     let num = parseInt(num_str, 10)
     if (isNaN(num)) {
@@ -471,9 +569,7 @@ const filteredCommands = computed(() => {
   const filterPart = inputText.value.slice(1)
   lastFilterWord = filterPart
   if (!filterPart) return COMMANDS
-  return COMMANDS.filter(cmd => 
-    cmd.command.slice(1).toLowerCase().startsWith(filterPart.toLowerCase())
-  )
+  return COMMANDS.filter((cmd) => cmd.command.slice(1).toLowerCase().startsWith(filterPart.toLowerCase()))
 })
 
 const handleInput = () => {
@@ -505,7 +601,8 @@ const handleKeydown = (e: KeyboardEvent) => {
       return
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      selectedIndex.value = (selectedIndex.value - 1 + filteredCommands.value.length) % filteredCommands.value.length
+      selectedIndex.value =
+        (selectedIndex.value - 1 + filteredCommands.value.length) % filteredCommands.value.length
       return
     } else if (e.key === 'Escape') {
       e.preventDefault()
@@ -517,7 +614,11 @@ const handleKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Enter') {
     if (e.shiftKey) return
     e.preventDefault()
-    if (showCompletion.value && filteredCommands.value.length && filteredCommands.value[selectedIndex.value]) {
+    if (
+      showCompletion.value &&
+      filteredCommands.value.length &&
+      filteredCommands.value[selectedIndex.value]
+    ) {
       selectCommand(filteredCommands.value[selectedIndex.value])
       return
     }
@@ -528,9 +629,8 @@ const handleKeydown = (e: KeyboardEvent) => {
 const handleClickOutside = (e: MouseEvent) => {
   if (!showCompletion.value) return
   const target = e.target as HTMLElement
-  const isClickInside = 
-    textareaRef.value?.contains(target) ||
-    completionPanelRef.value?.contains(target)
+  const isClickInside =
+    textareaRef.value?.contains(target) || completionPanelRef.value?.contains(target)
   if (!isClickInside) {
     showCompletion.value = false
   }
@@ -543,37 +643,49 @@ const scrollToBottom = async () => {
   }
 }
 
-// 监听消息变化，滚动到底部
-watch(() => messages.length, () => {
-  scrollToBottom()
-}, { deep: true })
+// 监听消息变化，滚动到底部（加载更多时跳过）
+watch(
+  () => messages.length,
+  () => {
+    if (skipAutoScroll.value) return
+    scrollToBottom()
+  },
+  { deep: true }
+)
 
-watch(displayMessages, () => {
-  scrollToBottom()
-}, { deep: true })
+watch(
+  displayMessages,
+  () => {
+    if (skipAutoScroll.value) return
+    scrollToBottom()
+  },
+  { deep: true }
+)
 
 const isMobile = () => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    || ('ontouchstart' in window)
+  return (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    ('ontouchstart' in window)
+  )
 }
 
 // ---------- 生命周期 ----------
 onMounted(() => {
   document.title = '私人助理'
   document.addEventListener('click', handleClickOutside)
-  
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape' && isLoading.value) {
       stopGeneration()
     }
   }
   window.addEventListener('keydown', handleKeyDown)
-  
+
   onUnmounted(() => {
     window.removeEventListener('keydown', handleKeyDown)
     document.removeEventListener('click', handleClickOutside)
   })
-  
+
   loadHistory()
 })
 
@@ -587,24 +699,60 @@ onUnmounted(() => {
 .chat-container {
   max-width: 800px;
   margin: 0 auto;
-  height: 100dvh;           /* 全屏高度 */
+  height: 100dvh; /* 全屏高度 */
   display: flex;
   flex-direction: column;
   padding: 20px;
-  box-sizing: border-box;  /* 避免 padding 导致溢出 */
-  overflow: hidden;        /* 防止整个页面滚动 */
+  box-sizing: border-box; /* 避免 padding 导致溢出 */
+  overflow: hidden; /* 防止整个页面滚动 */
 }
 
 /* 聊天区域自动填充剩余空间 */
 .chat-history {
-  flex: 1;                 /* 自动占据剩余高度 */
-  overflow-y: auto;        /* 内部滚动 */
+  flex: 1; /* 自动占据剩余高度 */
+  overflow-y: auto; /* 内部滚动 */
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 20px;
   background: #f9f9f9;
-  margin-bottom: 15px;     /* 与输入区留一点空隙 */
-  min-height: 0;           /* flex 子项防止溢出关键 */
+  margin-bottom: 15px; /* 与输入区留一点空隙 */
+  min-height: 0; /* flex 子项防止溢出关键 */
+}
+
+/* 加载更多指示器样式 */
+.loading-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 0;
+  margin-bottom: 8px;
+  color: #888;
+  font-size: 13px;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #ddd;
+  border-top-color: #888;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.no-more {
+  text-align: center;
+  padding: 12px 0;
+  margin-bottom: 8px;
+  color: #aaa;
+  font-size: 13px;
 }
 
 /* 普通消息样式 */
@@ -635,8 +783,13 @@ onUnmounted(() => {
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 /* 后台主动分割线样式（中间带文字） */
@@ -733,7 +886,7 @@ button:disabled {
   background: white;
   border: 1px solid #ddd;
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   max-height: 200px;
   overflow-y: auto;
   z-index: 10;
