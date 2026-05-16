@@ -110,6 +110,7 @@ const COMMANDS = [
 
   { command: '/cost', description: '查看所有角色会话成本', needsSpace: false },
   { command: '/memory', description: '查看当前角色的记忆', needsSpace: false },
+  { command: '/info', description: '显示当前状态信息', needsSpace: false },
 
   { command: '/reason', description: '查看上一次模型思考内容', needsSpace: false },
   { command: '/set_memory', description: '覆盖当前角色的记忆 (参数 [记忆文本])', needsSpace: true },
@@ -122,7 +123,6 @@ const COMMANDS = [
 
   { command: '/change_mode', description: '切换助理模式 (参数 [模式名("助理"或"扮演")])', needsSpace: true },
   { command: '/role_list', description: '显示所有角色信息', needsSpace: false },
-  { command: '/du', description: '显示系统注入的用户信息', needsSpace: false },
   { command: '/da', description: '显示所有会话信息', needsSpace: false },
 
   { command: '/rk', description: '重新生成最后一次回答', needsSpace: false },
@@ -457,6 +457,7 @@ function loadHistory() {
 async function deleteLastChat(num: number) {
   await axios.post('assistant/delete', { num: num })
   loadHistory()
+  isLoading.value = false
 }
 
 // ---------- 发送消息（支持指令）----------

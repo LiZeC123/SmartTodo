@@ -47,7 +47,6 @@ from app.tools.time import (
     get_hour_str_from,
     now,
     parse_befeore_time_str,
-    the_day_begin,
     today_begin,
 )
 
@@ -962,12 +961,12 @@ class AssistantManager:
 
     def dump_user_prompt(self, owner: str) ->Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
-        content = self.make_user_inject_content(status, owner)
-        yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
 
         mode =  assistant_mode_str(status.assistant_mode)
-        content = f"\n当前状态信息\n 角色名: {status.assistant_name}\n 角色模式: {mode}\n 角色描述: {status.assistant_desc}\n"
-        yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
+        config = self.role_manager.get_role(status.assistant_name)
+        content = f"【当前状态信息】\n角色名: {status.assistant_name}\n角色模式: {mode}\n角色描述: {config.short_desc}\n"
 
-        yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
+        to_inject_content = self.make_user_inject_content(status, owner)
+        content += f'\n【即将注入的信息】\n{to_inject_content}'
+        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 

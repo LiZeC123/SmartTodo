@@ -13,7 +13,7 @@ def assistant_chat_stream(owner: str):
     f: dict = request.get_json()
     prompt: str = f.get("prompt", "")
 
-    if prompt == "/du":
+    if prompt == "/info":
         # display user inject prompt
         g = assistant_manager.dump_user_prompt(owner)
     elif prompt == "/da":
