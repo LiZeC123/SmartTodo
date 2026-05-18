@@ -112,7 +112,7 @@ class Status(Base):
     assistant_name: Mapped[str]     = mapped_column(String(15), nullable=False, default='') # 当前助理的角色名
     assistant_desc: Mapped[str]     = mapped_column(Text, nullable=False, default='')       # 助理的角色描述
     assistant_mode: Mapped[int]     = mapped_column(Integer, nullable=False, default=0)     # 助理的模式 0: 助理模式 1: 扮演模式
-    enable_tools: Mapped[int]      = mapped_column(Integer, nullable=False, default=0)      # 工具权限 0: 禁止调用工具 1: 允许调用工具
+    enable_tools: Mapped[int]       = mapped_column(Integer, nullable=False, default=0)      # 工具权限 0: 禁止调用工具 1: 允许调用工具
 
 
 def make_assistant_status(owner: str):

@@ -25,19 +25,17 @@ class Item(Base):
     name: Mapped[str]   = mapped_column(Text, nullable=False)
 
     # Item类型，具体取值见 ItemType 类
-    item_type: Mapped[str]  = mapped_column(String(10), nullable=False, default=ItemType.Single)
+    item_type: Mapped[str]              = mapped_column(String(10), nullable=False, default=ItemType.Single)
+    create_time: Mapped[datetime]       = mapped_column(DateTime, nullable=False, default=now)
+    update_time: Mapped[datetime]       = mapped_column(DateTime, nullable=False, default=now)
+    deadline: Mapped[datetime | None]   = mapped_column(DateTime, default=None)
 
-    create_time: Mapped[datetime]           = mapped_column(DateTime, nullable=False, default=now)
-    update_time: Mapped[datetime]           = mapped_column(DateTime, nullable=False, default=now)
-    deadline: Mapped[datetime | None]    = mapped_column(DateTime, default=None)
-
-    url: Mapped[str | None]      = mapped_column(Text, default=None)
-    repeatable: Mapped[int]         = mapped_column(SmallInteger, nullable=False, default=False)
-    specific: Mapped[int]           = mapped_column(SmallInteger, nullable=False, default=0)
-    priority: Mapped[str]           = mapped_column(SmallInteger, nullable=False, default='p2')
-    tags: Mapped[str]               = mapped_column(SmallInteger, nullable=False, default='') # 废弃
-
-    owner: Mapped[str] = mapped_column(String(15), nullable=False)
+    url: Mapped[str | None] = mapped_column(Text, default=None)
+    repeatable: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=False)
+    specific: Mapped[int]   = mapped_column(SmallInteger, nullable=False, default=0)
+    priority: Mapped[str]   = mapped_column(SmallInteger, nullable=False, default='p2')
+    tags: Mapped[str]       = mapped_column(SmallInteger, nullable=False, default='') # 废弃
+    owner: Mapped[str]      = mapped_column(String(15), nullable=False)
 
     # 指示此Item是否附属于某个note, None表示不属于任何note
     parent: Mapped[int | None]   = mapped_column(Integer, ForeignKey("item.id"), default=None)

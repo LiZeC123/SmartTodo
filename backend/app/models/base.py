@@ -13,4 +13,3 @@ class Base(DeclarativeBase):
             else:
                 d[c.name] = v
         return d
-
