@@ -2,13 +2,14 @@ from datetime import timedelta
 
 import pytest
 
-from app.models.item import ItemType, TomatoType
-from app.services.item_manager import *
+from app.models.item import Item, ItemType, TomatoType
+from app.services.item_manager import ItemManager
 from app.tests.services.make_db import make_new_db
+from app.tools.exception import UnauthorizedException, UnmatchedException
+from app.tools.time import now, the_day_after
 
 manager = ItemManager(make_new_db())
 owner = "user"
-
 
 
 def make_base_item(name):
@@ -46,7 +47,6 @@ def test_create_item_with_attr():
 
     multi_tomato_item = make_base_item("multi_tomato_item")
     multi_tomato_item.expected_tomato = 3
-
 
     items = [deadline_item, repeatable_item, specific_item, activate_item, multi_tomato_item]
 
@@ -119,7 +119,6 @@ def test_file_no_url():
     manager.remove(item)
 
 
-
 def test_note():
     note = make_note_item("test_note")
     manager.create(note)
@@ -137,6 +136,7 @@ def test_note():
         manager.update_note(note.id + 10000, owner, test_content)
 
     manager.remove(note)
+
 
 def test_note_no_exists():
     fake_id = 65535
@@ -175,8 +175,8 @@ def test_all_items():
     manager.create(today_item)
 
     query = manager.select_all(owner, None)
-    assert len(query['todayTask']) == 1
-    assert len(query['activeTask']) == 1
+    assert len(query["todayTask"]) == 1
+    assert len(query["activeTask"]) == 1
 
     sub_base_item = make_base_item("test_all_items_sub_base_item")
     sub_base_item.parent = base_note_item.id
@@ -187,8 +187,8 @@ def test_all_items():
     manager.create(sub_today_item)
 
     query = manager.select_all(owner, base_note_item.id)
-    assert len(query['todayTask']) == 1
-    assert len(query['activeTask']) == 1
+    assert len(query["todayTask"]) == 1
+    assert len(query["activeTask"]) == 1
 
     manager.remove(base_note_item)
     manager.remove(today_item)
@@ -273,6 +273,11 @@ def test_increase_expected_tomato():
     item = make_base_item("test_increase_expected_tomato")
     manager.create(item)
 
+    # 直接增加预期时间
+    assert manager.increase_expected_tomato(item.id, owner)
+
+    # 完成一次后再次增加预期时间
+    assert manager.increase_used_tomato(item.id, owner)
     assert manager.increase_expected_tomato(item.id, owner)
 
     with pytest.raises(UnauthorizedException):
@@ -295,6 +300,30 @@ def test_increase_used_tomato():
     manager.remove(item)
 
 
+def test_finish_used_tomato():
+    item = make_base_item("test_finish_used_tomato")
+
+    # 完成单个任务
+    manager.create(item)
+    assert manager.finish_used_tomato(item.id, owner)
+    assert item.expected_tomato == item.used_tomato
+
+    # 完成有有多个番茄钟, 且已经完成部分番茄种的任务
+    manager.increase_expected_tomato(item.id, owner)
+    manager.increase_expected_tomato(item.id, owner)
+    assert manager.finish_used_tomato(item.id, owner)
+    assert item.expected_tomato == item.used_tomato
+    manager.remove(item)
+
+    # 完成一个具有多个番茄钟, 且当前未开始任何番茄钟的任务
+    item = make_base_item("test_finish_used_tomato2")
+    item.expected_tomato = 3
+    manager.create(item)
+    assert manager.finish_used_tomato(item.id, owner)
+    assert item.expected_tomato == item.used_tomato
+    manager.remove(item)
+
+
 def test_to_today_task():
     item = make_base_item("test_to_today_task")
     item.tomato_type = TomatoType.Activate
@@ -304,10 +333,11 @@ def test_to_today_task():
     with pytest.raises(UnauthorizedException):
         manager.to_today_task(item.id + 999, owner)
 
-    t =  manager.select(item.id)
-    assert t is not None and t.tomato_type  == TomatoType.Today
+    t = manager.select(item.id)
+    assert t is not None and t.tomato_type == TomatoType.Today
 
     manager.remove(item)
+
 
 def test_get_tomato_item():
     item1 = make_base_item("test_get_tomato_item1")
@@ -320,6 +350,7 @@ def test_get_tomato_item():
 
     manager.remove(item1)
     manager.remove(item2)
+
 
 def test_sub_task():
     item1 = make_base_item("test_sub_task_g")
@@ -347,17 +378,18 @@ def test_get_deadline_item():
     item2.deadline = the_day_after(now(), 12)
     manager.create(item2)
 
-    assert len(manager.get_deadline_item(owner))  == 1
+    assert len(manager.get_deadline_item(owner)) == 1
 
     manager.remove(item1)
     manager.remove(item2)
+
 
 def test_remove_by_id():
     item = make_base_item("test_remove_by_id")
     manager.create(item)
 
     manager.remove_by_id(item.id, owner)
-    assert len(manager.select_all(owner, None)['todayTask']) == 0
+    assert len(manager.select_all(owner, None)["todayTask"]) == 0
 
     with pytest.raises(UnauthorizedException):
         manager.remove_by_id(item.id, owner)
@@ -418,4 +450,3 @@ def test_renew_sp_task():
     item = manager.select(sp_item1.id)
     assert item is not None
     assert deadline == item.deadline
-
