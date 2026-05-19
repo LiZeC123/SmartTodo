@@ -12,7 +12,8 @@ tomato_bp = Blueprint('tomato', __name__)
 @authority_check()
 def set_tomato_task(owner: str):
     iid = get_xid_from_request()
-    return tomato_manager.start_task(iid, owner)
+    _, msg = tomato_manager.start_task(iid, owner)
+    return msg
 
 
 @tomato_bp.get('/api/tomato/getTask')

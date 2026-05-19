@@ -2,10 +2,10 @@
   <div v-show="props.item">
     <h2>当前任务</h2>
     <ol>
-      <audio id="notificationAudioBase" :src="MusicBase"></audio>
-      <audio id="notificationAudioShort" :src="MusicShort"></audio>
+      <audio ref="baseAudioRef" id="notificationAudioBase" :src="MusicBase"></audio>
+      <audio ref="shortAudioRef" id="notificationAudioShort" :src="MusicShort"></audio>
       <li class="FOCUS">
-        【{{ displayTimeStr }}】{{ item?.taskName }}
+        <span v-if="isResting">【休息中】</span>【{{ displayTimeStr }}】{{ item?.taskName }}
         <a class="function function-1" title="取消任务" @click="finishTask('undo')">
           <font-awesome-icon :icon="['fas', 'undo']" />
         </a>
@@ -14,7 +14,6 @@
         </a>
       </li>
     </ol>
-    <!-- <LedLight :msg="displayTimeStr"></LedLight> -->
   </div>
 </template>
 
@@ -23,9 +22,11 @@ import MusicBase from './M01.mp3'
 import MusicShort from './S01.mp3'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import type { TomatoEventType, TomatoItem, TomatoParam } from './types'
-import { OneMinuteMS } from './types'
 
-// import LedLight from '@/components/led/LedLight.vue'
+const WORK_MINUTES = 25
+const REST_MINUTES = 5
+const WORK_SECONDS = WORK_MINUTES * 60
+const CYCLE_SECONDS = (WORK_MINUTES + REST_MINUTES) * 60
 
 const props = defineProps<{
   item?: TomatoItem
@@ -33,85 +34,142 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'done-task', type: TomatoEventType, param: TomatoParam): void
+  (e: 'rest-finished', param: { id: number }): void
 }>()
 
-// RemainingSeconds 当前番茄钟剩余时间
-let rs = ref(0)
-// 当前计时器
+// 当前倒计时显示的剩余秒数
+const currentRemainingSeconds = ref(0)
+// 是否处于休息状态
+const isResting = ref(false)
+// 定时器句柄
 let timer: number | undefined = undefined
 
-// 番茄钟计数结束标记
-let hasTomatoFinished: boolean = true
+// 避免重复触发事件
+const hasWorkFinished = ref(false)
+const hasRestFinished = ref(false)
 
-// 监听item重置行为
+// 音频元素引用
+const baseAudioRef = ref<HTMLAudioElement | null>(null)
+const shortAudioRef = ref<HTMLAudioElement | null>(null)
+let fadeInterval: number
+
+// 监听新任务
 watch(
   () => props.item,
   () => {
-    clearInterval(timer)  // 始终先清除之前可能存在的定时器, 然后再开启新的定时器
+    clearInterval(timer)
     if (props.item !== undefined) {
+      // 重置状态
+      hasWorkFinished.value = false
+      hasRestFinished.value = false
+      isResting.value = false
+      currentRemainingSeconds.value = 0
       timer = setInterval(updateTomato, 500)
-      hasTomatoFinished = false
     }
-  },
+  }
 )
 
-
-// 核心刷新函数, 每0.5秒刷新一次状态
 function updateTomato() {
-  if (!props.item) {
-    return
-  }
+  if (!props.item) return
 
-  // 更新剩余时间, 驱动页面刷新
-  rs.value = calcRS(props.item)
+  const startTime = new Date(props.item.startTime).getTime()
+  const totalSeconds = (Date.now() - startTime) / 1000
 
-  // 倒计时结束且当且是未结束状态, 则触发结束动作
-  if (rs.value < 0 && !hasTomatoFinished) {
-    // 立即标记为结束状态, 避免定时器堆积时产生多次提交操作
-    hasTomatoFinished = true
-    finishTask('auto')
+  if (totalSeconds < WORK_SECONDS) {
+    // 工作阶段
+    isResting.value = false
+    currentRemainingSeconds.value = WORK_SECONDS - totalSeconds
+    hasWorkFinished.value = false
+  } else if (totalSeconds >= WORK_SECONDS && totalSeconds < CYCLE_SECONDS) {
+    // 休息阶段
+    isResting.value = true
+    currentRemainingSeconds.value = CYCLE_SECONDS - totalSeconds
+
+    // 首次进入休息时触发工作完成事件并播放音乐
+    if (!hasWorkFinished.value) {
+      hasWorkFinished.value = true
+      emit('done-task', 'auto', { id: props.item.itemId })
+      playNotifacationAudio()
+    }
+  } else {
+    // 休息结束或异常（≥30分钟）
+    if (!hasRestFinished.value) {
+      hasRestFinished.value = true
+      
+      // 休息结束短提示音
+      playNotifacationAudioShort()
+      emit('rest-finished', { id: props.item.itemId })
+      
+      // 清空所有状态，停止定时器
+      clearInterval(timer)
+      timer = undefined
+      isResting.value = false
+      currentRemainingSeconds.value = 0
+    } else {
+      // 已处理过，确保定时器清除
+      clearInterval(timer)
+      timer = undefined
+    }
   }
 }
 
 function finishTask(type: TomatoEventType) {
   clearInterval(timer)
-  if (props.item === undefined) {
-    return
+  if (props.item === undefined) return
+  
+  if (type == 'done') {
+    playNotifacationAudioShort()
   }
 
-  emit('done-task', type, { id: props.item.itemId})
+  emit('done-task', type, { id: props.item.itemId })
 }
 
 const displayTimeStr = computed(() => {
-  if (rs.value < 0) {
-    return '00:00'
-  }
-
-  const m = Math.floor(rs.value / 60)
-  const s = Math.floor(rs.value % 60)
-
+  const seconds = Math.max(0, Math.floor(currentRemainingSeconds.value))
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
   return m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0')
 })
 
-function calcRS(item: TomatoItem) {
-  const tomatoTimeMS = 25 * OneMinuteMS
-  const finishedSecond = (new Date(item.startTime).getTime()) + tomatoTimeMS
-  const tsNow = new Date().getTime()
-  // console.log(item.startTime, new Date(item.startTime))
-  return (finishedSecond - tsNow) / 1000
+
+function playNotifacationAudio() {
+  const audio = baseAudioRef?.value
+  if (audio) {
+    doFadeIn(audio)
+    audio.play()
+    setTimeout(() => audio.pause(), 90 * 1000)
+  }
 }
 
-// 页面卸载时强制清理定时器
-// 如果当前页面正在进行倒计时, 直接push切换页面后, 定时器并不会自动销毁
-// 因此不手动清理, 后续用户再次打开番茄钟页面, 可能会产生两个定时器进行倒计时, 进而导致两次提交
+function playNotifacationAudioShort() {
+  const audio = shortAudioRef?.value
+  if (audio) {
+    doFadeIn(audio)
+    audio.play()
+  }
+}
+
+function doFadeIn(audio: HTMLAudioElement) {
+  const MAX_VOLUME = 0.65
+  audio.volume = 0.25
+  // 设置淡入效果
+  if (fadeInterval) clearInterval(fadeInterval)
+  fadeInterval = setInterval(() => {
+    if (audio.volume < MAX_VOLUME) {
+      audio.volume += 0.01
+    } else {
+      audio.volume = MAX_VOLUME
+      clearInterval(fadeInterval)
+    }
+  }, 100)
+}
+
 onUnmounted(() => {
   clearInterval(timer)
 })
-
 </script>
 
 <style scoped>
-/*清除ol和ul标签的默认样式*/
 ol,
 ul {
   padding: 0;

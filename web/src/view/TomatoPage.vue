@@ -2,7 +2,7 @@
   <TodoSubmit></TodoSubmit>
   <div class="container">
     <!-- 番茄钟模块 -->
-    <TomatoClock :item="tomatoItem" @done-task="doneTomatoTask"></TomatoClock>
+    <TomatoClock :item="tomatoItem" @done-task="doneTomatoTask" @rest-finished="tomatoFinished"></TomatoClock>
     <ItemGroupedList title="今日任务" :btnCfg="tCfg" :data="tTask" @done="doneItem"></ItemGroupedList>
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
     <Footer :is-admin="false" :config="footerConfig"></Footer>
@@ -20,7 +20,6 @@ import ItemGroupedList from '@/components/item/ItemGroupedList.vue'
 import TimeLine from '@/components/timeline/TimeLine.vue'
 import Footer from '@/components/footer/TodoFooter.vue'
 
-import { playNotifacationAudio, playNotifacationAudioShort } from '@/components/tomato/tools'
 import type { TomatoEventType, TomatoItem, TomatoParam } from '@/components/tomato/types'
 import type { GroupedItem } from '@/components/item/types'
 import type { CountInfo, Report, TimeLineItem } from '@/components/timeline/types'
@@ -50,21 +49,34 @@ function loadTomato() {
 }
 
 function doneTomatoTask(type: TomatoEventType, param: TomatoParam) {
+  
   if (type === 'undo') {
     const reason = prompt('请输入取消原因')
     if (reason) {
       param.reason = reason
       axios.post('/tomato/undoTask', param).then(() => (tomatoItem.value = undefined))
     }
-  } else if (type === 'done' || type === 'auto') {
+    return
+  }
+    
+  if (type === 'done') {
+    // 手动需求还是需要请求后台并刷新状态
     axios.post<boolean>('/tomato/finishTask', param).then((res) => {
       if (res.data) {
-        type === 'auto' ? playNotifacationAudio() : playNotifacationAudioShort()
         tomatoItem.value = undefined
         reloadList()
       }
     })
   }
+}
+
+function tomatoFinished() {
+  // 当前番茄钟完成了工作和休息的倒计时, 更新一下后台状态
+  // 这里可以略微延迟一段时间后再查询
+  setTimeout(() => {
+    loadTomato()
+    setTimeout(reloadList, 200)
+  }, 200)
 }
 
 // ========================================================== ItemGroupedList 相关配置 ==========================================================

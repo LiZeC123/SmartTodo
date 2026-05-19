@@ -896,8 +896,15 @@ class AssistantManager:
         state = self.tomato_manager.query_task(owner=owner)
         if state:
             last_group_cnt, last_tomato_cnt, _ = self.get_tomoto_record_info(owner=owner, begin_time=begin_time)
-            remain_minutes = (state.start_time + timedelta(minutes=25) - now()).total_seconds() / 60
-            return f"正在进行{begin_state}第{last_group_cnt+1}组番茄钟内的第{last_tomato_cnt+1}个番茄钟, 当前为工作状态, 工作项目为[{state.name}], 工作时间剩余{remain_minutes:.2f}分钟\n"
+            work_finish_time = state.start_time + timedelta(minutes=25)
+            rest_finish_time = work_finish_time + timedelta(minutes=5)
+            now_time = now()
+            if now_time < work_finish_time:
+                remain_minutes = (work_finish_time - now_time).total_seconds() / 60
+                return f"正在进行{begin_state}第{last_group_cnt+1}组番茄钟内的第{last_tomato_cnt+1}个番茄钟, 当前为工作状态, 番茄钟任务为[{state.name}], 工作时间剩余{remain_minutes:.2f}分钟\n"
+            elif now_time < rest_finish_time:
+                remain_minutes = (rest_finish_time - now_time).total_seconds() / 60
+                return f"正在进行{begin_state}第{last_group_cnt+1}组番茄钟内的第{last_tomato_cnt+1}个番茄钟, 当前为休息状态, 番茄钟任务为[{state.name}], 休息时间剩余{remain_minutes:.2f}分钟\n"
 
         # 其次检查是否为休息时间, 相当于可以覆盖番茄钟的休息和规划状态
         reset_time = self.check_rest_time()
@@ -921,12 +928,7 @@ class AssistantManager:
                 return f"已完成{begin_state}第{last_group_cnt}组番茄钟, 已完成大组之间的休息, 当前进入规划状态, 已持续{elapsed_minutes - 20:.2f}分钟\n"
 
         # 如果不是最后一个番茄钟
-        if elapsed_minutes < 5:
-            # 休息时间不注入任务名, 该部分信息已经包含在事件列表中
-            # 进入这个状态是已经把当前番茄钟的记录写入, 因此无需再+1了
-            return f"正在进行{begin_state}第{last_group_cnt+1}组番茄钟内的第{last_tomato_cnt}个番茄钟, 当前为休息状态, 休息时间剩余{5 - elapsed_minutes:.2f}分钟\n"
-        else:
-            return f"已完成{begin_state}第{last_group_cnt+1}组番茄钟内的第{last_tomato_cnt}个番茄钟, 当前进入规划状态, 已持续{elapsed_minutes - 5:.2f}分钟\n"
+        return f"已完成{begin_state}第{last_group_cnt+1}组番茄钟内的第{last_tomato_cnt}个番茄钟, 当前进入规划状态, 已持续{elapsed_minutes - 5:.2f}分钟\n"
 
 
     def get_tomoto_record_info(self, owner: str, begin_time:datetime) -> tuple[int, int, TomatoTaskRecord | None]:

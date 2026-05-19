@@ -17,6 +17,8 @@ from app.tools.time import get_hour_str_from, last_month, now, parse_time, today
 # 其中完成类型可选值: auto 自动完成;
 OnTomatoFinished = Callable[[TomatoStatus, str], None]
 
+WorkTimeSecond = 25 * 60
+RestTimeSecond = 5 * 60
 
 class TomatoManager:
     def __init__(self, db: scoped_session[Session], item_manager: ItemManager):
@@ -27,24 +29,22 @@ class TomatoManager:
     def on_tomato_finished(self, callback: OnTomatoFinished):
         self.tomato_finished_event.append(callback)
 
-    def start_task(self, xid: int, owner: str) -> str:
+    def start_task(self, xid: int, owner: str) -> tuple[TomatoStatus | None, str]:
         # 检查当前用户是否已经开启其他番茄钟
         status = self.query_task(owner)
         if status:
-            return '启动失败: 当前存在正在执行的番茄钟'
+            return status, '启动失败: 当前存在正在执行的番茄钟'
 
         # 查询Item状态是否符合预期
         item = self.item_manager.select_with_authority(xid, owner)
-        if item.used_tomato == item.expected_tomato:
-            # 如果当前已完成全部番茄钟, 则自动增加一个预期番茄钟
-            add_event_log(self.db, owner, f'用户增加任务[{item.name}]的预计番茄钟数量, 该任务预计需要{item.expected_tomato}个番茄钟, 已完成{item.used_tomato}个番茄钟')
-            self.item_manager.increase_expected_tomato(xid, owner)
+        if item.used_tomato >= item.expected_tomato:
+            return None, '启动失败: 当前任务已完成全部番茄钟'
 
         # 针对owner字段设置了唯一索引, 避免一个用户同时提交多个番茄钟请求, 导致状态异常
         status = TomatoStatus(item_id=item.id, name=item.name, owner=owner)
         self.db.add(status)
         self.db.flush()
-        return ""
+        return status, ""
 
     def finish_task(self, xid: int, owner: str) -> bool:
         status = self.query_task_for_update(owner)
@@ -75,7 +75,7 @@ class TomatoManager:
             return False
 
         elapsed_minutes = (now() - status.start_time).total_seconds() / 60
-        add_event_log(self.db, owner, f'用户取消番茄钟任务[{status.name}]的执行, 取消原因是{reason}. 该任务在取消前已经执行{elapsed_minutes}分钟.')
+        add_event_log(self.db, owner, f'用户取消番茄钟任务[{status.name}]的执行, 取消原因是{reason}. 该任务在取消前已经执行{elapsed_minutes:.2f}分钟.')
         self.db.delete(instance=status)
         self.db.flush()
         return True
@@ -91,8 +91,19 @@ class TomatoManager:
 
     def get_task(self, owner: str) -> dict | None:
         status = self.query_task(owner)
-        if status:
+        if not status:
+            return None
+
+        # 处于正常番茄钟范围内, 直接返回
+        delta_time = now() - status.start_time
+        if delta_time.total_seconds() < (WorkTimeSecond + RestTimeSecond):
             return status.to_dict()
+
+        # 否则需要结束番茄钟
+        if self.finish_task(status.item_id, status.owner):
+            # 可以直接启动番茄钟, 如果没有配额了等于无事发生
+            status, _ = self.start_task(status.item_id, status.owner)
+            return status.to_dict() if status else None
 
     def has_task(self, owner) -> bool:
         return self.query_task(owner) is not None
