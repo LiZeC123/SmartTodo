@@ -109,16 +109,15 @@ const COMMANDS = [
   { command: '/switch', description: '切换助理 (参数 [角色名])', needsSpace: true },
 
   { command: '/cost', description: '查看所有角色会话成本', needsSpace: false },
+  { command: '/reason', description: '查看上一次模型思考内容', needsSpace: false },
   { command: '/memory', description: '查看当前角色的记忆', needsSpace: false },
   { command: '/info', description: '显示当前状态信息', needsSpace: false },
 
-  { command: '/reason', description: '查看上一次模型思考内容', needsSpace: false },
+  
   { command: '/set_memory', description: '覆盖当前角色的记忆 (参数 [记忆文本])', needsSpace: true },
   { command: '/set_time', description: '修改记忆截止时间 (参数 [月.日:时 格式时间字符串])', needsSpace: true },
-  { command: '/rewrite', description: '重写当前角色的记忆 (参数 [重写要求])', needsSpace: true },
 
   { command: '/rumor', description: '对当前角色注入流言蜚语', needsSpace: false },
-
   { command: '/inject', description: '注入数据 (参数 [数据名称] [prompt])', needsSpace: true },
 
   { command: '/change_mode', description: '切换助理模式 (参数 [模式名("助理"或"扮演")])', needsSpace: true },
