@@ -118,6 +118,7 @@ const COMMANDS = [
   { command: '/set_time', description: '修改记忆截止时间 (参数 [月.日:时 格式时间字符串])', needsSpace: true },
 
   { command: '/rumor', description: '对当前角色注入流言蜚语', needsSpace: false },
+  { command: '/topic', description: '要求助手发起一个新的话题', needsSpace: false },
   { command: '/inject', description: '注入数据 (参数 [数据名称] [prompt])', needsSpace: true },
 
   { command: '/change_mode', description: '切换助理模式 (参数 [模式名("助理"或"扮演")])', needsSpace: true },

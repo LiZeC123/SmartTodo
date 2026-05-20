@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session, scoped_session
 
 from app.models.assistant import (
     AssistantModeType,
+    AssistantTagType,
     AssistantType,
     History,
     Memory,
@@ -167,16 +168,6 @@ class AssistantHistoryManager:
     def change_mode(self, role_mode: int, owner: str):
         status = self.query_or_init_status(owner)
         status.assistant_mode = role_mode
-        self.db.flush()
-        self.db.commit()
-
-    def add_user_inject(self, content: str, role_name: str, owner: str):
-        last_msg = self.select_last_msg(role_name, owner)
-        role_mode = last_msg.assistant_mode if last_msg  else AssistantModeType.RolePlaying
-
-        msg = History(role='user', content='', system_inject_content=content, owner=owner,
-                               assistant_name=role_name, assistant_mode=role_mode, tag=1)
-        self.db.add(msg)
         self.db.flush()
         self.db.commit()
 
@@ -785,6 +776,11 @@ class AssistantManager:
         content = f"压缩记忆: \n{memory.compression_reason}\n\n流言蜚语: \n{memory.rumor_reason}"
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
+    def new_topic(self, owner: str) -> Generator[str, Any]:
+        inject = '你需要根据现有的近期话题主动发起一个新话题'
+        self.history_manager.add_user_prompt('', inject, owner, tag=AssistantTagType.NewTopic)
+        yield from self.generate(owner)
+
     def set_memory(self, memory_content: str, owner: str) -> Generator[str, Any]:
         memory_content = memory_content.strip()
         status = self.history_manager.query_or_init_status(owner)
@@ -833,12 +829,12 @@ class AssistantManager:
             yield f"data: {json.dumps({'text': '当前没有可用的流言蜚语\n', 'done': True})}\n\n"
 
         inject_content = f'你收到了一些传闻: {memory.short_term_memory}'
-        self.history_manager.add_user_inject(inject_content, status.assistant_name, owner)
+        self.history_manager.add_user_prompt('', inject_content, owner, tag=AssistantTagType.Rumor)
         yield from self.generate(owner, enable_tools=bool(status.enable_tools))
 
     def inject(self, inject_data:str, user_prompt:str, owner:str) -> Generator[str, Any]:
         self.history_manager.add_user_prompt(user_prompt, inject_data, owner)
-        yield from self.generate(owner, enable_tools=False)
+        yield from self.generate(owner)
 
     def __is_zero_tomoto_task(self, name:str) -> bool:
         # 打卡类任务可瞬间完成无需番茄钟.  午间和晚间任务不占用番茄钟

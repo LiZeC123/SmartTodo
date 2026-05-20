@@ -26,8 +26,17 @@ class AssistantModeType:
     RolePlaying = 1
 
 class AssistantTagType:
-    RoleSwitch = 1
-    ModeSwich = 2
+    NoTag = 0
+    Rumor = 1
+    NewTopic = 2
+
+
+Tag2Text = {
+    AssistantTagType.NoTag: "[用户没有任何输入]",
+    AssistantTagType.Rumor: "[助手收到了一些传闻]",
+    AssistantTagType.NewTopic: "[助手发起了一个新话题]"
+}
+
 
 def assistant_mode_str(mode: int) -> str:
     if mode == AssistantModeType.Assistant:
@@ -61,7 +70,7 @@ class History(Base):
     assistant_mode: Mapped[int]         = mapped_column(Integer, nullable=False, default=0)     # 助理的模式 0: 助理模式 1: 扮演模式
 
     # 扩展字段, 后续可能会对消息增加额外的标记
-    tag: Mapped[int]                    = mapped_column(Integer, nullable=False, default=0)     # 消息标记 0: 无标记 1: 流言蜚语
+    tag: Mapped[int]                    = mapped_column(Integer, nullable=False, default=0)     # 消息标记 参考 AssistantTagType
 
 
     # 定义联合索引
@@ -92,9 +101,7 @@ class History(Base):
         if self.role in "assistant":
             return self.content
         if self.role == 'user':
-            if self.content != "":
-                return self.content
-            return "[助手收到了一些传闻]" if self.tag == 1 else "[用户没有任何输入]"
+            return self.content if self.content else Tag2Text.get(self.tag)
 
     def to_dump(self) -> str | None:
         if self.role in ['system', 'tool']:
