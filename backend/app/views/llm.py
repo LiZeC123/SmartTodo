@@ -57,6 +57,10 @@ def assistant_chat_stream(owner: str):
         args = prompt.removeprefix("/inject ")
         inject_data, up = parse_switch_args(prompt)
         g = assistant_manager.inject(inject_data=inject_data, user_prompt=up, owner=owner)
+    elif prompt.startswith("/"):
+        # 指令兜底分支, 如果没有匹配上任何其他指令, 则视为/topic指令
+        # 避免输入一个未知的指令给模型, 让模型错误的回答
+        g = assistant_manager.new_topic(owner)
     else:
         g = assistant_manager.chat(prompt, owner)
 
