@@ -36,7 +36,7 @@ memory_manager = AssistantMemoryManager(db, llm_client, history_manager)
 assistant_manager = AssistantManager(llm_client, item_manager, tomato_manager, tomato_record_manager, history_manager, memory_manager)
 
 # 初始化定时任务
-task_manager = TaskManager()
+task_manager = TaskManager(db)
 task_manager.add_daily_task("垃圾回收", item_manager.garbage_collection, "01:00")
 task_manager.add_daily_task("重置可重复任务", item_manager.reset_daily_task, "01:10")
 task_manager.add_daily_task("重置未完成的今日任务", item_manager.reset_today_task, "01:20")

@@ -1,12 +1,12 @@
 import math
 
 import sqlalchemy as sal
-from sqlalchemy.orm import Session, scoped_session
+
+from app.models.base import Database
 
 from ..models.credit import Credit, CreditLog, ExchangeItem, ExchangeLog
 from ..tools.time import now, this_week_begin
 
-Database = scoped_session[Session]
 
 def update_credit(db: Database, owner: str, credit: int, reason: str) -> bool:
     """增加或减少积分"""

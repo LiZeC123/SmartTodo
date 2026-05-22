@@ -362,8 +362,6 @@ class ItemManager:
             self.remove(item)
             logger.info(f"垃圾回收(无引用的任务): {item.name}")
 
-        self.db.commit()  # 定时器触发任务, 必须commit, 否则操作会被回滚
-
     def reset_daily_task(self):
         stmt = sal.select(Item).where(Item.repeatable == True)  # noqa: E712
         items = self.db.execute(stmt).scalars().all()
@@ -373,7 +371,6 @@ class ItemManager:
             item.update_time = now()
             add_event_log(self.db, item.owner, f'系统自动重置可重复任务[{item.name}]为未完成状态')
             logger.info(f"重置可重复任务: {item.name}")
-        self.db.commit()  # 定时器触发任务, 必须commit, 否则操作会被回滚
 
     def reset_today_task(self):
         stmt = sal.select(Item).where(Item.tomato_type == TomatoType.Today, Item.repeatable == False,  # noqa: E712
@@ -382,7 +379,7 @@ class ItemManager:
         for item in items:
             # 使用逻辑回退, 从而保证回退操作的逻辑是一致的
             self._undo(item)
-        self.db.commit()  # 定时器触发任务, 必须commit, 否则操作会被回滚
+
 
     def renew_sp_task(self):
         stmt = sal.select(Item).where(Item.specific > 0, Item.item_type != ItemType.Note,
@@ -391,6 +388,6 @@ class ItemManager:
         for item in items:
             self.renew(item.id, item.owner, item.specific)
             logger.info(f'续期周期性任务: {item.name} 续期 {item.specific} 天')
-        self.db.commit()  # 定时器触发任务, 必须commit, 否则操作会被回滚
+
 
 

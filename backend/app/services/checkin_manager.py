@@ -3,16 +3,13 @@ from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 
 import sqlalchemy as sal
-from sqlalchemy.orm import Session, scoped_session
 
+from app.models.base import Database
 from app.models.event import CheckinState, EventLog
 from app.services.config_manager import ConfigManager
 from app.services.item_manager import ItemManager
 from app.tools.log import logger
 from app.tools.time import get_month_bounds, now, the_month_begin, today, today_begin
-
-Database = scoped_session[Session]
-
 
 icon_map = {"运动": "🏃🏻‍♀️", "早起": "🛏", "琴": "🎵", "体重": "🏋"}
 

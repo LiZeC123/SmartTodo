@@ -2,11 +2,9 @@ from collections.abc import Sequence
 from datetime import datetime
 
 import sqlalchemy as sal
-from sqlalchemy.orm import Session, scoped_session
 
+from app.models.base import Database
 from app.models.event import EventLog
-
-Database = scoped_session[Session]
 
 
 def add_event_log(db: Database, owner: str, msg: str) -> bool:

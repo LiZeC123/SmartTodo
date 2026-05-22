@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Session, scoped_session
 
 
 class Base(DeclarativeBase):
@@ -13,3 +13,5 @@ class Base(DeclarativeBase):
             else:
                 d[c.name] = v
         return d
+
+Database = scoped_session[Session]
