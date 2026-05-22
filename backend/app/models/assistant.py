@@ -1,4 +1,5 @@
 import json
+import warnings
 from datetime import datetime
 
 from openai.types.chat import (
@@ -13,7 +14,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
 from app.tools.exception import IllegalArgumentException
-from app.tools.time import now
+from app.tools.time import get_str_from_datetime, now
 
 
 class AssistantType:
@@ -95,13 +96,17 @@ class History(Base):
             return ChatCompletionToolMessageParam(content=self.content, role='tool', tool_call_id=self.tool_call_id)
         raise IllegalArgumentException(f"unknown role: {self.role}")
 
-    def to_web(self) -> str | None:
+    def to_str_msg(self) -> str | None:
         if self.role in ['system', 'tool']:
             return None
         if self.role in "assistant":
             return self.content
         if self.role == 'user':
             return self.content if self.content else Tag2Text.get(self.tag)
+
+    def to_web_json(self) -> dict:
+        return {"role": self.role, "content": self.to_str_msg(), "createTime": get_str_from_datetime(self.create_time)}
+
 
     def to_dump(self) -> str | None:
         if self.role in ['system', 'tool']:
@@ -126,6 +131,7 @@ def make_assistant_status(owner: str):
     return Status(owner=owner)
 
 
+@warnings.deprecated("Use MemoryDetail instead")
 class Memory(Base):
     """助手记忆表, 流水存储用户的每一个助理的记忆, 只插入不更新"""
     __tablename__ = "assistant_memory"
@@ -149,3 +155,47 @@ class Memory(Base):
 
     def to_dump(self) -> str:
         return f"角色名: {self.assistant_name}\n记忆处理时间: {self.processed_time}\n短期记忆:\n{self.short_term_memory}\n长期记忆:\n{self.long_term_memory}"
+
+
+class MemoryDetailType:
+    ToDoItem = 1
+    RoleSetting = 2     # 角色或者背景设定
+    RecentTopic = 3
+    Preference = 4      # 用户偏好预测
+    Diary = 5           # 日记
+
+    # 以下三个类型为固化类型, 总结合并之前的相关内容, 同时也作为水位线, 表示再此之前的项废弃
+    FixedSetting = 6    # 固化角色设定
+    FixedPreference = 7 # 固化角色偏好
+    Milestone = 8       # 里程碑事件
+
+    Thinking = 9        # 模型思考内容
+    StartTime = 10      # 对话历史起始标记, 该时间之后的对话保持原始内容
+
+
+
+# 记忆项目按照类型存储, 可以灵活的增减记忆类型, 同时在需要时按需加载记忆项目, 处理更灵活. 只新增不更新有利于回滚.
+class MemoryDetail(Base):
+    """助手记忆详细表, 按照时间顺序存储助手的各种类型的记忆信息, 记忆内容只新增不原地更新, 使用时按需加载最新的记忆"""
+    __tablename__ = "assistant_memory_detail"
+    id: Mapped[int]                 = mapped_column(Integer, primary_key=True, autoincrement=True)
+    owner: Mapped[str]              = mapped_column(String(15), nullable=False)
+    assistant_name: Mapped[str]     = mapped_column(String(15), nullable=False)
+    tag: Mapped[int]                = mapped_column(Integer, nullable=False, default=0)     # 消息类型, 见 MemoryDetailType
+    content: Mapped[str]            = mapped_column(Text, nullable=False)
+    reason: Mapped[str]             = mapped_column(Text, nullable=False, default='')
+    content_time: Mapped[datetime]  = mapped_column(DateTime, nullable=False)               # 记忆的内容发生的时间
+
+
+
+    # 定义联合索引
+    __table_args__ = (
+        # 查询用户的某个助手的指定类型的记忆
+        Index('idx_memory_detail_owner_role_tag', "owner", "assistant_name", "tag"),
+    )
+
+
+def make_memory_detail(content, *, reason='', assistant_name:str, owner: str, tag: int, content_time: datetime):
+    """创建一个新的记忆详情项. 注意content_time对应内容本身的时间而不是创建该项记忆的时间"""
+    return MemoryDetail(owner=owner, assistant_name=assistant_name, tag=tag, content=content, reason=reason, content_time=content_time)
+

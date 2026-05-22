@@ -16,9 +16,6 @@ def assistant_chat_stream(owner: str):
     if prompt == "/info":
         # display user inject prompt
         g = assistant_manager.dump_user_prompt(owner)
-    elif prompt == "/da":
-        # display all
-        g = assistant_manager.dump_history(owner)
     elif prompt == "/rk":
         # remake answer
         g = assistant_manager.remake(owner)
@@ -45,8 +42,8 @@ def assistant_chat_stream(owner: str):
         args = [arg for arg in prompt.strip().split() if arg]
         g = assistant_manager.replace(args[1], owner)
     elif prompt.startswith("/set_memory "):
-        args = prompt.removeprefix("/set_memory ")
-        g = assistant_manager.set_memory(args, owner)
+        args = prompt.strip().split(maxsplit=2)
+        g = assistant_manager.set_memory(args[1], args[2], owner)
     elif prompt.startswith("/set_time "):
         args = prompt.removeprefix("/set_time ")
         g = assistant_manager.set_time(args, owner)
@@ -75,7 +72,7 @@ def assistant_chat_stream(owner: str):
     )
 
 
-def parse_switch_args(prompt) -> tuple[str, str]:
+def parse_switch_args(prompt: str) -> tuple[str, str]:
     "解析角色名关键词和用户的prompt"
     args: list[str] = [arg for arg in prompt.strip().split() if arg]
     if len(args) >= 3:

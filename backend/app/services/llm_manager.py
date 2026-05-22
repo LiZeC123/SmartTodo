@@ -1,5 +1,4 @@
 import json
-import random
 import re
 from collections.abc import Callable, Generator, Iterable, Sequence
 from dataclasses import dataclass
@@ -20,10 +19,12 @@ from app.models.assistant import (
     AssistantTagType,
     AssistantType,
     History,
-    Memory,
+    MemoryDetail,
+    MemoryDetailType,
     Status,
     assistant_mode_str,
     make_assistant_status,
+    make_memory_detail,
 )
 from app.models.item import Item
 from app.models.tomato import TomatoTaskRecord
@@ -42,10 +43,12 @@ from app.template.prompt import (
 from app.template.tools import AnyQueryTool, CreatItemTool
 from app.tools.llm import LLMClient
 from app.tools.log import logger
+from app.tools.redis import MemoryCache
 from app.tools.time import (
     format_timedelta,
     get_datetime_from_str,
     get_hour_str_from,
+    get_str_from_datetime,
     now,
     parse_befeore_time_str,
     today_begin,
@@ -54,42 +57,60 @@ from app.tools.time import (
 
 @dataclass
 class RoleConfig:
-    name: str               # 角色姓名
-    enable_tools: bool      # 是否允许调用工具
-    memory_compress: str    # 记忆压缩策略
-    enable_rumor: bool      # 是否启用流言蜚语系统(获得流言蜚语信息)
+    name: str  # 角色姓名
+    enable_tools: bool  # 是否允许调用工具
+    memory_compress: str  # 记忆压缩策略
+    enable_rumor: bool  # 是否启用流言蜚语系统(获得流言蜚语信息)
     visible_in_rumor: bool  # 是否在流言蜚语系统中可见(可以产生传闻并被其他角色获知)
-    short_desc: str         # 角色的简短描述
-    long_desc: str          # 角色的详细设定
+    short_desc: str  # 角色的简短描述
+    long_desc: str  # 角色的详细设定
 
-    def get_desc(self):
+    def get_self_desc(self):
         return f"你是一位{self.short_desc}, 名叫{self.name}. {self.long_desc}"
+
+
+DefaultRoleConfig = RoleConfig(
+    name="默认助手",
+    enable_tools=False,
+    memory_compress="No",
+    enable_rumor=False,
+    visible_in_rumor=False,
+    short_desc="有用的助手.",
+    long_desc="",
+)
+
 
 @dataclass
 class CompressionPolicy:
-    day_delta: int
-    char_cost: int
+    """
+    压缩策略由原始文本的天数和字符数控制, 取两者中保留内容最多的.
+    例如day_delta=1, char_cost=3K时, 则无论昨天的文本有多少内容, 至少保留1天的对话内容. 如果昨天的对话内容不足3KB, 则会向前加载更多天的对话, 直到超过3KB
+    """
+
+    day_delta: int  # 始终保留原始聊天上下文的天数
+    char_cost: int  # 至少保留的对话文本字符数
+
 
 KB = 1024
 
 # 如果剩余的聊天内容太短, 会对聊天风格产生明显的影响, 导致一些难以量化但是可以察觉出来的微妙变化
 # 因此即使是最激进的压缩模式, 也需要保留一些内容
-AggressivePolicy = CompressionPolicy(day_delta=1, char_cost=6*KB)
-ModeratePolicy = CompressionPolicy(day_delta=1, char_cost=10*KB)
-LazyPolicy = CompressionPolicy(day_delta=1, char_cost=14*KB)
+AggressivePolicy = CompressionPolicy(day_delta=1, char_cost=6 * KB)
+ModeratePolicy = CompressionPolicy(day_delta=1, char_cost=10 * KB)
+LazyPolicy = CompressionPolicy(day_delta=1, char_cost=14 * KB)
 
-MinCompressionSize = 5*KB
+MinCompressionSize = 2 * KB
 
 
 class RoleManager:
     def __init__(self) -> None:
         pass
 
-    def __load_file(self) -> list[RoleConfig]:
+    def __load_file(self) -> Iterable[RoleConfig]:
         with open("config/role/Assistant.jsonl") as f:
-            return [RoleConfig(**json.loads(s)) for role in f if (s:=role.strip()) != "" and not s.startswith("//")]
+            return [RoleConfig(**json.loads(s)) for role in f if (s := role.strip()) != "" and not s.startswith("//")]
 
-    def get_role_list(self) -> list[RoleConfig]:
+    def get_role_list(self) -> Iterable[RoleConfig]:
         try:
             return self.__load_file()
         except OSError:
@@ -100,66 +121,79 @@ class RoleManager:
         return {item.name: item for item in self.get_role_list()}
 
     def get_role(self, role_keyword: str) -> RoleConfig:
-        roles =self.get_role_list()
-        if len(roles) == 0:
-            logger.warning('角色列表为空, 加载默认角色')
-            return RoleConfig(name='默认助手', enable_tools=False, memory_compress='No', enable_rumor=False, visible_in_rumor=False, short_desc='有用的助手.', long_desc='')
+        roles = self.get_role_list()
 
-        random_role = random.choice(roles)
-        if role_keyword == "":
-            return random_role
+        it = (role for role in roles if role_keyword in role.get_self_desc())
+        config = next(it, None)
 
-        it = (role for role in roles if role_keyword in role.get_desc())
-        return next(it, random_role)
+        return config if config else DefaultRoleConfig
 
     def get_compression_policy(self, policy: str) -> CompressionPolicy:
-        if policy == 'Aggressive':
+        if policy == "Aggressive":
             return AggressivePolicy
-        if policy == 'Lazy':
+        if policy == "Lazy":
             return LazyPolicy
 
         return ModeratePolicy
-
 
 
 class AssistantHistoryManager:
     def __init__(self, db: scoped_session[Session]) -> None:
         self.db = db
 
-    def add_user_prompt(self, prompt: str, inject: str, owner:str, *, tag:int=0):
+    def add_user_prompt(self, prompt: str, inject: str, owner: str, *, tag: int = 0):
         status = self.query_or_init_status(owner)
-        msg = History(role='user', content=prompt, system_inject_content=inject, owner=owner,
-                               assistant_name=status.assistant_name, assistant_mode=status.assistant_mode, tag=tag)
+        msg = History(
+            role="user",
+            content=prompt,
+            system_inject_content=inject,
+            owner=owner,
+            assistant_name=status.assistant_name,
+            assistant_mode=status.assistant_mode,
+            tag=tag,
+        )
         self.db.add(msg)
         self.db.flush()
         self.db.commit()
 
-    def add_assistant_answer(self, content: str,owner:str, *, tool_call_list_json='', tag:int=0):
+    def add_assistant_answer(self, content: str, owner: str, *, tool_call_list_json="", tag: int = 0):
         status = self.query_or_init_status(owner)
-        msg = History(role='assistant', content=content, owner=owner,
-                               assistant_name=status.assistant_name, assistant_mode=status.assistant_mode,
-                               tool_call_list_json=tool_call_list_json, tag=tag)
+        msg = History(
+            role="assistant",
+            content=content,
+            owner=owner,
+            assistant_name=status.assistant_name,
+            assistant_mode=status.assistant_mode,
+            tool_call_list_json=tool_call_list_json,
+            tag=tag,
+        )
         self.db.add(msg)
         self.db.flush()
         self.db.commit()
 
-    def add_tool_call_msg(self, tool_call_id: str, content: str, *, owner: str, tag:int=0):
+    def add_tool_call_msg(self, tool_call_id: str, content: str, *, owner: str, tag: int = 0):
         status = self.query_or_init_status(owner)
-        msg = History(role='tool', tool_call_id=tool_call_id, content=content, owner=owner,
-                               assistant_name=status.assistant_name, assistant_mode=status.assistant_mode,
-                               tag=tag)
+        msg = History(
+            role="tool",
+            tool_call_id=tool_call_id,
+            content=content,
+            owner=owner,
+            assistant_name=status.assistant_name,
+            assistant_mode=status.assistant_mode,
+            tag=tag,
+        )
         self.db.add(msg)
         self.db.flush()
         self.db.commit()
 
-    def switch(self, /, role_config: RoleConfig, owner:str):
+    def switch(self, /, role_config: RoleConfig, owner: str):
         status = self.query_or_init_status(owner)
         status.assistant_name = role_config.name
-        status.assistant_desc = role_config.get_desc()
+        status.assistant_desc = role_config.get_self_desc()
         status.enable_tools = role_config.enable_tools
 
         msg = self.select_last_msg(role_config.name, owner)
-        role_mode = msg.assistant_mode if msg  else AssistantModeType.RolePlaying
+        role_mode = msg.assistant_mode if msg else AssistantModeType.RolePlaying
         status.assistant_mode = role_mode
 
         self.db.flush()
@@ -173,7 +207,7 @@ class AssistantHistoryManager:
 
     def remove_last_assistant(self, owner: str) -> bool:
         status = self.query_or_init_status(owner)
-        last =  self.select_last_msg(status.assistant_name, owner)
+        last = self.select_last_msg(status.assistant_name, owner)
         if last is None:
             return False
 
@@ -187,7 +221,7 @@ class AssistantHistoryManager:
 
     def remove_last_user(self, owner: str) -> bool:
         status = self.query_or_init_status(owner)
-        last =  self.select_last_msg(status.assistant_name, owner)
+        last = self.select_last_msg(status.assistant_name, owner)
         if last is None:
             return False
 
@@ -202,7 +236,7 @@ class AssistantHistoryManager:
     def remove_last_pair(self, owner: str) -> bool:
         status = self.query_or_init_status(owner)
         while True:
-            last =  self.select_last_msg(status.assistant_name, owner)
+            last = self.select_last_msg(status.assistant_name, owner)
             if last is None:
                 break
 
@@ -225,328 +259,40 @@ class AssistantHistoryManager:
             self.db.commit()
         return t
 
-
-    def select_last_msg(self, assistant_name: str,  owner: str) -> History | None:
+    def select_last_msg(self, assistant_name: str, owner: str) -> History | None:
         """查询指定角色最后一条消息"""
-        stmt = sal.select(History).where(History.owner==owner, History.assistant_name==assistant_name).order_by(History.id.desc()).limit(1)
+        stmt = (
+            sal.select(History)
+            .where(History.owner == owner, History.assistant_name == assistant_name)
+            .order_by(History.id.desc())
+            .limit(1)
+        )
         return self.db.scalar(stmt)
 
-    def get_last_assistant_mode_time(self, status:Status) -> datetime:
+    def get_last_assistant_mode_time(self, status: Status) -> datetime:
         # 查询当前助手上一次助手模式的记录时间, 在非助手模式或者其他助手对话过程中产生的记录对当前助手来说是没有见过的
-        stmt = sal.select(History).where(History.owner==status.owner,
-                                                  History.assistant_mode==AssistantModeType.Assistant,
-                                                  History.assistant_name==status.assistant_name).order_by(History.id.desc()).limit(1)
+        stmt = (
+            sal.select(History)
+            .where(
+                History.owner == status.owner,
+                History.assistant_mode == AssistantModeType.Assistant,
+                History.assistant_name == status.assistant_name,
+            )
+            .order_by(History.id.desc())
+            .limit(1)
+        )
         last = self.db.scalar(stmt)
         if last is None:
             return today_begin()
         else:
             return last.create_time
 
-    def select_record(self, owner:str) -> tuple[Status, Memory | None, Iterable[History]]:
-        # 查询当前角色自从上次记忆压缩后的聊天记录
-        status = self.query_or_init_status(owner)
-
-        stmt = sal.select(Memory).where(Memory.assistant_name==status.assistant_name,Memory.owner==owner).order_by(Memory.id.desc()).limit(1)
-        memory = self.db.scalar(stmt)
-
-        if memory is not None:
-            start_time = memory.processed_time
-        else:
-            start_time = today_begin() - timedelta(days=2)
-        stmt = sal.select(History) \
-                  .where(History.owner == owner, History.create_time > start_time,
-                         History.assistant_name == status.assistant_name)
-        return (status, memory, self.db.scalars(stmt))
-
-    def select_record_after(self, role_name: str, start_time:datetime, owner: str) -> Iterable[History]:
-        stmt = sal.select(History)\
-                  .where(History.owner == owner, History.create_time > start_time,
-                         History.assistant_name == role_name)
-        return self.db.scalars(stmt)
-
-    def select_record_between(self, role_name: str, start_time:datetime, end_time:datetime, owner: str) -> Sequence[History]:
-        stmt = sal.select(History)\
-                  .where(History.owner == owner, History.assistant_name == role_name,
-                         History.create_time > start_time, History.create_time < end_time)
-        return self.db.scalars(stmt).all()
-
-    def get_history(self, owner:str)-> list[ChatCompletionMessageParam]:
-        status, memory, records = self.select_record(owner)
-        sp = self.make_system_prompt(status)
-
-        if memory is None:
-            return [sp] + [msg.to_openai() for msg in records]
-
-        mp = ChatCompletionUserMessageParam(role='user',content=memory.to_assistant())
-        return [sp, mp] + [msg.to_openai() for msg in records]
-
-    def get_web_history(self, owner: str) -> list[dict]:
-        status, memory, records = self.select_record(owner)
-        if memory is None:
-            return self.to_web_json_list(records)
-
-        start = memory.processed_time - timedelta(days=1)
-        records_before = self.select_record_between(status.assistant_name, start, memory.processed_time, owner)
-        data_before = self.to_web_json_list(records_before)
-        data_after = self.to_web_json_list(records)
-        div = [{'type': 'divider', 'label': '以上对话已压缩至记忆'}]
-
-        if data_before:
-            return data_before + div + data_after
-        else:
-            return data_after
-
-    def get_more_web_history(self, end_time: datetime,  owner: str) -> list[dict]:
-        status = self.query_or_init_status(owner)
-        stmt = sal.select(History)\
-                  .where(History.owner == owner, History.create_time < end_time,
-                         History.assistant_name == status.assistant_name).order_by(History.id.desc()).limit(20)
-        records = reversed(self.db.scalars(stmt).all())
-        return self.to_web_json_list(records)
-
-    @staticmethod
-    def to_web_json(msg: History):
-        return {'role': msg.role, 'content': msg.to_web(), 'createTime': msg.create_time.strftime("%Y-%m-%d %H:%M:%S")}
-
-    def to_web_json_list(self, records: Iterable[History]):
-        return self.post_merging([self.to_web_json(msg) for msg in records if msg.role in [AssistantType.User, AssistantType.Assistant]])
-
-    def post_merging(self, records: list[dict]):
-        if len(records) == 0:
-            return records
-
-        last = records[0]
-        rst = [last]
-        for rec in records[1:]:
-            this_role = rec.get('role')
-            if this_role == AssistantType.Assistant and last.get('role') == AssistantType.Assistant:
-                last['content'] += rec.get('content')
-            else:
-                rst.append(rec)
-                last = rec
-        return rst
-
-    def evalute_day_cost(self, role_name: str, start_day: datetime, owner: str) -> list[tuple[str, int, int]]:
-        stmt = sal.select(sal.func.date(History.create_time).label("stat_date"),
-                          sal.func.sum(sal.func.length(History.content) +sal.func.length(History.system_inject_content)).label("total_chars"),
-                          sal.func.count().label('msg_count')) \
-                  .where(History.owner == owner,History.assistant_name == role_name, History.create_time > start_day) \
-                  .group_by(sal.func.date(History.create_time)) \
-                  .order_by(sal.desc("stat_date"))
-        records = self.db.execute(stmt)
-        return [(r.stat_date, r.total_chars, r.msg_count) for r in records]
-
-
-    def day_cost_report(self, role: str,  owner: str) -> str:
-        start_day = now() - timedelta(days=14)
-        rows = self.evalute_day_cost(role, start_day, owner)
-        return "\n".join([f"{d}: {total_cnt / KB:6.2f} KB / {msg_cnt // 2:4d} Msg" for d, total_cnt, msg_cnt in rows])
-
-    def make_system_prompt(self, status: Status) -> ChatCompletionSystemMessageParam:
-        if status.assistant_mode == AssistantModeType.RolePlaying:
-            return ChatCompletionSystemMessageParam(role="system", content=RolePalyingSp.format(role_desc=status.assistant_desc))
-
-        return ChatCompletionSystemMessageParam(
-            role="system",
-            content=AssistantSp.format(role_desc=status.assistant_desc)
-        )
-
-
-
-class AssistantMemoryManager:
-    def __init__(self, db: scoped_session[Session], llm_client: LLMClient, history_manager: AssistantHistoryManager) -> None:
-        self.db = db
-        self.config_manager = ConfigManager()
-        self.role_manager = RoleManager()
-        self.cliet = llm_client
-        self.history_manager = history_manager
-
-    def query_or_init_memory(self, role_name:str, owner:str) -> Memory:
-        stmt = sal.select(Memory).where(Memory.assistant_name==role_name,Memory.owner==owner).order_by(Memory.id.desc()).limit(1)
-        t = self.db.scalar(stmt)
-        if t is None:
-            t = Memory(assistant_name=role_name, owner=owner)
-            self.db.add(t)
-            self.db.flush()
-            self.db.commit()
-        return t
-
-    def update_long_term_memory(self, *, config: RoleConfig, owner: str) -> bool:
-        policy = self.role_manager.get_compression_policy(config.memory_compress)
-        memory = self.query_or_init_memory(config.name, owner)
-
-        # 获取当前角色按照天统计的成本, 计算累计值达到阈值的日期
-        acc_count = 0
-        end_time = None
-        cost_records = self.history_manager.evalute_day_cost(config.name, memory.processed_time, owner)
-        for day, day_cost, _ in cost_records:
-            acc_count += day_cost
-            if acc_count > policy.char_cost:
-                t = datetime.strptime(day, '%Y-%m-%d')
-                end_time = datetime(year=t.year, month=t.month, day=t.day)
-                break
-        if end_time is None:
-            logger.info(f"[{owner}:{config.name}]: 跳过压缩, 当前角色剩余对话长度 {acc_count / KB:.2f} KB < 目标阈值 {policy.char_cost / KB:.2f} KB")
-            return False
-
-        # 查询需要压缩的记录, 判断是否满足记忆压缩策略
-        records = self.history_manager.select_record_between(config.name, memory.processed_time, end_time, owner)
-        cost = sum(len(s) for r in records if (s := r.to_dump()) is not None)
-        if cost < MinCompressionSize:
-            logger.info(f"[{owner}:{config.name}]: 跳过压缩, 当前待压缩对话长度 {cost / KB:.2f} KB < 最小压缩长度 {MinCompressionSize / KB:.2f} KB")
-            return False
-
-        # 执行压缩操作
-        logger.info(f"[{owner}:{config.name}]: 执行压缩, 当前角色剩余对话长度 {acc_count / KB:.2f} KB , 待压缩对话长度 {cost / KB:.2f} KB")
-        new_content = "\n".join([json.dumps(r.to_openai(), ensure_ascii=False) for r in records])
-        prompt = LongTermMemoryPrompt.format(role_desc=config.get_desc(), old_memory=memory.long_term_memory, new_content=new_content)
-        reason, content = self.cliet.generate_one_shot(prompt)
-
-        # 更新记忆
-        new_memory = memory.deep_copy(processed_time=end_time)
-        new_memory.compression_reason = reason if reason else ''
-        if content is not None:
-            new_memory.long_term_memory = content
-            self.db.add(new_memory)
-            self.db.commit()
-            logger.info(f"[{owner}:{config.name}] 记忆压缩完毕, 新记忆长度为 {len(content)/KB:.2f} KB, 思考长度为 {len(new_memory.compression_reason) / KB:.2f} KB")
-            return True
-        else:
-            logger.warning(f'[{owner}:{config.name}]: 模型返回记忆为空')
-            return False
-
-    def auto_update_memory(self):
-        users = self.config_manager.get_all_users()
-        for user in users:
-            # 检查该用户所有助理的历史对话长度, 更新满足要求的助理的记忆
-            for role in self.get_recent_assistant_list(user):
-                config = self.role_manager.get_role(role)
-                self.update_long_term_memory(config=config, owner=user)
-            # 基于已经更新的记忆和最近的活跃助理, 传播流言蜚语
-            # self.rumor_propagation(owner=user)
-
-    def rumor_propagation(self, owner: str):
-        roles = self.get_recent_assistant_list(owner)
-        if len(roles) == 0:
-            return
-
-        configs = self.role_manager.get_role_map()
-
-        # 第一轮提取公共池数据
-        names = []
-        for role in roles:
-            config = configs.get(role)
-            if config is None:
-                logger.warning(f'[{owner}:{role}] 无法获取角色配置')
-                continue
-            if not config.visible_in_rumor:
-                logger.info(f'[{owner}:{role}] 当前角色不产生流言蜚语')
-                continue
-            names.append(role)
-
-        idea_pool = self.get_memory_pool(names, configs, owner)
-        if len(idea_pool) == 0:
-            logger.warning(f"[{owner}] 由于没有公共记忆, 流言蜚语传播计算取消")
-            return False
-
-        # 第二轮计算昨日活跃角色扩散的流言蜚语
-        roles = self.get_activate_assistant_names(owner)
-        for role in roles:
-            config = configs.get(role)
-            if config is None:
-                logger.warning(f'[{owner}:{role}] 无法获取角色配置')
-                continue
-            if not config.enable_rumor:
-                logger.info(f'[{owner}:{role}] 当前角色不接受流言蜚语')
-                continue
-
-            prompt = RumorMemoryPrompt.format(idea_pool=idea_pool, role_desc=config.get_desc())
-            reason, content = self.cliet.generate_one_shot(prompt)
-
-            memory = self.query_or_init_memory(config.name, owner)
-            memory.rumor_reason = reason if reason else ''
-            if content:
-                # 流言蜚语存储到短期记忆字段中, 默认不注入到对话之中
-                # 还需要实验合理的触发时机
-                memory.short_term_memory = content
-                logger.info(f'[{owner}:{role}] 流言蜚语计算完毕, 长度为{len(memory.short_term_memory) / KB:.2f} KB, 思考长度为 {len(memory.rumor_reason) / KB:.2f} KB')
-            else:
-                logger.warning(f'[{owner}:{role}] 流言蜚语计算返回为空, 思考长度为 {len(memory.rumor_reason) / KB:.2f} KB')
-            self.db.flush()
-            self.db.commit()
-
-    def get_memory_pool(self, role_names: list[str], configs: dict[str, RoleConfig], owner: str) -> str:
-        # 子查询：按 assistant_name 分组，取每组最大 id
-        sub =  sal.select(Memory.assistant_name, sal.func.max(Memory.id).label("max_id")) \
-                  .where(Memory.assistant_name.in_(role_names), Memory.owner==owner) \
-                  .group_by(Memory.assistant_name).subquery()
-
-        stmt = sal.select(Memory).where(Memory.id == sub.c.max_id)
-
-        lines = []
-        for memory in self.db.scalars(stmt):
-            config =configs.get(memory.assistant_name)
-            if config is None:
-                continue
-
-            idea = self.extract_inner_thoughts(memory.long_term_memory)
-            if idea == '':
-                continue
-            lines.append(f"{config.name}({config.short_desc}): {idea}")
-
-
-        return "\n".join(lines)
-
-
-    @staticmethod
-    def extract_inner_thoughts(text: str) -> str:
-        """
-        从包含 '# 助手内心想法' 和 '# 新增设定' 的文本中提取中间内容。
-        """
-        # 非贪婪匹配两个标题之间的任意字符（包括换行）
-        pattern = r'#\s*助手内心想法\s*(.*?)\s*#\s*新增设定'
-        match = re.search(pattern, text, re.DOTALL)
-        if match:
-            content = match.group(1).strip()
-            return content
-        return ""
-
-
-
-    # TODO: 实现
-    def rollback_long_term_memory(self, *, role_name: str, owner: str) -> bool:
-        return False
-
-    # TODO: 实现
-    def redo_long_term_memory(self, *, role_name: str, role_desc:str, end_time:datetime, owner: str) -> str:
-        return ""
-
-    # TODO: 实现
-    def reset_long_term_memory(self, *, role_name: str, owner: str) -> bool:
-        return False
-
-    def inject_long_term_memory(self, *, memory_content: str,  role_name: str, owner: str):
-        """从外部直接注入记忆"""
-        memory = self.query_or_init_memory(role_name, owner)
-        new_memory = memory.deep_copy(memory.processed_time)
-        new_memory.long_term_memory = memory_content
-        new_memory.compression_reason = '手动注入记忆'
-        self.db.add(new_memory)
-        self.db.commit()
-
-    def reset_process_time(self, new_time: datetime,  role_name:str, owner:str) -> bool:
-        # 修改处理时间未改动内容, 为了减少冗余直接修改当前记录
-        # 因此无法直接回滚对时间的修改操作, 但是可以手动再次修改时间来恢复
-        memory = self.query_or_init_memory(role_name, owner)
-        memory.processed_time = new_time
-        self.db.flush()
-        self.db.commit()
-        return True
-
     def get_activate_assistant_names(self, owner: str) -> Iterable[str]:
         """最近一天活跃的助理列表, 可能存在用户单方面插入的信息, 如果助手还未回复则不视为活跃"""
         start = now() - timedelta(days=1)
-        stmt = sal.select(History.assistant_name.distinct()).where(History.owner==owner, History.create_time > start, History.role=='assistant')
+        stmt = sal.select(History.assistant_name.distinct()).where(
+            History.owner == owner, History.create_time > start, History.role == "assistant"
+        )
         return self.db.scalars(stmt)
 
     def get_recent_assistant_list(self, owner: str) -> Sequence[str]:
@@ -563,34 +309,544 @@ class AssistantMemoryManager:
         """)
 
         result = self.db.execute(sql, {"owner": owner})
-        names = result.scalars().all()   # 获得按照最近聊天顺序的列表
+        names = result.scalars().all()  # 获得按照最近聊天顺序的列表
         return names
 
-    def evaluate_cost(self, owner: str) -> str:
-        names = self.get_recent_assistant_list(owner)
-        head = "角色: 记忆字符数+对话字符数（轮数）= 总字符数(预计token数) / 对话累计时间\n"
-        return head+"\n".join([self.evaluate_one_role_cost(name, owner) for name in names])
+    def select_record_between(
+        self, role_name: str, start_time: datetime, end_time: datetime, owner: str
+    ) -> Sequence[History]:
+        if start_time >= end_time:
+            logger.warning(f"[{owner}:{role_name}]: 查询记录的时间范围异常. {start_time} > {end_time} ")
+            return []
 
-    def evaluate_one_role_cost(self, role_name: str, owner: str) -> str:
-        memory = self.query_or_init_memory(role_name, owner)
-        stmt = sal.select(History).where(History.owner == owner,
-                                                  History.create_time > memory.processed_time,
-                                                  History.assistant_name == role_name)
+        stmt = sal.select(History).where(
+            History.owner == owner,
+            History.assistant_name == role_name,
+            History.create_time > start_time,
+            History.create_time < end_time,
+        )
+        return self.db.scalars(stmt).all()
+
+    def get_more_web_history(self, end_time: datetime, owner: str) -> list[dict]:
+        status = self.query_or_init_status(owner)
+        stmt = (
+            sal.select(History)
+            .where(
+                History.owner == owner, History.create_time < end_time, History.assistant_name == status.assistant_name
+            )
+            .order_by(History.id.desc())
+            .limit(20)
+        )
+        records = reversed(self.db.scalars(stmt).all())
+        return self.to_web_json_list(records)
+
+    def to_web_json_list(self, records: Iterable[History]):
+        return self.post_merging(
+            [msg.to_web_json() for msg in records if msg.role in [AssistantType.User, AssistantType.Assistant]]
+        )
+
+    def post_merging(self, records: list[dict]):
+        if len(records) == 0:
+            return records
+
+        last = records[0]
+        rst = [last]
+        for rec in records[1:]:
+            this_role = rec.get("role")
+            if this_role == AssistantType.Assistant and last.get("role") == AssistantType.Assistant:
+                last["content"] += rec.get("content")
+            else:
+                rst.append(rec)
+                last = rec
+        return rst
+
+    def evalute_day_cost(self, role_name: str, start_day: datetime, owner: str) -> list[tuple[str, int, int]]:
+        """
+        按天统计指定角色的每日成本, 返回三元组(统计日期, 总字符数, 消息数)
+        """
+
+        stmt = (
+            sal.select(
+                sal.func.date(History.create_time).label("stat_date"),
+                sal.func.sum(sal.func.length(History.content) + sal.func.length(History.system_inject_content)).label(
+                    "total_chars"
+                ),
+                sal.func.count().label("msg_count"),
+            )
+            .where(History.owner == owner, History.assistant_name == role_name, History.create_time > start_day)
+            .group_by(sal.func.date(History.create_time))
+            .order_by(sal.desc("stat_date"))
+        )
+        records = self.db.execute(stmt)
+        return [(r.stat_date, r.total_chars, r.msg_count) for r in records]
+
+    def evalute_first_memory_datetime(self, min_size: int, role_name: str, owner: str) -> datetime:
+        start_day = now() - timedelta(14)
+        acc = 0
+        for day, total_chars, _ in self.evalute_day_cost(role_name, start_day, owner):
+            acc += total_chars
+            if acc > min_size:
+                return datetime.strptime(day, "%Y-%m-%d")
+        return start_day
+
+    def make_system_prompt(self, status: Status) -> ChatCompletionSystemMessageParam:
+        if status.assistant_mode == AssistantModeType.RolePlaying:
+            return ChatCompletionSystemMessageParam(
+                role="system", content=RolePalyingSp.format(role_desc=status.assistant_desc)
+            )
+
+        return ChatCompletionSystemMessageParam(
+            role="system", content=AssistantSp.format(role_desc=status.assistant_desc)
+        )
+
+
+class AssistantMemoryManager:
+    def __init__(
+        self, db: scoped_session[Session], llm_client: LLMClient, history_manager: AssistantHistoryManager
+    ) -> None:
+        self.db = db
+        self.config_manager = ConfigManager()
+        self.role_manager = RoleManager()
+        self.cache = MemoryCache()
+        self.cliet = llm_client
+        self.history_manager = history_manager
+
+    def query_memory_detail(self, assistant_name: str, owner: str) -> str:
+        topic: str = self.query_topic(assistant_name, owner)
+        setting: str = self.query_role_setting(assistant_name, owner)
+        preference: str = self.query_preference(assistant_name, owner)
+        diary: str = self.query_diary(assistant_name, owner)
+
+        # 构造最后的Prompt结构
+        content = ""
+        if setting:
+            content += f"# 角色新增设定\n{setting}\n"
+        if preference:
+            content += f"# 预测用户偏好\n{preference}\n"
+        if topic:
+            content += f"# 近期话题\n{topic}\n"
+        if diary:
+            content += f"# 角色里程碑事件与近期日记\n{diary}\n"
+
+        if content:
+            return "以下是你与用户之间的已经发生过的事件的总结信息\n" + content
+        else:
+            return ""
+
+    def query_topic(self, assistant_name: str, owner: str) -> str:
+        k = f"{owner}:{assistant_name}:topic"
+        v = self.cache.get(k)
+        if v:
+            return v
+
+        stmt = (
+            sal.select(MemoryDetail)
+            .where(
+                MemoryDetail.owner == owner,
+                MemoryDetail.assistant_name == assistant_name,
+                MemoryDetail.tag == MemoryDetailType.RecentTopic,
+            )
+            .order_by(MemoryDetail.id.desc())
+            .limit(10)
+        )
         records = self.db.scalars(stmt).all()
 
-        memory_char_cost = len(memory.long_term_memory)
-        char_cost = sum(len(s) for r in records if (s := r.to_dump()) is not None)
-        token_cost = (memory_char_cost+char_cost) * 1.5
-        conv_cnt = len(records)
-        delta_times = format_timedelta(now()-memory.processed_time)
+        if len(records) == 0:
+            self.cache.set(k, "", ex=600)
+            return ""
 
-        return f"{role_name:>8s}: {memory_char_cost/1024:2.1f}KB+{char_cost // 1024:3d}KB({conv_cnt // 2:3d}轮)={(memory_char_cost+char_cost) // 1024:3d}KB({token_cost / 1024:3.1f}K) / {delta_times}"
+        total_content = "\n".join([r.content for r in records])
+        self.cache.set(k, total_content)
+        return total_content
+
+    def query_role_setting(self, assistant_name: str, owner: str) -> str:
+        k = f"{owner}:{assistant_name}:setting"
+        v = self.cache.get(k)
+        if v:
+            return v
+
+        min_id, content = self.__query_watermark(assistant_name, owner, MemoryDetailType.FixedSetting)
+        stmt = sal.select(MemoryDetail).where(
+            MemoryDetail.owner == owner,
+            MemoryDetail.assistant_name == assistant_name,
+            MemoryDetail.tag == MemoryDetailType.RoleSetting,
+            MemoryDetail.id > min_id,
+        )
+
+        content.extend([r.content for r in self.db.scalars(stmt)])
+        if len(content) == 0:
+            self.cache.set(k, "", ex=600)
+            return ""
+
+        total = "\n".join(content)
+        self.cache.set(k, total)
+        return total
+
+    def query_preference(self, assistant_name: str, owner: str) -> str:
+        k = f"{owner}:{assistant_name}:preference"
+        v = self.cache.get(k)
+        if v:
+            return v
+
+        min_id, content = self.__query_watermark(assistant_name, owner, MemoryDetailType.FixedPreference)
+        stmt = sal.select(MemoryDetail).where(
+            MemoryDetail.owner == owner,
+            MemoryDetail.assistant_name == assistant_name,
+            MemoryDetail.tag == MemoryDetailType.Preference,
+            MemoryDetail.id > min_id,
+        )
+
+        content.extend([r.content for r in self.db.scalars(stmt)])
+        if len(content) == 0:
+            self.cache.set(k, "", ex=600)
+            return ""
+
+        total = "\n".join(content)
+        self.cache.set(k, total)
+        return total
+
+    def query_diary(self, assistant_name: str, owner: str) -> str:
+        k = f"{owner}:{assistant_name}:diary"
+        v = self.cache.get(k)
+        if v:
+            return v
+
+        min_id, content = self.__query_watermark(assistant_name, owner, MemoryDetailType.Milestone)
+        stmt = (
+            sal.select(MemoryDetail)
+            .where(
+                MemoryDetail.owner == owner,
+                MemoryDetail.assistant_name == assistant_name,
+                MemoryDetail.tag == MemoryDetailType.Diary,
+                MemoryDetail.id > min_id,
+            )
+            .order_by(MemoryDetail.id.desc())
+            .limit(2)
+        )
+
+        content.extend([f"{r.content_time.strftime('%Y-%m-%d')}\n{r.content}\n" for r in self.db.scalars(stmt)])
+        if len(content) == 0:
+            self.cache.set(k, "", ex=600)
+            return ""
+
+        total = "\n".join(content)
+        self.cache.set(k, total)
+        return total
+
+    def query_last_reason(self, assistant_name: str, owner: str) -> str:
+        _, items = self.__query_watermark(assistant_name, owner, MemoryDetailType.Thinking)
+        return items[0] if items else ""
+
+    def __query_watermark(self, assistant_name: str, owner: str, tag: int) -> tuple[int, list[str]]:
+        """查询指定tag类型有无水位线, 如果有返回水位线id和内容数组, 如果无返回默认值"""
+        watermark = self.__query_lastest(assistant_name, owner, tag)
+        if watermark:
+            min_id = watermark[0].id
+            content = [watermark[0].content]
+        else:
+            min_id = 0
+            content = []
+        return min_id, content
+
+    def __query_lastest(self, assistant_name: str, owner: str, tag: int) -> Sequence[MemoryDetail]:
+        stmt = (
+            sal.select(MemoryDetail)
+            .where(
+                MemoryDetail.owner == owner,
+                MemoryDetail.assistant_name == assistant_name,
+                MemoryDetail.tag == tag,
+            )
+            .order_by(MemoryDetail.id.desc())
+            .limit(1)
+        )
+
+        return self.db.scalars(stmt).all()
+
+    def get_lastest_diary_day(self, assistant_name: str, owner: str) -> datetime:
+        records = self.__query_lastest(assistant_name, owner, tag=MemoryDetailType.Diary)
+        if records:
+            return records[0].content_time
+        else:
+            return datetime(year=2026, month=5, day=1)
+
+    def query_msg_start_time(self, assistant_name: str, owner: str) -> datetime:
+        """
+        查询聊天记录的起始时刻, 起始时刻之前的内容使用记忆代替, 起始时刻之后的内容保留原始文本
+        """
+        details = self.__query_lastest(assistant_name, owner, MemoryDetailType.StartTime)
+        if not details:
+            # 没有设置过时间时, 进行初始化计算
+            config = self.role_manager.get_role(assistant_name)
+            policy = self.role_manager.get_compression_policy(config.memory_compress)
+            start_day = self.history_manager.evalute_first_memory_datetime(policy.char_cost, assistant_name, owner)
+            content = get_str_from_datetime(start_day)
+            self.set_process_time(content=content, assistant_name=assistant_name, owner=owner, reason="初始化")
+            return start_day
+
+        # 否则直接返回记录的时间, 在执行记忆压缩时会重新计算时间
+        return get_datetime_from_str(details[0].content)
+
+    # TODO: 二级内容提取, 里程碑等内容
+    def update_long_term_memory(self, *, config: RoleConfig, owner: str) -> bool:
+        # 查询需要压缩的记录, 判断是否满足记忆压缩策略
+        start_time = self.get_lastest_diary_day(config.name, owner) + timedelta(days=1)
+        records = self.history_manager.select_record_between(config.name, start_time, today_begin(), owner)
+        cost = sum(len(s) for r in records if (s := r.to_dump()) is not None)
+        if cost < MinCompressionSize:
+            logger.info(
+                f"[{owner}:{config.name}]: 跳过压缩, 当前待压缩对话长度 {cost / KB:.2f} KB < 最小压缩长度 {MinCompressionSize / KB:.2f} KB"
+            )
+            return False
+
+        # 执行压缩操作
+        new_content = "\n".join([json.dumps(r.to_openai(), ensure_ascii=False) for r in records])
+        existing_content = self.query_role_setting(config.name, owner) + self.query_preference(config.name, owner)
+        existing_content = "当前没有内容" if not existing_content else existing_content
+        prompt = LongTermMemoryPrompt.format(
+            role_desc=config.get_self_desc(), existing_content=existing_content, new_content=new_content
+        )
+        reason, content = self.cliet.generate_one_shot(prompt)
+        if content is None:
+            logger.error(f"[{owner}:{config.name}]: 模型返回记忆为空")
+            return False
+
+        # 更新记忆
+        details = self.split_markdown_by_heading(content)
+        items = self.parse_markdown_item(details, config.name, owner)
+        self.db.add_all(items)
+        if reason:
+            item = make_memory_detail(
+                reason,
+                assistant_name=config.name,
+                owner=owner,
+                tag=MemoryDetailType.Thinking,
+                content_time=now(),
+            )
+            self.db.add(item)
+
+        policy = self.role_manager.get_compression_policy(config.memory_compress)
+        old_start_time = self.query_msg_start_time(config.name, owner)
+        new_start_time = self.history_manager.evalute_first_memory_datetime(policy.char_cost, config.name, owner)
+        if new_start_time > old_start_time:
+            self.set_process_time(
+                content=get_str_from_datetime(new_start_time),
+                assistant_name=config.name,
+                owner=owner,
+                reason="自动更新",
+            )
+
+        self.db.commit()
+
+        logger.info(
+            f"[{owner}:{config.name}] 记忆压缩完毕, 新对话起始时间为 {get_str_from_datetime(new_start_time)}, 新增记忆长度为 {len(content) / KB:.2f} KB, 思考长度为 {len(reason) / KB:.2f} KB"
+        )
+        return True
+
+    def auto_update_memory(self):
+        users = self.config_manager.get_all_users()
+        for user in users:
+            # 检查该用户所有助理的历史对话长度, 更新满足要求的助理的记忆
+            for role in self.history_manager.get_recent_assistant_list(user):
+                config = self.role_manager.get_role(role)
+                self.update_long_term_memory(config=config, owner=user)
+            # 基于已经更新的记忆和最近的活跃助理, 传播流言蜚语
+            # self.rumor_propagation(owner=user)
+
+        # 完成更新后清除所有缓存, 由于1天仅更新一次, 因此也只需要在更新后清除缓存
+        self.cache.clear()
+
+    def rumor_propagation(self, owner: str):
+        return
+        roles = self.history_manager.get_recent_assistant_list(owner)
+        if len(roles) == 0:
+            return
+
+        configs = self.role_manager.get_role_map()
+
+        # 第一轮提取公共池数据
+        names = []
+        for role in roles:
+            config = configs.get(role)
+            if config is None:
+                logger.warning(f"[{owner}:{role}] 无法获取角色配置")
+                continue
+            if not config.visible_in_rumor:
+                logger.info(f"[{owner}:{role}] 当前角色不产生流言蜚语")
+                continue
+            names.append(role)
+
+        idea_pool = self.get_memory_pool(names, configs, owner)
+        if len(idea_pool) == 0:
+            logger.warning(f"[{owner}] 由于没有公共记忆, 流言蜚语传播计算取消")
+            return False
+
+        # 第二轮计算昨日活跃角色扩散的流言蜚语
+        roles = self.get_activate_assistant_names(owner)
+        for role in roles:
+            config = configs.get(role)
+            if config is None:
+                logger.warning(f"[{owner}:{role}] 无法获取角色配置")
+                continue
+            if not config.enable_rumor:
+                logger.info(f"[{owner}:{role}] 当前角色不接受流言蜚语")
+                continue
+
+            prompt = RumorMemoryPrompt.format(idea_pool=idea_pool, role_desc=config.get_self_desc())
+            reason, content = self.cliet.generate_one_shot(prompt)
+
+            memory = self.query_or_init_memory(config.name, owner)
+            memory.rumor_reason = reason if reason else ""
+            if content:
+                # 流言蜚语存储到短期记忆字段中, 默认不注入到对话之中
+                # 还需要实验合理的触发时机
+                memory.short_term_memory = content
+                logger.info(
+                    f"[{owner}:{role}] 流言蜚语计算完毕, 长度为{len(memory.short_term_memory) / KB:.2f} KB, 思考长度为 {len(memory.rumor_reason) / KB:.2f} KB"
+                )
+            else:
+                logger.warning(
+                    f"[{owner}:{role}] 流言蜚语计算返回为空, 思考长度为 {len(memory.rumor_reason) / KB:.2f} KB"
+                )
+            self.db.flush()
+            self.db.commit()
+
+    @staticmethod
+    def split_markdown_by_heading(content: str) -> dict[str, str]:
+        """
+        将 Markdown 文件按一级标题（# 开头）切分为字典。
+        返回:
+            Dict[str, str]: 键为章节标题（去除 '# ' 前缀），值为章节内容（保留原始格式）
+        """
+        if content == "":
+            return {}
+        lines = content.splitlines()
+
+        sections = {}
+        current_title = None
+        current_content = []
+
+        # 正则匹配一级标题行：行首可选空白 + '# ' + 标题内容
+        heading_pattern = re.compile(r"^\s*#\s+(.*)$")
+
+        for line in lines:
+            match = heading_pattern.match(line)
+            if match:
+                # 遇到新标题，保存上一个章节
+                if current_title is not None:
+                    sections[current_title] = "\n".join(current_content).rstrip("\n")
+                # 开始新章节
+                current_title = match.group(1).strip()  # 标题文本（去除两侧空白）
+                current_content = []
+            else:
+                # 非标题行，添加到当前章节内容
+                if current_title is not None:
+                    current_content.append(line)
+
+        # 处理最后一个章节
+        if current_title is not None:
+            sections[current_title] = "".join(current_content).rstrip("\n")
+
+        return sections
+
+    def parse_markdown_item(self, details: dict[str, str], assistant_name: str, owner: str) -> Sequence[MemoryDetail]:
+        content_time = today_begin() - timedelta(days=1)
+        ans = []
+
+        setting = details.get("新增设定", "").strip()
+        if len(setting) > 0:
+            item = make_memory_detail(
+                setting,
+                assistant_name=assistant_name,
+                owner=owner,
+                tag=MemoryDetailType.RoleSetting,
+                content_time=content_time,
+            )
+            ans.append(item)
+
+        preference = details.get("用户偏好", "").strip()
+        if len(preference) > 0:
+            item = make_memory_detail(
+                preference,
+                assistant_name=assistant_name,
+                owner=owner,
+                tag=MemoryDetailType.Preference,
+                content_time=content_time,
+            )
+            ans.append(item)
+
+        topics = details.get("近期话题", "").strip().splitlines()
+        for topic in topics:
+            item = make_memory_detail(
+                topic,
+                assistant_name=assistant_name,
+                owner=owner,
+                tag=MemoryDetailType.RecentTopic,
+                content_time=content_time,
+            )
+            ans.append(item)
+
+        diary = details.get("个人日记", "").strip()
+        if len(diary) > 0:
+            item = make_memory_detail(
+                diary, assistant_name=assistant_name, owner=owner, tag=MemoryDetailType.Diary, content_time=content_time
+            )
+            ans.append(item)
+
+        return ans
+
+    def stabilize_role_setting(self, *, content: str, assistant_name: str, owner: str):
+        k = f"{owner}:{assistant_name}:setting"
+        self.cache.delete(k)
+
+        detail = make_memory_detail(
+            content,
+            reason="手动设置",
+            assistant_name=assistant_name,
+            owner=owner,
+            tag=MemoryDetailType.FixedSetting,
+            content_time=now(),
+        )
+        self.db.add(detail)
+        self.db.commit()
+
+    def stabilize_preference(self, *, content: str, assistant_name: str, owner: str):
+        k = f"{owner}:{assistant_name}:preference"
+        self.cache.delete(k)
+
+        detail = make_memory_detail(
+            content,
+            reason="手动设置",
+            assistant_name=assistant_name,
+            owner=owner,
+            tag=MemoryDetailType.FixedPreference,
+            content_time=now(),
+        )
+        self.db.add(detail)
+        self.db.commit()
+
+    def set_process_time(self, *, content: str, assistant_name: str, owner: str, reason="手动设置"):
+        detail = make_memory_detail(
+            content,
+            reason=reason,
+            assistant_name=assistant_name,
+            owner=owner,
+            tag=MemoryDetailType.StartTime,
+            content_time=now(),
+        )
+        self.db.add(detail)
+        self.db.commit()
 
 
 class AssistantManager:
-    def __init__(self, llm_manager: LLMClient, item_manager: ItemManager,
-                 tomato_manager: TomatoManager, tomato_record_manager: TomatoRecordManager,
-                 history_manager: AssistantHistoryManager, memory_manager: AssistantMemoryManager) -> None:
+    def __init__(
+        self,
+        llm_manager: LLMClient,
+        item_manager: ItemManager,
+        tomato_manager: TomatoManager,
+        tomato_record_manager: TomatoRecordManager,
+        history_manager: AssistantHistoryManager,
+        memory_manager: AssistantMemoryManager,
+    ) -> None:
         self.llm_manager = llm_manager
         self.role_manager = RoleManager()
         self.item_manager = item_manager
@@ -599,10 +855,23 @@ class AssistantManager:
         self.history_manager = history_manager
         self.memory_manager = memory_manager
 
+    def get_history(self, owner: str) -> list[ChatCompletionMessageParam]:
+        status = self.history_manager.query_or_init_status(owner)
+        sp = self.history_manager.make_system_prompt(status)
+        memory = self.memory_manager.query_memory_detail(status.assistant_name, owner)
+        start_time = self.memory_manager.query_msg_start_time(status.assistant_name, owner)
+        records = self.history_manager.select_record_between(status.assistant_name, start_time, now(), owner)
+
+        if not memory:
+            return [sp] + [msg.to_openai() for msg in records]
+
+        mp = ChatCompletionUserMessageParam(role="user", content=memory)
+        return [sp, mp] + [msg.to_openai() for msg in records]
+
     def generate(self, owner: str, *, enable_tools=False) -> Generator[str, Any]:
         """流式生成回复：后台消费 LLM 流并保存，前台推送给客户端"""
         if not enable_tools:
-            history = self.history_manager.get_history(owner)
+            history = self.get_history(owner)
             stream = self.llm_manager.generate_stream(history)
             yield from self._consume_simple_stream(stream, owner)
         else:
@@ -618,13 +887,13 @@ class AssistantManager:
                 yield f"data: {json.dumps({'text': token, 'done': False})}\n\n"
             yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
         except GeneratorExit as e:
-            logger.error(f'推送LLM模型消息到客户端中断: {e}')
+            logger.error(f"推送LLM模型消息到客户端中断: {e}")
             # 继续消费上游数据, 确保已经生成的内容依然可以落库
             for token in stream:
                 full_answer.append(token)
         except Exception as e:
             # 发生其他异常时，先尝试发送错误信息（如果客户端还在）
-            logger.error(f'推送LLM模型消息到客户端异常: {e}')
+            logger.error(f"推送LLM模型消息到客户端异常: {e}")
             yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
         finally:
             content = "".join(full_answer)
@@ -636,7 +905,7 @@ class AssistantManager:
         while True:
             tool_calls_list = []
             full_answer = []
-            history = self.history_manager.get_history(owner)
+            history = self.get_history(owner)
             stream = self.llm_manager.generate_steam_with_tools(history, tool_desc, tool_calls_list)
             for token in stream:
                 full_answer.append(token)
@@ -660,50 +929,53 @@ class AssistantManager:
                 self.history_manager.add_assistant_answer(content, owner)
                 return
 
-    def make_tools(self, owner:str) -> tuple[Iterable[ChatCompletionToolUnionParam], dict[str, Callable[[str], str]]]:
-        def create_f(arg_json:str) -> str:
+    def make_tools(self, owner: str) -> tuple[Iterable[ChatCompletionToolUnionParam], dict[str, Callable[[str], str]]]:
+        def create_f(arg_json: str) -> str:
             try:
-                args:dict[str,str] = json.loads(arg_json)
-                item = Item(name=args.get('name'), item_type='single', owner=owner,
-                            deadline=get_datetime_from_str(args.get('deadline', '')),
-                            priority=args.get('priority'))
+                args: dict[str, str] = json.loads(arg_json)
+                item = Item(
+                    name=args.get("name"),
+                    item_type="single",
+                    owner=owner,
+                    deadline=get_datetime_from_str(args.get("deadline", "")),
+                    priority=args.get("priority"),
+                )
                 self.item_manager.create(item)
                 self.item_manager.db.commit()
             except Exception as e:
                 return f"error: {e}"
             return "success"
 
-        def query_f(arg_json:str) -> str:
+        def query_f(arg_json: str) -> str:
             try:
-                args:dict[str,str] = json.loads(arg_json)
-                role_name = args.get('name', '')
-                question = args.get('question', '')
-                if role_name == '' or question == '':
-                    return f'查询信息不完整. name={role_name}, question={question}'
+                args: dict[str, str] = json.loads(arg_json)
+                role_name = args.get("name", "")
+                question = args.get("question", "")
+                if role_name == "" or question == "":
+                    return f"查询信息不完整. name={role_name}, question={question}"
                 config = self.role_manager.get_role(role_name)
                 short_info = f"{config.name}({config.short_desc})"
                 prompt = AnyQueryPrompt.format(role_short_info=short_info, question=question)
-                content = self.llm_manager.generate_one_shot_with_history(prompt,f'{owner}_AnyQ', simple_client=True)
-                logger.info(f'[{config.name}] 提问 [{question}] 获得回答 [{content}]')
-                return content or '查询结果为空'
+                content = self.llm_manager.generate_one_shot_with_history(prompt, f"{owner}_AnyQ", simple_client=True)
+                logger.info(f"[{config.name}] 提问 [{question}] 获得回答 [{content}]")
+                return content or "查询结果为空"
             except Exception as e:
-                return f'error: {e}'
+                return f"error: {e}"
 
-        return [CreatItemTool, AnyQueryTool], {"create_item": create_f, 'query_info': query_f}
+        return [CreatItemTool, AnyQueryTool], {"create_item": create_f, "query_info": query_f}
 
-
-    def chat(self, prompt: str, owner: str) ->  Generator[str, Any]:
+    def chat(self, prompt: str, owner: str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
         inject_content = self.make_user_inject_content(status, owner)
         self.history_manager.add_user_prompt(prompt, inject_content, owner)
         return self.generate(owner, enable_tools=bool(status.enable_tools))
 
-    def remake(self, owner: str) ->  Generator[str, Any]:
+    def remake(self, owner: str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
         self.history_manager.remove_last_assistant(owner)
         return self.generate(owner, enable_tools=bool(status.enable_tools))
 
-    def delete(self, num: int,  owner: str) -> bool:
+    def delete(self, num: int, owner: str) -> bool:
         if num < 1:
             return False
 
@@ -711,22 +983,22 @@ class AssistantManager:
             self.history_manager.remove_last_pair(owner)
         return True
 
-    def replace(self, prompt: str, owner: str) ->  Generator[str, Any]:
+    def replace(self, prompt: str, owner: str) -> Generator[str, Any]:
         self.history_manager.remove_last_pair(owner)
         return self.chat(prompt, owner)
 
-    def auto_switch(self, *, role_keyword: str, owner:str) -> Generator[str, Any]:
+    def auto_switch(self, *, role_keyword: str, owner: str) -> Generator[str, Any]:
         config = self.role_manager.get_role(role_keyword)
         self.history_manager.switch(role_config=config, owner=owner)
         content = f"切换到角色: {config.name}"
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
-    def change_mode(self, role_mode: int, owner:str) -> Generator[str, Any]:
+    def change_mode(self, role_mode: int, owner: str) -> Generator[str, Any]:
         self.history_manager.change_mode(role_mode, owner)
         content = f"切换到模式: {assistant_mode_str(role_mode)}"
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
-    def make_user_inject_content(self, status: Status, owner:str) -> str:
+    def make_user_inject_content(self, status: Status, owner: str) -> str:
         # 扮演模式不注入任何系统相关的信息
         if status.assistant_mode == AssistantModeType.RolePlaying:
             return ""
@@ -740,7 +1012,7 @@ class AssistantManager:
 
         # 事件信息, 可能没有事件
         # 如果已经跨越了1天时间, 则昨天产生的信息不再继续追加到当前会话中
-        start = tb if (tb:=today_begin()) > start else start
+        start = tb if (tb := today_begin()) > start else start
         event_info = self.get_event_info(owner, start)
         if event_info != "":
             content += "用户新增的事件记录:\n" + event_info
@@ -756,93 +1028,115 @@ class AssistantManager:
             yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
         yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
 
-    def show_cost(self, owner:str) -> Generator[str, Any]:
-        cost_report = self.memory_manager.evaluate_cost(owner)
-        yield f"data: {json.dumps({'text': cost_report, 'done': False})}\n\n"
+    def show_cost(self, owner: str) -> Generator[str, Any]:
+        head = "角色: 记忆字符数+对话字符数（轮数）= 总字符数(预计token数)"
+        report = [head]
+        names = self.history_manager.get_recent_assistant_list(owner)
+        for name in names:
+            memory_cost = len(self.memory_manager.query_memory_detail(name, owner))
+            start_time = self.memory_manager.query_msg_start_time(name, owner)
+            records = self.history_manager.select_record_between(name, start_time, now(), owner)
+            char_cost = sum(len(s) for r in records if (s := r.to_dump()))
+            conv_cnt = len(records) // 2
+            all_char_cost = memory_cost + char_cost
+            token_cost = (memory_cost + char_cost) * 1.5
+            delta_times = format_timedelta(now() - start_time)
+            txt = f"{name:>8s}: {memory_cost / 1024:2.1f}KB+{char_cost // 1024:3d}KB({conv_cnt:3d}轮)={all_char_cost // 1024:3d}KB({token_cost / 1024:3.1f}K) / {delta_times} "
+            report.append(txt)
+        yield f"data: {json.dumps({'text': '\n'.join(report), 'done': False})}\n\n"
 
-        yield f"data: {json.dumps({'text': '\n\n当前角色成本明细:\n', 'done': False})}\n\n"
+        head = "\n\n当前角色成本明细:"
+        report = [head]
         state = self.history_manager.query_or_init_status(owner)
-        cost_report: str = self.history_manager.day_cost_report(state.assistant_name, owner)
-        yield f"data: {json.dumps({'text': cost_report, 'done': True})}\n\n"
+        start_day = now() - timedelta(days=14)
+        rows = self.history_manager.evalute_day_cost(state.assistant_name, start_day, owner)
+        report.extend([f"{d}: {total_cnt / KB:6.2f} KB / {msg_cnt // 2:4d} Msg" for d, total_cnt, msg_cnt in rows])
+        yield f"data: {json.dumps({'text': '\n'.join(report), 'done': True})}\n\n"
 
-    def show_memory(self, owner:str) -> Generator[str, Any]:
+    def show_memory(self, owner: str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
-        memory = self.memory_manager.query_or_init_memory(status.assistant_name, owner)
-        yield f"data: {json.dumps({'text': memory.to_dump(), 'done': True})}\n\n"
+        memory = self.memory_manager.query_memory_detail(status.assistant_name, owner)
+        yield f"data: {json.dumps({'text': memory, 'done': True})}\n\n"
 
-    def show_last_reason(self, owner:str) -> Generator[str, Any]:
+    def show_last_reason(self, owner: str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
-        memory = self.memory_manager.query_or_init_memory(status.assistant_name, owner)
-        content = f"压缩记忆: \n{memory.compression_reason}\n\n流言蜚语: \n{memory.rumor_reason}"
+        reason = self.memory_manager.query_last_reason(status.assistant_name, owner)
+        content = f"压缩记忆: \n{reason}\n\n流言蜚语: \n"
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
     def new_topic(self, owner: str) -> Generator[str, Any]:
-        inject = '你需要根据现有的近期话题主动发起一个新话题'
-        self.history_manager.add_user_prompt('', inject, owner, tag=AssistantTagType.NewTopic)
+        inject = "你需要根据现有的近期话题主动发起一个新话题"
+        self.history_manager.add_user_prompt("", inject, owner, tag=AssistantTagType.NewTopic)
         yield from self.generate(owner)
 
-    def set_memory(self, memory_content: str, owner: str) -> Generator[str, Any]:
-        memory_content = memory_content.strip()
+    def set_memory(self, memory_type: str, content: str, owner: str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
-        self.memory_manager.inject_long_term_memory(memory_content=memory_content, role_name=status.assistant_name, owner=owner)
+        if memory_type == "设定":
+            self.memory_manager.stabilize_role_setting(
+                content=content, assistant_name=status.assistant_name, owner=owner
+            )
+        elif memory_type == "偏好":
+            self.memory_manager.stabilize_preference(content=content, assistant_name=status.assistant_name, owner=owner)
+
         yield from self.show_memory(owner)
 
     def set_time(self, time_str: str, owner: str) -> Generator[str, Any]:
         # 使用待办事项截止日期相同格式的时间处理逻辑, 简化输入
         t = parse_befeore_time_str(time_str)
+        content = get_str_from_datetime(t)
         status = self.history_manager.query_or_init_status(owner)
-        self.memory_manager.reset_process_time(t, status.assistant_name, owner)
+        self.memory_manager.set_process_time(content=content, assistant_name=status.assistant_name, owner=owner)
         yield from self.show_memory(owner)
 
-
-    def rumor(self, target_keyword: str, owner:str) -> Generator[str, Any]:
+    def rumor(self, target_keyword: str, owner: str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
         target = self.role_manager.get_role(target_keyword)
         content = f"正在生成{status.assistant_name}收到的关于{target.name}的流言蜚语\n"
         yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
 
-        history = self.history_manager.select_record_after(target.name, today_begin(), owner)
+        history = self.history_manager.select_record_between(target.name, today_begin(), now(), owner)
         new_content = ""
         for record in history:
             r = record.to_openai()
             new_content += json.dumps(r, ensure_ascii=False)
             new_content += "\n"
 
-        prompt = RumorMillPrompt.format(visitor_desc=status.assistant_desc, role_desc=target.get_desc(), new_content=new_content)
+        prompt = RumorMillPrompt.format(
+            visitor_desc=status.assistant_desc, role_desc=target.get_self_desc(), new_content=new_content
+        )
         reason, content = self.llm_manager.generate_one_shot(prompt)
         if reason is not None:
-            content = f'\n---\n\n{reason}\n\n---\n\n'
+            content = f"\n---\n\n{reason}\n\n---\n\n"
             yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
 
         if content is None:
             yield f"data: {json.dumps({'text': '生成失败', 'done': True})}\n\n"
             return
 
-        inject_content = f'你的内心产生了一个想法: {content}'
-        self.history_manager.add_user_prompt('', inject_content, owner)
+        inject_content = f"你的内心产生了一个想法: {content}"
+        self.history_manager.add_user_prompt("", inject_content, owner)
         yield from self.generate(owner, enable_tools=bool(status.enable_tools))
 
     def rumor_propagation(self, owner: str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
-        memory = self.memory_manager.query_or_init_memory(status.assistant_name, owner)
-        if not memory.short_term_memory:
-            yield f"data: {json.dumps({'text': '当前没有可用的流言蜚语\n', 'done': True})}\n\n"
+        # memory = self.memory_manager.query_or_init_memory(status.assistant_name, owner)
+        # if not memory.short_term_memory:
+        #     yield f"data: {json.dumps({'text': '当前没有可用的流言蜚语\n', 'done': True})}\n\n"
 
-        inject_content = f'你收到了一些传闻: {memory.short_term_memory}'
-        self.history_manager.add_user_prompt('', inject_content, owner, tag=AssistantTagType.Rumor)
+        # inject_content = f"你收到了一些传闻: {memory.short_term_memory}"
+        # self.history_manager.add_user_prompt("", inject_content, owner, tag=AssistantTagType.Rumor)
         yield from self.generate(owner, enable_tools=bool(status.enable_tools))
 
-    def inject(self, inject_data:str, user_prompt:str, owner:str) -> Generator[str, Any]:
+    def inject(self, inject_data: str, user_prompt: str, owner: str) -> Generator[str, Any]:
         self.history_manager.add_user_prompt(user_prompt, inject_data, owner)
         yield from self.generate(owner)
 
-    def __is_zero_tomoto_task(self, name:str) -> bool:
+    def __is_zero_tomoto_task(self, name: str) -> bool:
         # 打卡类任务可瞬间完成无需番茄钟.  午间和晚间任务不占用番茄钟
-        keywords = ['打卡', '午间', '晚间']
+        keywords = ["打卡", "午间", "晚间"]
         return any(word in name for word in keywords)
 
-
-    def get_event_info(self, owner:str, begin_time: datetime) -> str:
+    def get_event_info(self, owner: str, begin_time: datetime) -> str:
         content = ""
         # 新增番茄钟记录
         events = get_event_log_after(self.item_manager.db, begin_time, owner)
@@ -858,12 +1152,12 @@ class AssistantManager:
         today_afternoon_end = datetime(now_time.year, now_time.month, now_time.day, 18, 0, 0)
 
         if now_time < today_morning_end:
-            return today_morning_start, '上午'
+            return today_morning_start, "上午"
 
         if now_time < today_afternoon_end:
-            return today_morning_end, '下午'
+            return today_morning_end, "下午"
 
-        return today_afternoon_end, '晚上'
+        return today_afternoon_end, "晚上"
 
     def check_rest_time(self) -> str:
         now_time = now()
@@ -886,7 +1180,6 @@ class AssistantManager:
 
         return ""
 
-
     def get_tomato_state(self, owner: str, begin_time: datetime, begin_state: str) -> str:
         # 首先检查是否是番茄钟工作状态, 该状态优先级最高, 因此用户实际上可以在任意时间开始番茄钟
         state = self.tomato_manager.query_task(owner=owner)
@@ -897,10 +1190,10 @@ class AssistantManager:
             now_time = now()
             if now_time < work_finish_time:
                 remain_minutes = (work_finish_time - now_time).total_seconds() / 60
-                return f"正在进行{begin_state}第{last_group_cnt+1}组番茄钟内的第{last_tomato_cnt+1}个番茄钟, 当前为工作状态, 番茄钟任务为[{state.name}], 工作时间剩余{remain_minutes:.2f}分钟\n"
+                return f"正在进行{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt + 1}个番茄钟, 当前为工作状态, 番茄钟任务为[{state.name}], 工作时间剩余{remain_minutes:.2f}分钟\n"
             elif now_time < rest_finish_time:
                 remain_minutes = (rest_finish_time - now_time).total_seconds() / 60
-                return f"正在进行{begin_state}第{last_group_cnt+1}组番茄钟内的第{last_tomato_cnt+1}个番茄钟, 当前为休息状态, 番茄钟任务为[{state.name}], 休息时间剩余{remain_minutes:.2f}分钟\n"
+                return f"正在进行{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt + 1}个番茄钟, 当前为休息状态, 番茄钟任务为[{state.name}], 休息时间剩余{remain_minutes:.2f}分钟\n"
 
         # 其次检查是否为休息时间, 相当于可以覆盖番茄钟的休息和规划状态
         reset_time = self.check_rest_time()
@@ -924,49 +1217,49 @@ class AssistantManager:
                 return f"已完成{begin_state}第{last_group_cnt}组番茄钟, 已完成大组之间的休息, 当前进入规划状态, 已持续{elapsed_minutes - 20:.2f}分钟\n"
 
         # 如果不是最后一个番茄钟
-        return f"已完成{begin_state}第{last_group_cnt+1}组番茄钟内的第{last_tomato_cnt}个番茄钟, 当前进入规划状态, 已持续{elapsed_minutes - 5:.2f}分钟\n"
+        return f"已完成{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt}个番茄钟, 当前进入规划状态, 已持续{elapsed_minutes - 5:.2f}分钟\n"
 
-
-    def get_tomoto_record_info(self, owner: str, begin_time:datetime) -> tuple[int, int, TomatoTaskRecord | None]:
+    def get_tomoto_record_info(self, owner: str, begin_time: datetime) -> tuple[int, int, TomatoTaskRecord | None]:
         tomato_records = self.tomato_record_manager.select_record_after(owner=owner, time=begin_time)
         record_cnt = len(tomato_records)
 
         if record_cnt == 0:
-            return 0,0, None
+            return 0, 0, None
 
         last_group_cnt = record_cnt // 4
         last_tomato_cnt = record_cnt % 4
         return last_group_cnt, last_tomato_cnt, tomato_records[-1]
 
+    def get_web_history(self, owner: str) -> list[dict]:
+        status = self.history_manager.query_or_init_status(owner)
+        start_time = self.memory_manager.query_msg_start_time(status.assistant_name, owner)
+        records = self.history_manager.select_record_between(status.assistant_name, start_time, now(), owner)
 
-    def get_web_history(self, owner:str) -> list[dict]:
-        return self.history_manager.get_web_history(owner)
+        data_after = self.history_manager.to_web_json_list(records)
+        div = [{"type": "divider", "label": "以上对话已压缩至记忆"}]
 
-    def get_more_web_history(self, end_time_str: str,  owner: str) -> list[dict]:
-        if end_time_str == '':
+        data_before = self.history_manager.get_more_web_history(start_time, owner)
+        if data_before:
+            return data_before + div + data_after
+        else:
+            return data_after
+
+    def get_more_web_history(self, end_time_str: str, owner: str) -> list[dict]:
+        if end_time_str == "":
             return []
 
         end_time = get_datetime_from_str(end_time_str)
         return self.history_manager.get_more_web_history(end_time=end_time, owner=owner)
 
-    def dump_history(self, owner:str) -> Generator[str, Any]:
-        _, memory, record = self.history_manager.select_record(owner)
-        if memory is not None:
-            yield f"data: {json.dumps({'text': memory.to_dump(), 'done': False})}\n\n"
-
-        for item in record:
-            v = item.to_dump()
-            yield f"data: {json.dumps({'text': v, 'done': False})}\n\n"
-        yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
-
-    def dump_user_prompt(self, owner: str) ->Generator[str, Any]:
+    def dump_user_prompt(self, owner: str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
 
-        mode =  assistant_mode_str(status.assistant_mode)
+        mode = assistant_mode_str(status.assistant_mode)
         config = self.role_manager.get_role(status.assistant_name)
-        content = f"【当前状态信息】\n角色名: {status.assistant_name}\n角色模式: {mode}\n角色描述: {config.short_desc}\n"
+        content = (
+            f"【当前状态信息】\n角色名: {status.assistant_name}\n角色模式: {mode}\n角色描述: {config.short_desc}\n"
+        )
 
         to_inject_content = self.make_user_inject_content(status, owner)
-        content += f'\n【即将注入的信息】\n{to_inject_content}'
+        content += f"\n【即将注入的信息】\n{to_inject_content}"
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
-
