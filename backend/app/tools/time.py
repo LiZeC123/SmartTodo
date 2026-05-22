@@ -57,6 +57,9 @@ def this_year_str() -> str:
 def get_datetime_from_str(t: str) -> datetime:
     return datetime.strptime(t, '%Y-%m-%d %H:%M:%S')
 
+def get_str_from_datetime(t: datetime):
+    return t.strftime("%Y-%m-%d %H:%M:%S")
+
 def get_datetime_from_month_str(t: str):
     return datetime.strptime(t, '%Y-%m')
 

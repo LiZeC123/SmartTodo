@@ -38,10 +38,32 @@ class LLMClient:
                 data = chunk.choices[0].delta.content
                 yield data
 
-    def generate_one_shot(self, prompt: str, *, thinking=True, simple_client=False):
+    def generate_stream_with_prompt(self, prompt: str, *, thinking=True, simple_client=False):
+        """单次流式请求模型, 返回思考内容和模型回复"""
         client, model_name, extra_body = self.get_client_and_body(thinking, simple_client)
 
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant"},
+                {"role": "user", "content": prompt},
+            ],
+            stream=True,
+            extra_body=extra_body,
+        )
+
+        for chunk in response:
+            content = chunk.choices[0].delta.content
+            reasoning_content = chunk.choices[0].delta.reasoning_content # type: ignore
+            if reasoning_content is not None:
+                yield reasoning_content
+            if content is not None:
+                yield content
+
+    def generate_one_shot(self, prompt: str, *, thinking=True, simple_client=False):
         """单次非流式请求模型, 返回思考内容和模型回复"""
+        client, model_name, extra_body = self.get_client_and_body(thinking, simple_client)
+
         response = client.chat.completions.create(
             model=model_name,
             messages=[
