@@ -212,6 +212,10 @@ class ItemManager:
 
     def increase_expected_tomato(self, xid: int, owner: str):
         item = self.select_with_authority(xid=xid, owner=owner)
+        if item.expected_tomato >= 4:
+            logger.warning(f"单个待办事项[{item.name}]最多添加四个番茄钟")
+            return False
+
         item.expected_tomato += 1
         if item.used_tomato > 0:
             add_event_log(self.db, owner, f'用户增加任务[{item.name}]的预计番茄钟数量, 该任务预计需要{item.expected_tomato}个番茄钟, 已完成{item.used_tomato}个番茄钟')

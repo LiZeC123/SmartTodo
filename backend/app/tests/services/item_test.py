@@ -283,6 +283,13 @@ def test_increase_expected_tomato():
     with pytest.raises(UnauthorizedException):
         manager.increase_expected_tomato(item.id + 999, owner)
 
+    # 最多设置四个番茄钟
+    assert manager.increase_used_tomato(item.id, owner)
+    assert manager.increase_used_tomato(item.id, owner)
+
+    # 继续增加番茄钟数量会失败
+    assert not manager.increase_used_tomato(item.id, owner)
+
     manager.remove(item)
 
 
