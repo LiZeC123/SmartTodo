@@ -1,7 +1,6 @@
 import json
 import re
 from collections.abc import Callable, Generator, Iterable, Sequence
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -19,26 +18,32 @@ from app.models.assistant import (
     AssistantTagType,
     AssistantType,
     History,
-    MemoryDetail,
-    MemoryDetailType,
     Status,
     assistant_mode_str,
     make_assistant_status,
-    make_memory_detail,
 )
 from app.models.item import Item
+from app.models.memory import (
+    KB,
+    CompressionPolicy,
+    MemoryDetail,
+    MemoryDetailType,
+    MinCompressionSize,
+    make_memory_detail,
+)
 from app.models.tomato import TomatoTaskRecord
 from app.services.config_manager import ConfigManager
 from app.services.event_log_manager import get_event_log_after
 from app.services.item_manager import ItemManager
+from app.services.role_manager import RoleConfig, RoleManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
 from app.template.prompt import (
     AnyQueryPrompt,
     AssistantSp,
+    InjectRumorPrompt,
     LongTermMemoryPrompt,
     RolePalyingSp,
     RumorMemoryPrompt,
-    RumorMillPrompt,
 )
 from app.template.tools import AnyQueryTool, CreatItemTool
 from app.tools.llm import LLMClient
@@ -50,91 +55,10 @@ from app.tools.time import (
     get_hour_str_from,
     get_str_from_datetime,
     now,
+    now_str,
     parse_befeore_time_str,
     today_begin,
 )
-
-
-@dataclass
-class RoleConfig:
-    name: str  # 角色姓名
-    enable_tools: bool  # 是否允许调用工具
-    memory_compress: str  # 记忆压缩策略
-    enable_rumor: bool  # 是否启用流言蜚语系统(获得流言蜚语信息)
-    visible_in_rumor: bool  # 是否在流言蜚语系统中可见(可以产生传闻并被其他角色获知)
-    short_desc: str  # 角色的简短描述
-    long_desc: str  # 角色的详细设定
-
-    def get_self_desc(self):
-        return f"你是一位{self.short_desc}, 名叫{self.name}. {self.long_desc}"
-
-
-DefaultRoleConfig = RoleConfig(
-    name="默认助手",
-    enable_tools=False,
-    memory_compress="No",
-    enable_rumor=False,
-    visible_in_rumor=False,
-    short_desc="有用的助手.",
-    long_desc="",
-)
-
-
-@dataclass
-class CompressionPolicy:
-    """
-    压缩策略由原始文本的天数和字符数控制, 取两者中保留内容最多的.
-    例如day_delta=1, char_cost=3K时, 则无论昨天的文本有多少内容, 至少保留1天的对话内容. 如果昨天的对话内容不足3KB, 则会向前加载更多天的对话, 直到超过3KB
-    """
-
-    day_delta: int  # 始终保留原始聊天上下文的天数
-    char_cost: int  # 至少保留的对话文本字符数
-
-
-KB = 1024
-
-# 如果剩余的聊天内容太短, 会对聊天风格产生明显的影响, 导致一些难以量化但是可以察觉出来的微妙变化
-# 因此即使是最激进的压缩模式, 也需要保留一些内容
-AggressivePolicy = CompressionPolicy(day_delta=1, char_cost=6 * KB)
-ModeratePolicy = CompressionPolicy(day_delta=1, char_cost=10 * KB)
-LazyPolicy = CompressionPolicy(day_delta=1, char_cost=14 * KB)
-
-MinCompressionSize = 2 * KB
-
-
-class RoleManager:
-    def __init__(self) -> None:
-        pass
-
-    def __load_file(self) -> Iterable[RoleConfig]:
-        with open("config/role/Assistant.jsonl") as f:
-            return [RoleConfig(**json.loads(s)) for role in f if (s := role.strip()) != "" and not s.startswith("//")]
-
-    def get_role_list(self) -> Iterable[RoleConfig]:
-        try:
-            return self.__load_file()
-        except OSError:
-            # 文件不存在时, 直接返回空即可, 相当于没有额外的角色设定
-            return []
-
-    def get_role_map(self) -> dict[str, RoleConfig]:
-        return {item.name: item for item in self.get_role_list()}
-
-    def get_role(self, role_keyword: str) -> RoleConfig:
-        roles = self.get_role_list()
-
-        it = (role for role in roles if role_keyword in role.get_self_desc())
-        config = next(it, None)
-
-        return config if config else DefaultRoleConfig
-
-    def get_compression_policy(self, policy: str) -> CompressionPolicy:
-        if policy == "Aggressive":
-            return AggressivePolicy
-        if policy == "Lazy":
-            return LazyPolicy
-
-        return ModeratePolicy
 
 
 class AssistantHistoryManager:
@@ -189,8 +113,6 @@ class AssistantHistoryManager:
     def switch(self, /, role_config: RoleConfig, owner: str):
         status = self.query_or_init_status(owner)
         status.assistant_name = role_config.name
-        status.assistant_desc = role_config.get_self_desc()
-        status.enable_tools = role_config.enable_tools
 
         msg = self.select_last_msg(role_config.name, owner)
         role_mode = msg.assistant_mode if msg else AssistantModeType.RolePlaying
@@ -389,24 +311,19 @@ class AssistantHistoryManager:
                 return datetime.strptime(day, "%Y-%m-%d")
         return start_day
 
-    def make_system_prompt(self, status: Status) -> ChatCompletionSystemMessageParam:
-        if status.assistant_mode == AssistantModeType.RolePlaying:
-            return ChatCompletionSystemMessageParam(
-                role="system", content=RolePalyingSp.format(role_desc=status.assistant_desc)
-            )
-
-        return ChatCompletionSystemMessageParam(
-            role="system", content=AssistantSp.format(role_desc=status.assistant_desc)
-        )
-
 
 class AssistantMemoryManager:
+    RUMOR_ROLE_NAME = "公共"
+
     def __init__(
-        self, db: scoped_session[Session], llm_client: LLMClient, history_manager: AssistantHistoryManager
+        self,
+        db: scoped_session[Session],
+        role_manager: RoleManager,
+        llm_client: LLMClient,
+        history_manager: AssistantHistoryManager,
     ) -> None:
         self.db = db
-        self.config_manager = ConfigManager()
-        self.role_manager = RoleManager()
+        self.role_manager = role_manager
         self.cache = MemoryCache()
         self.cliet = llm_client
         self.history_manager = history_manager
@@ -576,8 +493,8 @@ class AssistantMemoryManager:
         details = self.__query_lastest(assistant_name, owner, MemoryDetailType.StartTime)
         if not details:
             # 没有设置过时间时, 进行初始化计算
-            config = self.role_manager.get_role(assistant_name)
-            policy = self.role_manager.get_compression_policy(config.memory_compress)
+            config = self.role_manager.get_role(name=assistant_name)
+            policy = CompressionPolicy.get_policy(config.memory_compress)
             start_day = self.history_manager.evalute_first_memory_datetime(policy.char_cost, assistant_name, owner)
             content = get_str_from_datetime(start_day)
             self.set_process_time(content=content, assistant_name=assistant_name, owner=owner, reason="初始化")
@@ -624,7 +541,7 @@ class AssistantMemoryManager:
             )
             self.db.add(item)
 
-        policy = self.role_manager.get_compression_policy(config.memory_compress)
+        policy = CompressionPolicy.get_policy(config.memory_compress)
         old_start_time = self.query_msg_start_time(config.name, owner)
         new_start_time = self.history_manager.evalute_first_memory_datetime(policy.char_cost, config.name, owner)
         if new_start_time > old_start_time:
@@ -642,73 +559,55 @@ class AssistantMemoryManager:
         )
         return True
 
-    def auto_update_memory(self):
-        users = self.config_manager.get_all_users()
-        for user in users:
-            # 检查该用户所有助理的历史对话长度, 更新满足要求的助理的记忆
-            for role in self.history_manager.get_recent_assistant_list(user):
-                config = self.role_manager.get_role(role)
-                self.update_long_term_memory(config=config, owner=user)
-            # 基于已经更新的记忆和最近的活跃助理, 传播流言蜚语
-            # self.rumor_propagation(owner=user)
-
-        # 完成更新后清除所有缓存, 由于1天仅更新一次, 因此也只需要在更新后清除缓存
-        self.cache.clear()
-
-    def rumor_propagation(self, owner: str):
-        return
+    def rumor_propagation(self, start_time: datetime, owner: str) -> bool:
         roles = self.history_manager.get_recent_assistant_list(owner)
         if len(roles) == 0:
-            return
-
-        configs = self.role_manager.get_role_map()
-
-        # 第一轮提取公共池数据
-        names = []
-        for role in roles:
-            config = configs.get(role)
-            if config is None:
-                logger.warning(f"[{owner}:{role}] 无法获取角色配置")
-                continue
-            if not config.visible_in_rumor:
-                logger.info(f"[{owner}:{role}] 当前角色不产生流言蜚语")
-                continue
-            names.append(role)
-
-        idea_pool = self.get_memory_pool(names, configs, owner)
-        if len(idea_pool) == 0:
-            logger.warning(f"[{owner}] 由于没有公共记忆, 流言蜚语传播计算取消")
             return False
 
-        # 第二轮计算昨日活跃角色扩散的流言蜚语
-        roles = self.get_activate_assistant_names(owner)
-        for role in roles:
-            config = configs.get(role)
-            if config is None:
-                logger.warning(f"[{owner}:{role}] 无法获取角色配置")
-                continue
-            if not config.enable_rumor:
-                logger.info(f"[{owner}:{role}] 当前角色不接受流言蜚语")
-                continue
+        end_time = start_time + timedelta(days=1)
+        stmt = sal.select(MemoryDetail).where(
+            MemoryDetail.owner == owner,
+            MemoryDetail.content_time >= start_time,
+            MemoryDetail.content_time <= end_time,
+            MemoryDetail.tag == MemoryDetailType.Diary,
+            MemoryDetail.assistant_name.in_(roles),
+        )
 
-            prompt = RumorMemoryPrompt.format(idea_pool=idea_pool, role_desc=config.get_self_desc())
-            reason, content = self.cliet.generate_one_shot(prompt)
+        records = self.db.scalars(stmt).all()
+        if len(records) == 0:
+            logger.warning(f"[{owner}] 由于没有可用日记, 流言蜚语传播计算取消")
+            return False
 
-            memory = self.query_or_init_memory(config.name, owner)
-            memory.rumor_reason = reason if reason else ""
-            if content:
-                # 流言蜚语存储到短期记忆字段中, 默认不注入到对话之中
-                # 还需要实验合理的触发时机
-                memory.short_term_memory = content
-                logger.info(
-                    f"[{owner}:{role}] 流言蜚语计算完毕, 长度为{len(memory.short_term_memory) / KB:.2f} KB, 思考长度为 {len(memory.rumor_reason) / KB:.2f} KB"
-                )
-            else:
-                logger.warning(
-                    f"[{owner}:{role}] 流言蜚语计算返回为空, 思考长度为 {len(memory.rumor_reason) / KB:.2f} KB"
-                )
-            self.db.flush()
-            self.db.commit()
+        diaries = []
+        for r in records:
+            name = r.assistant_name
+            desc = self.role_manager.get_role(name=r.assistant_name).short_desc
+            text = r.content
+            diaries.append(f"{name}({desc}): {text}")
+
+        diary_text = "\n".join(diaries)
+        # 根据所有人的日记获得一个用户全天行为的客观描述
+        prompt = RumorMemoryPrompt.format(diary_text=diary_text)
+        reason, content = self.cliet.generate_one_shot(prompt)
+        if not content:
+            logger.warning("")
+            return False
+
+        detail = make_memory_detail(
+            content,
+            reason=reason,
+            assistant_name=self.RUMOR_ROLE_NAME,
+            owner=owner,
+            tag=MemoryDetailType.Rumor,
+            content_time=start_time,
+        )
+        self.db.add(detail)
+        self.db.commit()
+        return True
+
+    def query_rumor(self, owner: str) -> MemoryDetail | None:
+        records = self.__query_lastest(self.RUMOR_ROLE_NAME, owner, MemoryDetailType.Rumor)
+        return records[0] if records else None
 
     @staticmethod
     def split_markdown_by_heading(content: str) -> dict[str, str]:
@@ -840,6 +739,8 @@ class AssistantMemoryManager:
 class AssistantManager:
     def __init__(
         self,
+        config_manager: ConfigManager,
+        role_manager: RoleManager,
         llm_manager: LLMClient,
         item_manager: ItemManager,
         tomato_manager: TomatoManager,
@@ -847,17 +748,26 @@ class AssistantManager:
         history_manager: AssistantHistoryManager,
         memory_manager: AssistantMemoryManager,
     ) -> None:
+        self.config_manager = config_manager
         self.llm_manager = llm_manager
-        self.role_manager = RoleManager()
+        self.role_manager = role_manager
         self.item_manager = item_manager
         self.tomato_manager = tomato_manager
         self.tomato_record_manager = tomato_record_manager
         self.history_manager = history_manager
         self.memory_manager = memory_manager
 
+    def make_system_prompt(self, status: Status) -> ChatCompletionSystemMessageParam:
+        config = self.role_manager.get_role(name=status.assistant_name)
+        desc = config.get_self_desc()
+        if status.assistant_mode == AssistantModeType.RolePlaying:
+            return ChatCompletionSystemMessageParam(role="system", content=RolePalyingSp.format(role_desc=desc))
+
+        return ChatCompletionSystemMessageParam(role="system", content=AssistantSp.format(role_desc=desc))
+
     def get_history(self, owner: str) -> list[ChatCompletionMessageParam]:
         status = self.history_manager.query_or_init_status(owner)
-        sp = self.history_manager.make_system_prompt(status)
+        sp = self.make_system_prompt(status)
         memory = self.memory_manager.query_memory_detail(status.assistant_name, owner)
         start_time = self.memory_manager.query_msg_start_time(status.assistant_name, owner)
         records = self.history_manager.select_record_between(status.assistant_name, start_time, now(), owner)
@@ -953,7 +863,8 @@ class AssistantManager:
                 question = args.get("question", "")
                 if role_name == "" or question == "":
                     return f"查询信息不完整. name={role_name}, question={question}"
-                config = self.role_manager.get_role(role_name)
+                # TODO: 角色名存在校验
+                config = self.role_manager.get_role(name=role_name)
                 short_info = f"{config.name}({config.short_desc})"
                 prompt = AnyQueryPrompt.format(role_short_info=short_info, question=question)
                 content = self.llm_manager.generate_one_shot_with_history(prompt, f"{owner}_AnyQ", simple_client=True)
@@ -966,14 +877,16 @@ class AssistantManager:
 
     def chat(self, prompt: str, owner: str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
+        config = self.role_manager.get_role(name=status.assistant_name)
         inject_content = self.make_user_inject_content(status, owner)
         self.history_manager.add_user_prompt(prompt, inject_content, owner)
-        return self.generate(owner, enable_tools=bool(status.enable_tools))
+        return self.generate(owner, enable_tools=bool(config.enable_tools))
 
     def remake(self, owner: str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
+        config = self.role_manager.get_role(name=status.assistant_name)
         self.history_manager.remove_last_assistant(owner)
-        return self.generate(owner, enable_tools=bool(status.enable_tools))
+        return self.generate(owner, enable_tools=bool(config.enable_tools))
 
     def delete(self, num: int, owner: str) -> bool:
         if num < 1:
@@ -988,7 +901,7 @@ class AssistantManager:
         return self.chat(prompt, owner)
 
     def auto_switch(self, *, role_keyword: str, owner: str) -> Generator[str, Any]:
-        config = self.role_manager.get_role(role_keyword)
+        config = self.role_manager.get_role(keyword=role_keyword)
         self.history_manager.switch(role_config=config, owner=owner)
         content = f"切换到角色: {config.name}"
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
@@ -1060,8 +973,12 @@ class AssistantManager:
 
     def show_last_reason(self, owner: str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
-        reason = self.memory_manager.query_last_reason(status.assistant_name, owner)
-        content = f"压缩记忆: \n{reason}\n\n流言蜚语: \n"
+        memory_reason = self.memory_manager.query_last_reason(status.assistant_name, owner)
+
+        rumor_detail = self.memory_manager.query_rumor(owner)
+        rumor_reason = rumor_detail.reason if rumor_detail else ""
+
+        content = f"压缩记忆: \n{memory_reason}\n\n流言蜚语: \n {rumor_reason}"
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
     def new_topic(self, owner: str) -> Generator[str, Any]:
@@ -1081,51 +998,40 @@ class AssistantManager:
         yield from self.show_memory(owner)
 
     def set_time(self, time_str: str, owner: str) -> Generator[str, Any]:
-        # 使用待办事项截止日期相同格式的时间处理逻辑, 简化输入
-        t = parse_befeore_time_str(time_str)
-        content = get_str_from_datetime(t)
+        """设置原始聊天上下文起始时间, 支持待办事项截止日期相同格式的时间, 或者字符串'now'表示设置为当前时间"""
+        if time_str == "now":
+            content = now_str()
+        else:
+            t = parse_befeore_time_str(time_str)
+            content = get_str_from_datetime(t)
         status = self.history_manager.query_or_init_status(owner)
         self.memory_manager.set_process_time(content=content, assistant_name=status.assistant_name, owner=owner)
         yield from self.show_memory(owner)
 
-    def rumor(self, target_keyword: str, owner: str) -> Generator[str, Any]:
-        status = self.history_manager.query_or_init_status(owner)
-        target = self.role_manager.get_role(target_keyword)
-        content = f"正在生成{status.assistant_name}收到的关于{target.name}的流言蜚语\n"
-        yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
+    def rumor(self, owner: str) -> Generator[str, Any]:
+        yestoday = today_begin() - timedelta(days=1)
+        yield f"data: {json.dumps({'text': '正在生成流言蜚语\n', 'done': False})}\n\n"
+        self.memory_manager.rumor_propagation(yestoday, owner)
+        rumor = self.memory_manager.query_rumor(owner)
+        rumor_text = rumor.content if rumor else ""
+        yield f"data: {json.dumps({'text': rumor_text, 'done': False})}\n\n"
 
-        history = self.history_manager.select_record_between(target.name, today_begin(), now(), owner)
-        new_content = ""
-        for record in history:
-            r = record.to_openai()
-            new_content += json.dumps(r, ensure_ascii=False)
-            new_content += "\n"
-
-        prompt = RumorMillPrompt.format(
-            visitor_desc=status.assistant_desc, role_desc=target.get_self_desc(), new_content=new_content
-        )
-        reason, content = self.llm_manager.generate_one_shot(prompt)
-        if reason is not None:
-            content = f"\n---\n\n{reason}\n\n---\n\n"
-            yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
-
-        if content is None:
-            yield f"data: {json.dumps({'text': '生成失败', 'done': True})}\n\n"
+    def rumor_propagation(self, target_keyword: str, owner: str) -> Generator[str, Any]:
+        rumor_detail = self.memory_manager.query_rumor(owner)
+        if not rumor_detail:
+            yield f"data: {json.dumps({'text': '当前没有流言蜚语', 'done': True})}\n\n"
             return
 
-        inject_content = f"你的内心产生了一个想法: {content}"
-        self.history_manager.add_user_prompt("", inject_content, owner)
-        yield from self.generate(owner, enable_tools=bool(status.enable_tools))
+        target = ""
+        if target_keyword:
+            target = f"用户要求你关注{target_keyword}相关的流言蜚语."
 
-    def rumor_propagation(self, owner: str) -> Generator[str, Any]:
+        inject_content = InjectRumorPrompt.format(target=target, rumor_text=rumor_detail.content)
+        self.history_manager.add_user_prompt("", inject_content, owner, tag=AssistantTagType.Rumor)
+
         status = self.history_manager.query_or_init_status(owner)
-        # memory = self.memory_manager.query_or_init_memory(status.assistant_name, owner)
-        # if not memory.short_term_memory:
-        #     yield f"data: {json.dumps({'text': '当前没有可用的流言蜚语\n', 'done': True})}\n\n"
-
-        # inject_content = f"你收到了一些传闻: {memory.short_term_memory}"
-        # self.history_manager.add_user_prompt("", inject_content, owner, tag=AssistantTagType.Rumor)
-        yield from self.generate(owner, enable_tools=bool(status.enable_tools))
+        config = self.role_manager.get_role(name=status.assistant_name)
+        yield from self.generate(owner, enable_tools=config.enable_tools)
 
     def inject(self, inject_data: str, user_prompt: str, owner: str) -> Generator[str, Any]:
         self.history_manager.add_user_prompt(user_prompt, inject_data, owner)
@@ -1252,10 +1158,11 @@ class AssistantManager:
         return self.history_manager.get_more_web_history(end_time=end_time, owner=owner)
 
     def dump_user_prompt(self, owner: str) -> Generator[str, Any]:
+        # TODO: 目标是输出比较多无法被观测的内容, 例如系统提示词, 注入信息
         status = self.history_manager.query_or_init_status(owner)
 
         mode = assistant_mode_str(status.assistant_mode)
-        config = self.role_manager.get_role(status.assistant_name)
+        config = self.role_manager.get_role(name=status.assistant_name)
         content = (
             f"【当前状态信息】\n角色名: {status.assistant_name}\n角色模式: {mode}\n角色描述: {config.short_desc}\n"
         )
@@ -1263,3 +1170,17 @@ class AssistantManager:
         to_inject_content = self.make_user_inject_content(status, owner)
         content += f"\n【即将注入的信息】\n{to_inject_content}"
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
+
+    def auto_update_memory(self):
+        users = self.config_manager.get_all_users()
+        start_time = today_begin() - timedelta(days=1)
+        for user in users:
+            # 检查该用户所有助理的历史对话长度, 更新满足要求的助理的记忆
+            for role in self.history_manager.get_recent_assistant_list(user):
+                config = self.role_manager.get_role(name=role)
+                self.memory_manager.update_long_term_memory(config=config, owner=user)
+            # 基于已经更新的日记, 计算用户行为轨迹, 作为流言蜚语传播的素材
+            self.memory_manager.rumor_propagation(start_time, user)
+
+        # 完成更新后清除所有缓存, 由于1天仅更新一次, 因此也只需要在更新后清除缓存
+        self.memory_manager.cache.clear()

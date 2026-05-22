@@ -45,11 +45,14 @@ def assistant_chat_stream(owner: str):
         args = prompt.strip().split(maxsplit=2)
         g = assistant_manager.set_memory(args[1], args[2], owner)
     elif prompt.startswith("/set_time "):
-        args = prompt.removeprefix("/set_time ")
+        args = prompt.removeprefix("/set_time ").strip()
         g = assistant_manager.set_time(args, owner)
     elif prompt.startswith("/rumor"):
-        # 调试指令: 注入流言
-        g = assistant_manager.rumor_propagation(owner)
+        # 调试指令: 注入流言, 可指定特别关注的角色, 也可以让模型自行决定
+        args = prompt.removeprefix("/rumor ").strip()
+        g = assistant_manager.rumor_propagation(args, owner)
+    elif prompt.startswith("/make_rumor"):
+        g = assistant_manager.rumor(owner)
     elif prompt.startswith("/inject "):
         args = prompt.removeprefix("/inject ")
         inject_data, up = parse_switch_args(prompt)

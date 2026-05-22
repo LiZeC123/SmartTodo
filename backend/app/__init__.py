@@ -8,6 +8,7 @@ from app.services.config_manager import ConfigManager
 from app.services.interpreter import OpInterpreter
 from app.services.item_manager import ItemManager
 from app.services.llm_manager import AssistantHistoryManager, AssistantManager, AssistantMemoryManager
+from app.services.role_manager import RoleManager
 from app.services.task_manager import TaskManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
 from app.tools.gen import generate_token_str
@@ -30,10 +31,11 @@ tomato_manager = TomatoManager(db, item_manager)
 tomato_record_manager = TomatoRecordManager(db, item_manager)
 checkin_manager = CheckinManager(db, config_manager, item_manager)
 
+role_manager = RoleManager()
 llm_client =LLMClient(config_manager)
 history_manager = AssistantHistoryManager(db)
-memory_manager = AssistantMemoryManager(db, llm_client, history_manager)
-assistant_manager = AssistantManager(llm_client, item_manager, tomato_manager, tomato_record_manager, history_manager, memory_manager)
+memory_manager = AssistantMemoryManager(db, role_manager, llm_client, history_manager)
+assistant_manager = AssistantManager(config_manager, role_manager, llm_client, item_manager, tomato_manager, tomato_record_manager, history_manager, memory_manager)
 
 # 初始化定时任务
 task_manager = TaskManager(db)
@@ -43,7 +45,7 @@ task_manager.add_daily_task("重置未完成的今日任务", item_manager.reset
 task_manager.add_daily_task("重置已完成的周期性任务", item_manager.renew_sp_task, "01:30")
 task_manager.add_daily_task("计算打卡相关统计数据", checkin_manager.update_all_checkin_state, "01:40")
 # 注意以下任务可能需要执行较长时间, 需要确保间隔时间充足
-task_manager.add_daily_task("个人助理记忆压缩与流言扩散", memory_manager.auto_update_memory, "02:30")
+task_manager.add_daily_task("个人助理记忆压缩与流言扩散", assistant_manager.auto_update_memory, "02:30")
 
 def create_app():
     # 创建Flask应用实例

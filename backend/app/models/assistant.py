@@ -122,9 +122,7 @@ class Status(Base):
     id: Mapped[int]                 = mapped_column(Integer, primary_key=True, autoincrement=True)
     owner: Mapped[str]              = mapped_column(String(15), nullable=False)
     assistant_name: Mapped[str]     = mapped_column(String(15), nullable=False, default='') # 当前助理的角色名
-    assistant_desc: Mapped[str]     = mapped_column(Text, nullable=False, default='')       # 助理的角色描述
     assistant_mode: Mapped[int]     = mapped_column(Integer, nullable=False, default=0)     # 助理的模式 0: 助理模式 1: 扮演模式
-    enable_tools: Mapped[int]       = mapped_column(Integer, nullable=False, default=0)      # 工具权限 0: 禁止调用工具 1: 允许调用工具
 
 
 def make_assistant_status(owner: str):
@@ -157,45 +155,5 @@ class Memory(Base):
         return f"角色名: {self.assistant_name}\n记忆处理时间: {self.processed_time}\n短期记忆:\n{self.short_term_memory}\n长期记忆:\n{self.long_term_memory}"
 
 
-class MemoryDetailType:
-    ToDoItem = 1
-    RoleSetting = 2     # 角色或者背景设定
-    RecentTopic = 3
-    Preference = 4      # 用户偏好预测
-    Diary = 5           # 日记
 
-    # 以下三个类型为固化类型, 总结合并之前的相关内容, 同时也作为水位线, 表示再此之前的项废弃
-    FixedSetting = 6    # 固化角色设定
-    FixedPreference = 7 # 固化角色偏好
-    Milestone = 8       # 里程碑事件
-
-    Thinking = 9        # 模型思考内容
-    StartTime = 10      # 对话历史起始标记, 该时间之后的对话保持原始内容
-
-
-
-# 记忆项目按照类型存储, 可以灵活的增减记忆类型, 同时在需要时按需加载记忆项目, 处理更灵活. 只新增不更新有利于回滚.
-class MemoryDetail(Base):
-    """助手记忆详细表, 按照时间顺序存储助手的各种类型的记忆信息, 记忆内容只新增不原地更新, 使用时按需加载最新的记忆"""
-    __tablename__ = "assistant_memory_detail"
-    id: Mapped[int]                 = mapped_column(Integer, primary_key=True, autoincrement=True)
-    owner: Mapped[str]              = mapped_column(String(15), nullable=False)
-    assistant_name: Mapped[str]     = mapped_column(String(15), nullable=False)
-    tag: Mapped[int]                = mapped_column(Integer, nullable=False, default=0)     # 消息类型, 见 MemoryDetailType
-    content: Mapped[str]            = mapped_column(Text, nullable=False)
-    reason: Mapped[str]             = mapped_column(Text, nullable=False, default='')
-    content_time: Mapped[datetime]  = mapped_column(DateTime, nullable=False)               # 记忆的内容发生的时间
-
-
-
-    # 定义联合索引
-    __table_args__ = (
-        # 查询用户的某个助手的指定类型的记忆
-        Index('idx_memory_detail_owner_role_tag', "owner", "assistant_name", "tag"),
-    )
-
-
-def make_memory_detail(content, *, reason='', assistant_name:str, owner: str, tag: int, content_time: datetime):
-    """创建一个新的记忆详情项. 注意content_time对应内容本身的时间而不是创建该项记忆的时间"""
-    return MemoryDetail(owner=owner, assistant_name=assistant_name, tag=tag, content=content, reason=reason, content_time=content_time)
 

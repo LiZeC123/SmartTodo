@@ -112,12 +112,11 @@ const COMMANDS = [
   { command: '/reason', description: '查看上一次模型思考内容', needsSpace: false },
   { command: '/memory', description: '查看当前角色的记忆', needsSpace: false },
   { command: '/info', description: '显示当前状态信息', needsSpace: false },
-
   
-  { command: '/set_memory', description: '覆盖当前角色的记忆 (参数 [记忆文本])', needsSpace: true },
-  { command: '/set_time', description: '修改记忆截止时间 (参数 [月.日:时 格式时间字符串])', needsSpace: true },
+  { command: '/set_memory', description: '覆盖当前角色的记忆 (参数 [类型("设定"或"偏好")] [记忆文本])', needsSpace: true },
+  { command: '/set_time', description: '修改记忆截止时间 (参数 [时间字符串(月.日:时)])', needsSpace: true },
 
-  { command: '/rumor', description: '对当前角色注入流言蜚语', needsSpace: false },
+  { command: '/rumor', description: '注入流言蜚语(参数 [目标关注角色(可选)])', needsSpace: false },
   { command: '/topic', description: '要求助手发起一个新的话题', needsSpace: false },
   { command: '/inject', description: '注入数据 (参数 [数据名称] [prompt])', needsSpace: true },
 
