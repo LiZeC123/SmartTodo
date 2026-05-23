@@ -43,7 +43,7 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.replace(args[1], owner)
     elif prompt.startswith("/set_memory "):
         args = prompt.strip().split(maxsplit=2)
-        g = assistant_manager.set_memory(args[1], args[2], owner)
+        g = assistant_manager.set_memory(args[1].strip(), args[2].strip(), owner)
     elif prompt.startswith("/set_time "):
         args = prompt.removeprefix("/set_time ").strip()
         g = assistant_manager.set_time(args, owner)
