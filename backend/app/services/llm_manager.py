@@ -22,12 +22,13 @@ from app.models.assistant import (
     assistant_mode_str,
     make_assistant_status,
 )
+from app.models.base import Database
 from app.models.item import Item
 from app.models.memory import (
     KB,
-    CompressionPolicy,
     MemoryDetail,
     MemoryDetailType,
+    MemoryPolicy,
     MinCompressionSize,
     make_memory_detail,
 )
@@ -249,6 +250,18 @@ class AssistantHistoryManager:
         )
         return self.db.scalars(stmt).all()
 
+    def select_inject_history(self, role_name: str, limit: int, owner: str) -> Sequence[History]:
+        if limit < 1:
+            limit = 1
+
+        stmt = (
+            sal.select(History)
+            .where(History.owner == owner, History.assistant_name == role_name, History.system_inject_content != "")
+            .order_by(History.id.desc())
+            .limit(limit)
+        )
+        return self.db.scalars(stmt).all()
+
     def get_more_web_history(self, end_time: datetime, owner: str) -> list[dict]:
         status = self.query_or_init_status(owner)
         stmt = (
@@ -314,6 +327,7 @@ class AssistantHistoryManager:
 
 class AssistantMemoryManager:
     RUMOR_ROLE_NAME = "公共"
+    CACHE_EXPIRE_TIME = 20 * 3600
 
     def __init__(
         self,
@@ -329,28 +343,37 @@ class AssistantMemoryManager:
         self.history_manager = history_manager
 
     def query_memory_detail(self, assistant_name: str, owner: str) -> str:
-        topic: str = self.query_topic(assistant_name, owner)
-        setting: str = self.query_role_setting(assistant_name, owner)
-        preference: str = self.query_preference(assistant_name, owner)
-        diary: str = self.query_diary(assistant_name, owner)
-
-        # 构造最后的Prompt结构
         content = ""
-        if setting:
-            content += f"# 角色新增设定\n{setting}\n"
-        if preference:
-            content += f"# 预测用户偏好\n{preference}\n"
-        if topic:
-            content += f"# 近期话题\n{topic}\n"
-        if diary:
-            content += f"# 角色里程碑事件与近期日记\n{diary}\n"
+        config = self.role_manager.get_role(name=assistant_name)
+        policy = MemoryPolicy.get_policy(config.memory_policy)
 
+        if policy.enable_role_setting:
+            setting: str = self.query_role_setting(assistant_name, owner)
+            content += f"# 角色新增设定\n{setting}\n" if setting else ""
+
+        if policy.enable_preference:
+            preference: str = self.query_preference(assistant_name, owner)
+            content += f"# 预测用户偏好\n{preference}\n" if preference else ""
+
+        if policy.max_topic_num > 0:
+            topic: str = self.query_topic(policy.max_topic_num, assistant_name, owner)
+            content += f"# 近期话题\n{topic}\n" if topic else ""
+
+        if policy.max_diary_num > 0:
+            # TODO: 日记和里程碑的处理与其他字段不一样, 还需要更细致的操作
+            diary: str = self.query_diary(policy.max_diary_num, assistant_name, owner)
+            content += f"# 角色近期日记\n{diary}\n" if diary else ""
+
+        content = content.strip()
         if content:
             return "以下是你与用户之间的已经发生过的事件的总结信息\n" + content
         else:
             return ""
 
-    def query_topic(self, assistant_name: str, owner: str) -> str:
+    def query_topic(self, topic_num: int, assistant_name: str, owner: str) -> str:
+        if topic_num < 1 or topic_num > 15:
+            topic_num = 1
+
         k = f"{owner}:{assistant_name}:topic"
         v = self.cache.get(k)
         if v:
@@ -364,7 +387,7 @@ class AssistantMemoryManager:
                 MemoryDetail.tag == MemoryDetailType.RecentTopic,
             )
             .order_by(MemoryDetail.id.desc())
-            .limit(10)
+            .limit(topic_num)
         )
         records = self.db.scalars(stmt).all()
 
@@ -373,7 +396,7 @@ class AssistantMemoryManager:
             return ""
 
         total_content = "\n".join([r.content for r in records])
-        self.cache.set(k, total_content)
+        self.cache.set(k, total_content, self.CACHE_EXPIRE_TIME)
         return total_content
 
     def query_role_setting(self, assistant_name: str, owner: str) -> str:
@@ -396,7 +419,7 @@ class AssistantMemoryManager:
             return ""
 
         total = "\n".join(content)
-        self.cache.set(k, total)
+        self.cache.set(k, total, self.CACHE_EXPIRE_TIME)
         return total
 
     def query_preference(self, assistant_name: str, owner: str) -> str:
@@ -419,10 +442,13 @@ class AssistantMemoryManager:
             return ""
 
         total = "\n".join(content)
-        self.cache.set(k, total)
+        self.cache.set(k, total, self.CACHE_EXPIRE_TIME)
         return total
 
-    def query_diary(self, assistant_name: str, owner: str) -> str:
+    def query_diary(self, diary_num: int, assistant_name: str, owner: str) -> str:
+        if diary_num < 1 or diary_num > 10:
+            diary_num = 1
+
         k = f"{owner}:{assistant_name}:diary"
         v = self.cache.get(k)
         if v:
@@ -438,7 +464,7 @@ class AssistantMemoryManager:
                 MemoryDetail.id > min_id,
             )
             .order_by(MemoryDetail.id.desc())
-            .limit(2)
+            .limit(diary_num)
         )
 
         content.extend([f"{r.content_time.strftime('%Y-%m-%d')}\n{r.content}\n" for r in self.db.scalars(stmt)])
@@ -447,7 +473,7 @@ class AssistantMemoryManager:
             return ""
 
         total = "\n".join(content)
-        self.cache.set(k, total)
+        self.cache.set(k, total, self.CACHE_EXPIRE_TIME)
         return total
 
     def query_last_reason(self, assistant_name: str, owner: str) -> str:
@@ -494,8 +520,10 @@ class AssistantMemoryManager:
         if not details:
             # 没有设置过时间时, 进行初始化计算
             config = self.role_manager.get_role(name=assistant_name)
-            policy = CompressionPolicy.get_policy(config.memory_compress)
-            start_day = self.history_manager.evalute_first_memory_datetime(policy.char_cost, assistant_name, owner)
+            policy = MemoryPolicy.get_policy(config.memory_policy)
+            start_day = self.history_manager.evalute_first_memory_datetime(
+                policy.raw_content_size, assistant_name, owner
+            )
             content = get_str_from_datetime(start_day)
             self.set_process_time(content=content, assistant_name=assistant_name, owner=owner, reason="初始化")
             return start_day
@@ -541,9 +569,9 @@ class AssistantMemoryManager:
             )
             self.db.add(item)
 
-        policy = CompressionPolicy.get_policy(config.memory_compress)
+        policy = MemoryPolicy.get_policy(config.memory_policy)
         old_start_time = self.query_msg_start_time(config.name, owner)
-        new_start_time = self.history_manager.evalute_first_memory_datetime(policy.char_cost, config.name, owner)
+        new_start_time = self.history_manager.evalute_first_memory_datetime(policy.raw_content_size, config.name, owner)
         if new_start_time > old_start_time:
             self.set_process_time(
                 content=get_str_from_datetime(new_start_time),
@@ -590,7 +618,7 @@ class AssistantMemoryManager:
         prompt = RumorMemoryPrompt.format(diary_text=diary_text)
         reason, content = self.cliet.generate_one_shot(prompt)
         if not content:
-            logger.warning("")
+            logger.warning(f"{owner}: 流言蜚语计算, 模型返回为空")
             return False
 
         detail = make_memory_detail(
@@ -739,23 +767,20 @@ class AssistantMemoryManager:
 class AssistantManager:
     def __init__(
         self,
+        db: Database,
         config_manager: ConfigManager,
-        role_manager: RoleManager,
-        llm_manager: LLMClient,
         item_manager: ItemManager,
         tomato_manager: TomatoManager,
         tomato_record_manager: TomatoRecordManager,
-        history_manager: AssistantHistoryManager,
-        memory_manager: AssistantMemoryManager,
     ) -> None:
         self.config_manager = config_manager
-        self.llm_manager = llm_manager
-        self.role_manager = role_manager
+        self.llm_manager = LLMClient(config_manager)
+        self.role_manager = RoleManager()
         self.item_manager = item_manager
         self.tomato_manager = tomato_manager
         self.tomato_record_manager = tomato_record_manager
-        self.history_manager = history_manager
-        self.memory_manager = memory_manager
+        self.history_manager = AssistantHistoryManager(db)
+        self.memory_manager = AssistantMemoryManager(db, self.role_manager, self.llm_manager, self.history_manager)
 
     def make_system_prompt(self, status: Status) -> ChatCompletionSystemMessageParam:
         config = self.role_manager.get_role(name=status.assistant_name)
@@ -1158,17 +1183,24 @@ class AssistantManager:
         return self.history_manager.get_more_web_history(end_time=end_time, owner=owner)
 
     def dump_user_prompt(self, owner: str) -> Generator[str, Any]:
-        # TODO: 目标是输出比较多无法被观测的内容, 例如系统提示词, 注入信息
         status = self.history_manager.query_or_init_status(owner)
-
         mode = assistant_mode_str(status.assistant_mode)
         config = self.role_manager.get_role(name=status.assistant_name)
         content = (
             f"【当前状态信息】\n角色名: {status.assistant_name}\n角色模式: {mode}\n角色描述: {config.short_desc}\n"
         )
 
+        rumor = self.memory_manager.query_rumor(owner)
+        rumor_text = rumor.content if rumor else ""
+        content += f"\n【流言蜚语】\n{rumor_text}\n"
+
+        records = self.history_manager.select_inject_history(status.assistant_name, 4, owner)
+        content += "\n【最近几条注入信息】\n"
+        content += "\n".join([r.system_inject_content for r in records])
+
         to_inject_content = self.make_user_inject_content(status, owner)
-        content += f"\n【即将注入的信息】\n{to_inject_content}"
+        content += f"\n\n【即将注入的信息】\n{to_inject_content}\n"
+
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
     def auto_update_memory(self):

@@ -7,12 +7,10 @@ from app.services.checkin_manager import CheckinManager
 from app.services.config_manager import ConfigManager
 from app.services.interpreter import OpInterpreter
 from app.services.item_manager import ItemManager
-from app.services.llm_manager import AssistantHistoryManager, AssistantManager, AssistantMemoryManager
-from app.services.role_manager import RoleManager
+from app.services.llm_manager import AssistantManager
 from app.services.task_manager import TaskManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
 from app.tools.gen import generate_token_str
-from app.tools.llm import LLMClient
 
 # 初始化数据库对象
 engine = create_engine(url='sqlite:///data/data.db', future=True)
@@ -31,11 +29,7 @@ tomato_manager = TomatoManager(db, item_manager)
 tomato_record_manager = TomatoRecordManager(db, item_manager)
 checkin_manager = CheckinManager(db, config_manager, item_manager)
 
-role_manager = RoleManager()
-llm_client =LLMClient(config_manager)
-history_manager = AssistantHistoryManager(db)
-memory_manager = AssistantMemoryManager(db, role_manager, llm_client, history_manager)
-assistant_manager = AssistantManager(config_manager, role_manager, llm_client, item_manager, tomato_manager, tomato_record_manager, history_manager, memory_manager)
+assistant_manager = AssistantManager(db, config_manager,  item_manager, tomato_manager, tomato_record_manager)
 
 # 初始化定时任务
 task_manager = TaskManager(db)

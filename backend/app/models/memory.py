@@ -27,11 +27,14 @@ class MemoryDetailType:
 
     Thinking = 9  # 模型思考内容
     StartTime = 10  # 对话历史起始标记, 该时间之后的对话保持原始内容
-    Rumor   = 11 # 流言蜚语
+    Rumor = 11  # 流言蜚语
 
 
 class MemoryDetail(Base):
-    """助手记忆详细表, 按照时间顺序存储助手的各种类型的记忆信息, 记忆内容只新增不原地更新, 使用时按需加载最新的记忆"""
+    """
+    助手记忆详细表, 按照时间顺序存储助手的各种类型的记忆信息
+    记忆内容只新增不原地更新, 使用时结合水位线按需加载最新的记忆
+    """
 
     __tablename__ = "assistant_memory_detail"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -57,29 +60,6 @@ def make_memory_detail(content, *, reason="", assistant_name: str, owner: str, t
 
 
 @dataclass
-class CompressionPolicy:
-    """
-    压缩策略由原始文本的天数和字符数控制, 取两者中保留内容最多的.
-    例如day_delta=1, char_cost=3K时, 则无论昨天的文本有多少内容, 至少保留1天的对话内容. 如果昨天的对话内容不足3KB, 则会向前加载更多天的对话, 直到超过3KB
-    """
-
-    day_delta: int  # 始终保留原始聊天上下文的天数
-    char_cost: int  # 至少保留的对话文本字符数
-
-    @staticmethod
-    def get_policy(policy_name: str) -> "CompressionPolicy":
-        if policy_name == "Aggressive":
-            # 如果剩余的聊天内容太短, 会对聊天风格产生明显的影响, 导致一些难以量化但是可以察觉出来的微妙变化
-            # 因此即使是最激进的压缩模式, 也需要保留一些内容
-            return CompressionPolicy(day_delta=1, char_cost=6 * KB)
-        if policy_name == "Lazy":
-            return CompressionPolicy(day_delta=1, char_cost=14 * KB)
-
-        # 默认 Moderate
-        return CompressionPolicy(day_delta=1, char_cost=10 * KB)
-
-
-@dataclass
 class MemoryPolicy:
     """
     记忆策略控制角色使用和压缩记忆的各项参数配置, 决定了角色的记忆使用倾向和压缩频率.
@@ -87,10 +67,19 @@ class MemoryPolicy:
     不同策略具有不同的等级, 一般数字越大, 则记忆的长度越短.
     """
 
+    # 是否启用新增角色设定
     enable_role_setting: bool
+
+    # 是否启用用户偏好预测
     enable_preference: bool
+
+    # 最大引入的近期话题数量, 对于主要为讨论的场景, 需要保留更多的话题
     max_topic_num: int
+
+    # 最大日记数量, 对于对话连贯性的场景, 需要更多日记
     max_diary_num: int
+
+    # 原始文本保留的字符数, 无论采用何种压缩方式, 都需要保留一部分上下文, 否则会使聊天风格产生一些微妙的变化
     raw_content_size: int
 
     @staticmethod
