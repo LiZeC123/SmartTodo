@@ -998,8 +998,10 @@ class AssistantManager:
 
     def show_memory(self, owner: str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
-        memory = self.memory_manager.query_memory_detail(status.assistant_name, owner)
-        yield f"data: {json.dumps({'text': memory, 'done': True})}\n\n"
+        start_time = self.memory_manager.query_msg_start_time(status.assistant_name, owner)
+        content = f"原始对话起始时间: {get_str_from_datetime(start_time)}"
+        content += self.memory_manager.query_memory_detail(status.assistant_name, owner)
+        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
     def show_last_reason(self, owner: str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
@@ -1201,7 +1203,7 @@ class AssistantManager:
 
         records = self.history_manager.select_inject_history(status.assistant_name, 4, owner)
         content += "\n【最近几条注入信息】\n"
-        content += "\n".join([r.system_inject_content for r in records])
+        content += "\n".join([r.system_inject_content for r in reversed(records)])
 
         to_inject_content = self.make_user_inject_content(status, owner)
         content += f"\n\n【即将注入的信息】\n{to_inject_content}\n"
