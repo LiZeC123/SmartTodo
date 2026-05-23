@@ -533,6 +533,11 @@ class AssistantMemoryManager:
 
     # TODO: 二级内容提取, 里程碑等内容
     def update_long_term_memory(self, *, config: RoleConfig, owner: str) -> bool:
+        # 判断记忆压缩策略
+        if config.memory_policy == 'None':
+            logger.info(f"[{owner}:{config.name}]: 跳过压缩, 该角色记忆压缩策略为不压缩")
+            return False
+
         # 查询需要压缩的记录, 判断是否满足记忆压缩策略
         start_time = self.get_lastest_diary_day(config.name, owner) + timedelta(days=1)
         records = self.history_manager.select_record_between(config.name, start_time, today_begin(), owner)

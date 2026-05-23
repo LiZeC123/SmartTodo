@@ -136,7 +136,7 @@ class MemoryPolicy:
             enable_preference=False,
             max_topic_num=0,
             max_diary_num=0,
-            raw_content_size=6 * KB,
+            raw_content_size=10 * KB,
         )
 
     @staticmethod
