@@ -810,6 +810,12 @@ class AssistantManager:
         self.history_manager = AssistantHistoryManager(db)
         self.memory_manager = AssistantMemoryManager(db, self.role_manager, self.llm_manager, self.history_manager)
 
+        # 执行一些其他初始化逻辑
+        self.print_check_info()
+
+    def print_check_info(self):
+        logger.info(f"当前是生产环境?: {self.config_manager.is_production()}")
+
     def make_system_prompt(self, status: Status) -> ChatCompletionSystemMessageParam:
         config = self.role_manager.get_role(name=status.assistant_name)
         desc = config.get_self_desc()
@@ -1239,6 +1245,10 @@ class AssistantManager:
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
     def auto_update_memory(self):
+        if not self.config_manager.is_production():
+            logger.info("非生产环境, 取消记忆压缩任务执行")
+            return
+
         users = self.config_manager.get_all_users()
         start_time = today_begin() - timedelta(days=1)
         for user in users:

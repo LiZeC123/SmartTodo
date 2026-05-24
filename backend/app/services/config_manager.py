@@ -1,4 +1,5 @@
 import json
+import os
 from collections.abc import Iterable
 from os.path import exists, join
 
@@ -53,3 +54,6 @@ class ConfigManager:
     def get_all_users(self) -> Iterable[str]:
         users: dict = self.config["USER_INFO"]
         return users.keys()
+
+    def is_production(self) -> bool:
+        return os.environ.get("ENV") == "PROD"

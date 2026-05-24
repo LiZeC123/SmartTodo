@@ -72,6 +72,7 @@ services:
     image: ghcr.io/lizec123/smart-todo:latest
     environment:
       TZ: Asia/Shanghai
+      ENV: PROD
     ports: 
       - "8080:80"
     volumes:
@@ -84,6 +85,10 @@ services:
 ```bash
 docker-compose up -d
 ```
+
+---
+
+注意: ENV变量指定的服务所在环境, 为了避免意外执行定时任务产生额外费用, 对于非`PROD`环境(或者没有设置ENV变量的环境)不执行可能产生费用的LLM相关定时任务. 具体信息可查看`backend/app/__init__.py`中定义的定时任务.
 
 ### 本地构建镜像
 
