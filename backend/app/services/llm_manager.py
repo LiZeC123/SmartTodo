@@ -386,7 +386,7 @@ class AssistantMemoryManager:
         topic: str = self.query_topic(15, assistant_name, owner)
         content += f"# 近期话题\n{topic}\n\n" if topic else ""
 
-        end_time = today_begin() - timedelta(days=5)
+        end_time = now()
         diary: str = self.query_diary(5, end_time, assistant_name, owner)
         content += f"# 角色近期日记\n{diary}\n\n" if diary else ""
 
