@@ -29,6 +29,8 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.show_last_reason(owner)
     elif prompt == "/topic":
         g = assistant_manager.new_topic(owner)
+    elif prompt == "/dump_memory":
+        g = assistant_manager.dump_memory(owner)
     elif prompt.startswith("/switch "):
         # 切换助理角色, 自动维持上一次使用的模式
         args = prompt.removeprefix("/switch ")

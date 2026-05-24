@@ -115,6 +115,7 @@ const COMMANDS = [
   
   { command: '/set_memory', description: '覆盖当前角色的记忆 (参数 [类型("设定"或"偏好")] [记忆文本])', needsSpace: true },
   { command: '/set_time', description: '修改记忆截止时间 (参数 [时间字符串(月.日:时)])', needsSpace: true },
+  { command: '/dump_memory', description: '显示该角色所有记忆项', needsSpace: false },
 
   { command: '/rumor', description: '注入流言蜚语(参数 [目标关注角色(可选)])', needsSpace: false },
   { command: '/topic', description: '要求助手发起一个新的话题', needsSpace: false },

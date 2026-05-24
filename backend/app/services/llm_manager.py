@@ -58,6 +58,7 @@ from app.tools.time import (
     now,
     now_str,
     parse_befeore_time_str,
+    the_day_begin,
     today_begin,
 )
 
@@ -343,6 +344,7 @@ class AssistantMemoryManager:
         self.history_manager = history_manager
 
     def query_memory_detail(self, assistant_name: str, owner: str) -> str:
+        """基于角色的记忆使用策略, 按照配置加载对应的记忆项, 返回提示词文本"""
         content = ""
         config = self.role_manager.get_role(name=assistant_name)
         policy = MemoryPolicy.get_policy(config.memory_policy)
@@ -361,7 +363,10 @@ class AssistantMemoryManager:
 
         if policy.max_diary_num > 0:
             # TODO: 日记和里程碑的处理与其他字段不一样, 还需要更细致的操作
-            diary: str = self.query_diary(policy.max_diary_num, assistant_name, owner)
+            # 原始对话文本的开始时间那一天就是日记的截止时间, 避免加载重复的内容
+            end_time = self.query_msg_start_time(assistant_name, owner)
+            end_time = the_day_begin(end_time)
+            diary: str = self.query_diary(policy.max_diary_num, end_time, assistant_name, owner)
             content += f"# 角色近期日记\n{diary}\n" if diary else ""
 
         content = content.strip()
@@ -369,6 +374,23 @@ class AssistantMemoryManager:
             return "以下是你与用户之间的已经发生过的事件的总结信息\n" + content
         else:
             return ""
+
+    def dump_memory_detail(self, assistant_name: str, owner: str) -> str:
+        content = "当前角色所有生效的记忆项\n\n"
+        setting: str = self.query_role_setting(assistant_name, owner)
+        content += f"# 角色新增设定\n{setting}\n\n" if setting else ""
+
+        preference: str = self.query_preference(assistant_name, owner)
+        content += f"# 预测用户偏好\n{preference}\n\n" if preference else ""
+
+        topic: str = self.query_topic(15, assistant_name, owner)
+        content += f"# 近期话题\n{topic}\n\n" if topic else ""
+
+        end_time = today_begin() - timedelta(days=5)
+        diary: str = self.query_diary(5, end_time, assistant_name, owner)
+        content += f"# 角色近期日记\n{diary}\n\n" if diary else ""
+
+        return content
 
     def query_topic(self, topic_num: int, assistant_name: str, owner: str) -> str:
         if topic_num < 1 or topic_num > 15:
@@ -445,7 +467,7 @@ class AssistantMemoryManager:
         self.cache.set(k, total, self.CACHE_EXPIRE_TIME)
         return total
 
-    def query_diary(self, diary_num: int, assistant_name: str, owner: str) -> str:
+    def query_diary(self, diary_num: int, end_time: datetime, assistant_name: str, owner: str) -> str:
         if diary_num < 1 or diary_num > 10:
             diary_num = 1
 
@@ -462,6 +484,7 @@ class AssistantMemoryManager:
                 MemoryDetail.assistant_name == assistant_name,
                 MemoryDetail.tag == MemoryDetailType.Diary,
                 MemoryDetail.id > min_id,
+                MemoryDetail.content < end_time,
             )
             .order_by(MemoryDetail.id.desc())
             .limit(diary_num)
@@ -534,7 +557,7 @@ class AssistantMemoryManager:
     # TODO: 二级内容提取, 里程碑等内容
     def update_long_term_memory(self, *, config: RoleConfig, owner: str) -> bool:
         # 判断记忆压缩策略
-        if config.memory_policy == 'None':
+        if config.memory_policy == "None":
             logger.info(f"[{owner}:{config.name}]: 跳过压缩, 该角色记忆压缩策略为不压缩")
             return False
 
@@ -999,7 +1022,7 @@ class AssistantManager:
     def show_memory(self, owner: str) -> Generator[str, Any]:
         status = self.history_manager.query_or_init_status(owner)
         start_time = self.memory_manager.query_msg_start_time(status.assistant_name, owner)
-        content = f"原始对话起始时间: {get_str_from_datetime(start_time)}"
+        content = f"原始对话起始时间: {get_str_from_datetime(start_time)}\n"
         content += self.memory_manager.query_memory_detail(status.assistant_name, owner)
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
@@ -1039,6 +1062,11 @@ class AssistantManager:
         status = self.history_manager.query_or_init_status(owner)
         self.memory_manager.set_process_time(content=content, assistant_name=status.assistant_name, owner=owner)
         yield from self.show_memory(owner)
+
+    def dump_memory(self, owner: str) -> Generator[str, Any]:
+        status = self.history_manager.query_or_init_status(owner)
+        content = self.memory_manager.dump_memory_detail(status.assistant_name, owner)
+        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
     def rumor(self, owner: str) -> Generator[str, Any]:
         yestoday = today_begin() - timedelta(days=1)
