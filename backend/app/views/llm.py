@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 from flask import Blueprint, Response, request
 
 from app import assistant_manager
@@ -13,6 +15,7 @@ def assistant_chat_stream(owner: str):
     f: dict = request.get_json()
     prompt: str = f.get("prompt", "")
 
+    g: Iterator[str]
     if prompt == "/info":
         # display user inject prompt
         g = assistant_manager.dump_user_prompt(owner)
@@ -31,6 +34,8 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.new_topic(owner)
     elif prompt == "/dump_memory":
         g = assistant_manager.dump_memory(owner)
+    elif prompt == "/debug_compress":
+        g = assistant_manager.debug_update_memory()
     elif prompt.startswith("/switch "):
         # 切换助理角色, 自动维持上一次使用的模式
         args = prompt.removeprefix("/switch ")

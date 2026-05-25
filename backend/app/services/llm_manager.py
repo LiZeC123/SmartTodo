@@ -1,8 +1,7 @@
 import json
 import re
-from collections.abc import Callable, Generator, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from datetime import datetime, timedelta
-from typing import Any
 
 import sqlalchemy as sal
 from openai.types.chat import (
@@ -210,14 +209,6 @@ class AssistantHistoryManager:
             return today_begin()
         else:
             return last.create_time
-
-    def get_activate_assistant_names(self, owner: str) -> Iterable[str]:
-        """最近一天活跃的助理列表, 可能存在用户单方面插入的信息, 如果助手还未回复则不视为活跃"""
-        start = now() - timedelta(days=1)
-        stmt = sal.select(History.assistant_name.distinct()).where(
-            History.owner == owner, History.create_time > start, History.role == "assistant"
-        )
-        return self.db.scalars(stmt)
 
     def get_recent_assistant_list(self, owner: str) -> Sequence[str]:
         """按照最后活动顺序获得所有交互过的助理列表"""
@@ -837,7 +828,7 @@ class AssistantManager:
         mp = ChatCompletionUserMessageParam(role="user", content=memory)
         return [sp, mp] + [msg.to_openai() for msg in records]
 
-    def generate(self, owner: str, *, enable_tools=False) -> Generator[str, Any]:
+    def generate(self, owner: str, *, enable_tools=False) -> Iterator[str]:
         """流式生成回复：后台消费 LLM 流并保存，前台推送给客户端"""
         if not enable_tools:
             history = self.get_history(owner)
@@ -847,7 +838,7 @@ class AssistantManager:
             yield from self._comsume_tool_stream(owner)
             yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
 
-    def _consume_simple_stream(self, stream: Generator[str, Any], owner: str) -> Generator[str, Any]:
+    def _consume_simple_stream(self, stream: Iterator[str], owner: str) -> Iterator[str]:
         """消费简单模式的流"""
         full_answer = []
         try:
@@ -868,7 +859,7 @@ class AssistantManager:
             content = "".join(full_answer)
             self.history_manager.add_assistant_answer(content, owner)
 
-    def _comsume_tool_stream(self, owner: str) -> Generator[str, Any]:
+    def _comsume_tool_stream(self, owner: str) -> Iterator[str]:
         tool_desc, tool_map = self.make_tools(owner)
 
         while True:
@@ -898,7 +889,7 @@ class AssistantManager:
                 self.history_manager.add_assistant_answer(content, owner)
                 return
 
-    def make_tools(self, owner: str) -> tuple[Iterable[ChatCompletionToolUnionParam], dict[str, Callable[[str], str]]]:
+    def make_tools(self, owner: str) -> tuple[Sequence[ChatCompletionToolUnionParam], dict[str, Callable[[str], str]]]:
         def create_f(arg_json: str) -> str:
             try:
                 args: dict[str, str] = json.loads(arg_json)
@@ -934,14 +925,14 @@ class AssistantManager:
 
         return [CreatItemTool, AnyQueryTool], {"create_item": create_f, "query_info": query_f}
 
-    def chat(self, prompt: str, owner: str) -> Generator[str, Any]:
+    def chat(self, prompt: str, owner: str) -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)
         config = self.role_manager.get_role(name=status.assistant_name)
         inject_content = self.make_user_inject_content(status, owner)
         self.history_manager.add_user_prompt(prompt, inject_content, owner)
         return self.generate(owner, enable_tools=bool(config.enable_tools))
 
-    def remake(self, owner: str) -> Generator[str, Any]:
+    def remake(self, owner: str) -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)
         config = self.role_manager.get_role(name=status.assistant_name)
         self.history_manager.remove_last_assistant(owner)
@@ -955,17 +946,17 @@ class AssistantManager:
             self.history_manager.remove_last_pair(owner)
         return True
 
-    def replace(self, prompt: str, owner: str) -> Generator[str, Any]:
+    def replace(self, prompt: str, owner: str) -> Iterator[str]:
         self.history_manager.remove_last_pair(owner)
         return self.chat(prompt, owner)
 
-    def auto_switch(self, *, role_keyword: str, owner: str) -> Generator[str, Any]:
+    def auto_switch(self, *, role_keyword: str, owner: str) -> Iterator[str]:
         config = self.role_manager.get_role(keyword=role_keyword)
         self.history_manager.switch(role_config=config, owner=owner)
         content = f"切换到角色: {config.name}"
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
-    def change_mode(self, role_mode: int, owner: str) -> Generator[str, Any]:
+    def change_mode(self, role_mode: int, owner: str) -> Iterator[str]:
         self.history_manager.change_mode(role_mode, owner)
         content = f"切换到模式: {assistant_mode_str(role_mode)}"
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
@@ -991,7 +982,7 @@ class AssistantManager:
 
         return content
 
-    def get_role_info_list(self) -> Generator[str, Any]:
+    def get_role_info_list(self) -> Iterator[str]:
         raw_list = self.role_manager.get_role_list()
         for role in raw_list:
             name = role.name
@@ -1000,7 +991,7 @@ class AssistantManager:
             yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
         yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
 
-    def show_cost(self, owner: str) -> Generator[str, Any]:
+    def show_cost(self, owner: str) -> Iterator[str]:
         head = "角色: 记忆字符数+对话字符数（轮数）= 总字符数(预计token数)"
         report = [head]
         names = self.history_manager.get_recent_assistant_list(owner)
@@ -1025,14 +1016,14 @@ class AssistantManager:
         report.extend([f"{d}: {total_cnt / KB:6.2f} KB / {msg_cnt // 2:4d} Msg" for d, total_cnt, msg_cnt in rows])
         yield f"data: {json.dumps({'text': '\n'.join(report), 'done': True})}\n\n"
 
-    def show_memory(self, owner: str) -> Generator[str, Any]:
+    def show_memory(self, owner: str) -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)
         start_time = self.memory_manager.query_msg_start_time(status.assistant_name, owner)
         content = f"原始对话起始时间: {get_str_from_datetime(start_time)}\n"
         content += self.memory_manager.query_memory_detail(status.assistant_name, owner)
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
-    def show_last_reason(self, owner: str) -> Generator[str, Any]:
+    def show_last_reason(self, owner: str) -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)
         memory_reason = self.memory_manager.query_last_reason(status.assistant_name, owner)
 
@@ -1042,12 +1033,12 @@ class AssistantManager:
         content = f"压缩记忆: \n{memory_reason}\n\n流言蜚语: \n {rumor_reason}"
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
-    def new_topic(self, owner: str) -> Generator[str, Any]:
+    def new_topic(self, owner: str) -> Iterator[str]:
         inject = "你需要根据现有的近期话题主动发起一个新话题"
         self.history_manager.add_user_prompt("", inject, owner, tag=AssistantTagType.NewTopic)
         yield from self.generate(owner)
 
-    def set_memory(self, memory_type: str, content: str, owner: str) -> Generator[str, Any]:
+    def set_memory(self, memory_type: str, content: str, owner: str) -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)
         if memory_type == "设定":
             self.memory_manager.stabilize_role_setting(
@@ -1058,7 +1049,7 @@ class AssistantManager:
 
         yield from self.show_memory(owner)
 
-    def set_time(self, time_str: str, owner: str) -> Generator[str, Any]:
+    def set_time(self, time_str: str, owner: str) -> Iterator[str]:
         """设置原始聊天上下文起始时间, 支持待办事项截止日期相同格式的时间, 或者字符串'now'表示设置为当前时间"""
         if time_str == "now":
             content = now_str()
@@ -1069,12 +1060,12 @@ class AssistantManager:
         self.memory_manager.set_process_time(content=content, assistant_name=status.assistant_name, owner=owner)
         yield from self.show_memory(owner)
 
-    def dump_memory(self, owner: str) -> Generator[str, Any]:
+    def dump_memory(self, owner: str) -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)
         content = self.memory_manager.dump_memory_detail(status.assistant_name, owner)
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
-    def rumor(self, owner: str) -> Generator[str, Any]:
+    def rumor(self, owner: str) -> Iterator[str]:
         yestoday = today_begin() - timedelta(days=1)
         yield f"data: {json.dumps({'text': '正在生成流言蜚语\n', 'done': False})}\n\n"
         self.memory_manager.rumor_propagation(yestoday, owner)
@@ -1082,7 +1073,7 @@ class AssistantManager:
         rumor_text = rumor.content if rumor else ""
         yield f"data: {json.dumps({'text': rumor_text, 'done': False})}\n\n"
 
-    def rumor_propagation(self, target_keyword: str, owner: str) -> Generator[str, Any]:
+    def rumor_propagation(self, target_keyword: str, owner: str) -> Iterator[str]:
         rumor_detail = self.memory_manager.query_rumor(owner)
         if not rumor_detail:
             yield f"data: {json.dumps({'text': '当前没有流言蜚语', 'done': True})}\n\n"
@@ -1099,7 +1090,7 @@ class AssistantManager:
         config = self.role_manager.get_role(name=status.assistant_name)
         yield from self.generate(owner, enable_tools=config.enable_tools)
 
-    def inject(self, inject_data: str, user_prompt: str, owner: str) -> Generator[str, Any]:
+    def inject(self, inject_data: str, user_prompt: str, owner: str) -> Iterator[str]:
         self.history_manager.add_user_prompt(user_prompt, inject_data, owner)
         yield from self.generate(owner)
 
@@ -1223,7 +1214,7 @@ class AssistantManager:
         end_time = get_datetime_from_str(end_time_str)
         return self.history_manager.get_more_web_history(end_time=end_time, owner=owner)
 
-    def dump_user_prompt(self, owner: str) -> Generator[str, Any]:
+    def dump_user_prompt(self, owner: str) -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)
         mode = assistant_mode_str(status.assistant_mode)
         config = self.role_manager.get_role(name=status.assistant_name)
@@ -1261,3 +1252,8 @@ class AssistantManager:
 
         # 完成更新后清除所有缓存, 由于1天仅更新一次, 因此也只需要在更新后清除缓存
         self.memory_manager.cache.clear()
+
+    def debug_update_memory(self) -> Iterator[str]:
+        yield f"data: {json.dumps({'text': '正在执行记忆压缩操作\n', 'done': False})}\n\n"
+        self.auto_update_memory()
+        yield f"data: {json.dumps({'text': '记忆压缩完毕\n', 'done': False})}\n\n"

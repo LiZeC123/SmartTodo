@@ -128,6 +128,8 @@ const COMMANDS = [
   { command: '/rk', description: '重新生成最后一次回答', needsSpace: false },
   { command: '/rc', description: '替换最后一条用户消息', needsSpace: true },
   { command: '/delete', description: '删除n轮对话 (参数 [对话轮数])', needsSpace: true },
+
+  { command: '/debug_compress', description: '触发自动压缩指令', needsSpace: false },
 ]
 
 // ---------- 响应式数据 ----------
