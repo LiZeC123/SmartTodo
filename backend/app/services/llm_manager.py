@@ -387,7 +387,7 @@ class AssistantMemoryManager:
         if topic_num < 1 or topic_num > 15:
             topic_num = 1
 
-        k = f"{owner}:{assistant_name}:topic"
+        k = f"{owner}:{assistant_name}:{topic_num}:topic"
         v = self.cache.get(k)
         if v:
             return v
@@ -462,11 +462,6 @@ class AssistantMemoryManager:
         if diary_num < 1 or diary_num > 10:
             diary_num = 1
 
-        k = f"{owner}:{assistant_name}:diary"
-        v = self.cache.get(k)
-        if v:
-            return v
-
         min_id, content = self.__query_watermark(assistant_name, owner, MemoryDetailType.Milestone)
         stmt = (
             sal.select(MemoryDetail)
@@ -475,19 +470,14 @@ class AssistantMemoryManager:
                 MemoryDetail.assistant_name == assistant_name,
                 MemoryDetail.tag == MemoryDetailType.Diary,
                 MemoryDetail.id > min_id,
-                MemoryDetail.content < end_time,
+                MemoryDetail.content_time < end_time,
             )
             .order_by(MemoryDetail.id.desc())
             .limit(diary_num)
         )
 
         content.extend([f"{r.content_time.strftime('%Y-%m-%d')}\n{r.content}\n" for r in self.db.scalars(stmt)])
-        if len(content) == 0:
-            self.cache.set(k, "", ex=600)
-            return ""
-
         total = "\n".join(content)
-        self.cache.set(k, total, self.CACHE_EXPIRE_TIME)
         return total
 
     def query_last_reason(self, assistant_name: str, owner: str) -> str:
