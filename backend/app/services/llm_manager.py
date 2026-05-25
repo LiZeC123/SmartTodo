@@ -1256,4 +1256,4 @@ class AssistantManager:
     def debug_update_memory(self) -> Iterator[str]:
         yield f"data: {json.dumps({'text': '正在执行记忆压缩操作\n', 'done': False})}\n\n"
         self.auto_update_memory()
-        yield f"data: {json.dumps({'text': '记忆压缩完毕\n', 'done': False})}\n\n"
+        yield f"data: {json.dumps({'text': '记忆压缩完毕\n', 'done': True})}\n\n"
