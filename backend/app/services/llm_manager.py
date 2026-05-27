@@ -688,6 +688,7 @@ class AssistantMemoryManager:
         content_time = today_begin() - timedelta(days=1)
         ans = []
 
+        has_error = False
         setting = details.get("新增设定", "").strip()
         if len(setting) > 0:
             item = make_memory_detail(
@@ -698,6 +699,8 @@ class AssistantMemoryManager:
                 content_time=content_time,
             )
             ans.append(item)
+        else:
+            has_error = True
 
         preference = details.get("用户偏好", "").strip()
         if len(preference) > 0:
@@ -709,6 +712,8 @@ class AssistantMemoryManager:
                 content_time=content_time,
             )
             ans.append(item)
+        else:
+            has_error = True
 
         topics = details.get("近期话题", "").strip().splitlines()
         for topic in topics:
@@ -720,6 +725,8 @@ class AssistantMemoryManager:
                 content_time=content_time,
             )
             ans.append(item)
+        else:
+            has_error = True
 
         diary = details.get("个人日记", "").strip()
         if len(diary) > 0:
@@ -727,6 +734,12 @@ class AssistantMemoryManager:
                 diary, assistant_name=assistant_name, owner=owner, tag=MemoryDetailType.Diary, content_time=content_time
             )
             ans.append(item)
+        else:
+            has_error = True
+
+        if has_error:
+            msg = "\n".join((f"{k}: {v}" for k, v in details.items()))
+            logger.warning(f"记忆项目存在提取失败: {msg}")
 
         return ans
 
