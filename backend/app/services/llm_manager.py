@@ -329,7 +329,7 @@ class AssistantMemoryManager:
     ) -> None:
         self.db = db
         self.role_manager = role_manager
-        self.cliet = llm_client
+        self.client = llm_client
         self.history_manager = history_manager
 
     def query_memory_detail(self, assistant_name: str, owner: str) -> str:
@@ -536,7 +536,7 @@ class AssistantMemoryManager:
         prompt = LongTermMemoryPrompt.format(
             role_desc=config.get_self_desc(), existing_content=existing_content, new_content=new_content
         )
-        reason, content = self.cliet.generate_one_shot(prompt)
+        reason, content = self.client.generate_one_shot(prompt)
         if content is None:
             logger.error(f"[{owner}:{config.name}]: 模型返回记忆为空")
             return False
@@ -602,7 +602,7 @@ class AssistantMemoryManager:
         diary_text = "\n".join(diaries)
         # 根据所有人的日记获得一个用户全天行为的客观描述
         prompt = RumorMemoryPrompt.format(diary_text=diary_text)
-        reason, content = self.cliet.generate_one_shot(prompt)
+        reason, content = self.client.generate_one_shot(prompt)
         if not content:
             logger.warning(f"{owner}: 流言蜚语计算, 模型返回为空")
             return False
@@ -657,7 +657,7 @@ class AssistantMemoryManager:
 
         # 处理最后一个章节
         if current_title is not None:
-            sections[current_title] = "".join(current_content).rstrip("\n")
+            sections[current_title] = "\n".join(current_content).rstrip("\n")
 
         return sections
 
@@ -693,6 +693,9 @@ class AssistantMemoryManager:
             has_error = True
 
         topics = details.get("近期话题", "").strip().splitlines()
+        if not topics:
+            has_error = True
+
         for topic in topics:
             item = make_memory_detail(
                 topic,
@@ -809,7 +812,7 @@ class AssistantManager:
             stream = self.llm_manager.generate_stream(history)
             yield from self._consume_simple_stream(stream, owner)
         else:
-            yield from self._comsume_tool_stream(owner)
+            yield from self._consume_tool_stream(owner)
             yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
 
     def _consume_simple_stream(self, stream: Iterator[str], owner: str) -> Iterator[str]:
@@ -833,7 +836,7 @@ class AssistantManager:
             content = "".join(full_answer)
             self.history_manager.add_assistant_answer(content, owner)
 
-    def _comsume_tool_stream(self, owner: str) -> Iterator[str]:
+    def _consume_tool_stream(self, owner: str) -> Iterator[str]:
         tool_desc, tool_map = self.make_tools(owner)
 
         while True:
@@ -877,6 +880,7 @@ class AssistantManager:
                 self.item_manager.create(item)
                 self.item_manager.db.commit()
             except Exception as e:
+                logger.exception(e)
                 return f"error: {e}"
             return "success"
 
@@ -895,6 +899,7 @@ class AssistantManager:
                 logger.info(f"[{config.name}] 提问 [{question}] 获得回答 [{content}]")
                 return content or "查询结果为空"
             except Exception as e:
+                logger.exception(e)
                 return f"error: {e}"
 
         return [CreatItemTool, AnyQueryTool], {"create_item": create_f, "query_info": query_f}
