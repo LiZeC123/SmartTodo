@@ -48,7 +48,6 @@ from app.template.prompt import (
 from app.template.tools import AnyQueryTool, CreatItemTool
 from app.tools.llm import LLMClient
 from app.tools.log import logger
-from app.tools.redis import MemoryCache
 from app.tools.time import (
     format_timedelta,
     get_datetime_from_str,
@@ -330,7 +329,6 @@ class AssistantMemoryManager:
     ) -> None:
         self.db = db
         self.role_manager = role_manager
-        self.cache = MemoryCache()
         self.cliet = llm_client
         self.history_manager = history_manager
 
@@ -387,11 +385,6 @@ class AssistantMemoryManager:
         if topic_num < 1 or topic_num > 15:
             topic_num = 1
 
-        k = f"{owner}:{assistant_name}:{topic_num}:topic"
-        v = self.cache.get(k)
-        if v:
-            return v
-
         stmt = (
             sal.select(MemoryDetail)
             .where(
@@ -405,19 +398,12 @@ class AssistantMemoryManager:
         records = self.db.scalars(stmt).all()
 
         if len(records) == 0:
-            self.cache.set(k, "", ex=600)
             return ""
 
         total_content = "\n".join([r.content for r in records])
-        self.cache.set(k, total_content, self.CACHE_EXPIRE_TIME)
         return total_content
 
     def query_role_setting(self, assistant_name: str, owner: str) -> str:
-        k = f"{owner}:{assistant_name}:setting"
-        v = self.cache.get(k)
-        if v:
-            return v
-
         min_id, content = self.__query_watermark(assistant_name, owner, MemoryDetailType.FixedSetting)
         stmt = sal.select(MemoryDetail).where(
             MemoryDetail.owner == owner,
@@ -428,19 +414,12 @@ class AssistantMemoryManager:
 
         content.extend([r.content for r in self.db.scalars(stmt)])
         if len(content) == 0:
-            self.cache.set(k, "", ex=600)
             return ""
 
         total = "\n".join(content)
-        self.cache.set(k, total, self.CACHE_EXPIRE_TIME)
         return total
 
     def query_preference(self, assistant_name: str, owner: str) -> str:
-        k = f"{owner}:{assistant_name}:preference"
-        v = self.cache.get(k)
-        if v:
-            return v
-
         min_id, content = self.__query_watermark(assistant_name, owner, MemoryDetailType.FixedPreference)
         stmt = sal.select(MemoryDetail).where(
             MemoryDetail.owner == owner,
@@ -451,11 +430,9 @@ class AssistantMemoryManager:
 
         content.extend([r.content for r in self.db.scalars(stmt)])
         if len(content) == 0:
-            self.cache.set(k, "", ex=600)
             return ""
 
         total = "\n".join(content)
-        self.cache.set(k, total, self.CACHE_EXPIRE_TIME)
         return total
 
     def query_diary(self, diary_num: int, end_time: datetime, assistant_name: str, owner: str) -> str:
@@ -744,9 +721,6 @@ class AssistantMemoryManager:
         return ans
 
     def stabilize_role_setting(self, *, content: str, assistant_name: str, owner: str):
-        k = f"{owner}:{assistant_name}:setting"
-        self.cache.delete(k)
-
         detail = make_memory_detail(
             content,
             reason="手动设置",
@@ -759,9 +733,6 @@ class AssistantMemoryManager:
         self.db.commit()
 
     def stabilize_preference(self, *, content: str, assistant_name: str, owner: str):
-        k = f"{owner}:{assistant_name}:preference"
-        self.cache.delete(k)
-
         detail = make_memory_detail(
             content,
             reason="手动设置",
@@ -1252,9 +1223,6 @@ class AssistantManager:
                 self.memory_manager.update_long_term_memory(config=config, owner=user)
             # 基于已经更新的日记, 计算用户行为轨迹, 作为流言蜚语传播的素材
             self.memory_manager.rumor_propagation(start_time, user)
-
-        # 完成更新后清除所有缓存, 由于1天仅更新一次, 因此也只需要在更新后清除缓存
-        self.memory_manager.cache.clear()
 
     def debug_update_memory(self) -> Iterator[str]:
         yield f"data: {json.dumps({'text': '正在执行记忆压缩操作\n', 'done': False})}\n\n"
