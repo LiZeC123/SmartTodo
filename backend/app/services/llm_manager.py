@@ -921,24 +921,25 @@ class AssistantManager:
 
         def get_deadline_f(arg_json: str) -> str:
             try:
-                items = self.item_manager.get_deadline_item(owner)
-                if not items:
+                groups = self.item_manager.get_deadline_item(owner)
+                if not groups:
                     return "当前没有过期的待办事项。"
-                lines = ["以下是所有过期的待办事项：", ""]
+                lines = ["以下是所有过期的待办事项（按分组展示）：", ""]
                 idx = 1
-                for group in items:
+                for group in groups:
                     parent = group.get("self", {})
                     children = group.get("children", [])
-                    all_items: list[dict] = [parent] if parent.get("id") != 0 else []
-                    all_items.extend(children)
-                    for d in all_items:
+                    group_name = parent.get("name", "全局任务")
+                    lines.append(f"【分组: {group_name}】")
+                    for d in children:
                         name = d.get("name", "(无名称)")
                         deadline = d.get("deadline", "(无截止时间)")
                         priority = d.get("priority", "(无优先级)")
-                        lines.append(f"{idx}. {name}")
-                        lines.append(f"   截止时间: {deadline}")
-                        lines.append(f"   优先级: {priority}")
+                        lines.append(f"  {idx}. {name}")
+                        lines.append(f"     截止时间: {deadline}")
+                        lines.append(f"     优先级: {priority}")
                         idx += 1
+                    lines.append("")
                 return "\n".join(lines)
             except Exception as e:
                 logger.exception(e)
