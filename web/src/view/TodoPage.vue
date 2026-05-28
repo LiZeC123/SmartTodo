@@ -44,7 +44,7 @@ let homePage: string | undefined = undefined
 
 onMounted(() => {
   parent = $router.params.id as string
-  if(parent != undefined) {
+  if (parent != undefined) {
     homePage = "/todo"
   }
   loadItem()
@@ -78,24 +78,12 @@ let aTask: Ref<Item[]> = ref([])
 const tCfg = [
   {
     name: 'angle-double-down',
-    desc: '退回此项目',
+    desc: '退回到活动清单',
     f: (index: number, id: string) => {
       axios.post<boolean>('/item/back', { id }).then(() => {
         aTask.value.push(...tTask.value.splice(index, 1))
         aTask.value.sort(byCalcValue)
       })
-    }
-  },
-  {
-    name: 'calculator',
-    desc: '增加预计时间',
-    f: (index: number, id: string) => {
-      const expT = tTask.value[index].expected_tomato
-      if (expT >= 4) {
-        alert("单个任务的番茄钟数量不建议超过4个")
-      } else {
-        axios.post('/item/incExpTime', { id }).then(() => (tTask.value[index].expected_tomato += 1))
-      }
     }
   }
 ]
@@ -109,13 +97,25 @@ const aCfg = [
     }
   },
   {
-    name: 'list-ol',
-    desc: '转为今日任务',
+    name: 'angle-double-up',
+    desc: '添加到今日任务',
     f: (index: number, id: string) => {
       axios.post('/item/toTodayTask', { id }).then(() => {
         // aTask.value[index].create_time = new Date().toISOString()
         tTask.value.push(...aTask.value.splice(index, 1))
       })
+    }
+  },
+  {
+    name: 'calculator',
+    desc: '增加预计时间',
+    f: (index: number, id: string) => {
+      const expT = aTask.value[index].expected_tomato
+      if (expT >= 4) {
+        alert("单个任务的番茄钟数量不建议超过4个")
+      } else {
+        axios.post('/item/incExpTime', { id }).then(() => (aTask.value[index].expected_tomato += 1))
+      }
     }
   }
 ]
