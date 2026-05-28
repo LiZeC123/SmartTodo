@@ -6,6 +6,7 @@ import sqlalchemy as sal
 
 from app.models.base import Database
 from app.models.event import CheckinState, EventLog
+from app.models.weight import WeightLog
 from app.services.config_manager import ConfigManager
 from app.services.item_manager import ItemManager
 from app.tools.log import logger
@@ -50,9 +51,20 @@ class CheckinManager:
         self.db = db
         self.item_manager = item_manager
         self.config_manager = config_manager
+        self._data_sources = [
+            self._event_log_source,
+            self._weight_log_source,
+        ]
+
+    def _get_checkin_item_names(self, owner: str) -> set[str]:
+        names = set(self.item_manager.select_checkin_item(owner))
+        stmt = sal.select(WeightLog.id).where(WeightLog.owner == owner).limit(1)
+        if self.db.scalar(stmt) is not None:
+            names.add("每日体重打卡")
+        return names
 
     def get_all_data(self, owner: str):
-        names = self.item_manager.select_checkin_item(owner)
+        names = self._get_checkin_item_names(owner)
         start = the_month_begin()
         end = now()
         return {name: self.get_data(name, start, end, owner) for name in names}
@@ -67,7 +79,7 @@ class CheckinManager:
         emoji = self.get_emoji(name)
         return {"record": [r.strftime("%Y-%m-%d %H:%M:%S") for r in record], "emoji": emoji}
 
-    def get_checkin_datetime(self, name: str, start: datetime, end: datetime, owner: str) -> Sequence[datetime]:
+    def _event_log_source(self, name: str, start: datetime, end: datetime, owner: str) -> Sequence[datetime]:
         stmt = sal.select(EventLog.create_time).where(
             EventLog.owner == owner,
             EventLog.create_time > start,
@@ -76,12 +88,36 @@ class CheckinManager:
         )
         return self.db.scalars(stmt).all()
 
-    def today_checked(self, name: str, owner: str) -> bool:
-        stmt = sal.select(EventLog.id).where(
-            EventLog.owner == owner, EventLog.create_time > today_begin(), EventLog.msg.like(f"%完成%{name}%")
+    def _weight_log_source(self, name: str, start: datetime, end: datetime, owner: str) -> Sequence[datetime]:
+        if "体重" not in name:
+            return []
+        stmt = sal.select(WeightLog.create_time).where(
+            WeightLog.owner == owner,
+            WeightLog.create_time > start,
+            WeightLog.create_time < end,
         )
-        id = self.db.scalar(stmt)
-        return id is not None
+        return self.db.scalars(stmt).all()
+
+    def get_checkin_datetime(self, name: str, start: datetime, end: datetime, owner: str) -> Sequence[datetime]:
+        results: list[datetime] = []
+        for source in self._data_sources:
+            results.extend(source(name, start, end, owner))
+        # 按日期去重, 确保同一天多次打卡仅保留一次
+        seen: set[date] = set()
+        deduped: list[datetime] = []
+        for r in results:
+            d = r.date()
+            if d not in seen:
+                seen.add(d)
+                deduped.append(r)
+        return deduped
+
+    def today_checked(self, name: str, owner: str) -> bool:
+        begin = today_begin()
+        for source in self._data_sources:
+            if len(source(name, begin, now(), owner)) > 0:
+                return True
+        return False
 
     def select_checkin_state(self, name: str, owner: str) -> CheckinState | None:
         stmt = sal.select(CheckinState).where(CheckinState.item_name == name, CheckinState.owner == owner).limit(1)
@@ -91,7 +127,7 @@ class CheckinManager:
         users = self.config_manager.get_all_users()
         end_day = today() - timedelta(days=1)
         for user in users:
-            names = self.item_manager.select_checkin_item(user)
+            names = self._get_checkin_item_names(user)
             for name in names:
                 self.update_checkin_state(name=name, end_day=end_day, owner=user)
 
