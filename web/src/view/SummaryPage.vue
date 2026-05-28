@@ -4,8 +4,8 @@
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
     <EventTime :items="eventLineItem"></EventTime>
     <SmartAnalysis :report="smartReport"></SmartAnalysis>
-    <ItemGroupedList title="" :data="tTask"></ItemGroupedList> 
-    <ItemList title="临期任务汇总" :data="dlTask" ></ItemList>
+    <ItemGroupedList title="" :data="tTask"></ItemGroupedList>
+    <ItemGroupedList title="临期任务汇总" :data="dlTask"></ItemGroupedList>
     <Footer :is-admin="false" :config="footerConfig"></Footer>
   </div>
 </template>
@@ -13,19 +13,17 @@
 <script setup lang="ts">
 import axios from 'axios'
 import { onMounted, ref, type Ref } from 'vue'
-import router from '@/router'
 
 import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 import TimeLine from "@/components/timeline/TimeLine.vue"
 import EventTime from '@/components/eventline/EventLine.vue'
 import SmartAnalysis from '@/components/analysis/SmartAnalysis.vue'
 import ItemGroupedList from '@/components/item/ItemGroupedList.vue'
-import ItemList from '@/components/item/ItemList.vue'
 import Footer from '@/components/footer/TodoFooter.vue'
 
 import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/types'
 import type { EventItem } from '@/components/eventline/types'
-import type {SmartAnalysisReport} from '@/components/analysis/types'
+import type { SmartAnalysisReport } from '@/components/analysis/types'
 import type { FooterConfig } from '@/components/footer/types'
 import type { GroupedItem, Item } from '@/components/item/types'
 
@@ -63,7 +61,7 @@ function loadEventLineItems() {
 
 // ========================================================== SmartAnalysis 相关配置 ==========================================================
 
-let smartReport = ref<SmartAnalysisReport>({count: 0, groups: []})
+let smartReport = ref<SmartAnalysisReport>({ count: 0, groups: [] })
 
 
 function loadAnalysisReport() {
@@ -81,10 +79,10 @@ function loadItemWithSubTask() {
 }
 
 // ========================================================== ItemList 相关配置 ==========================================================
-let dlTask: Ref<Item[]> = ref([])
+let dlTask: Ref<GroupedItem[]> = ref([])
 
 function loadDLItem() {
-  axios.post<Item[]>('/item/getDeadlineItem').then((res) => { dlTask.value = res.data })
+  axios.post<GroupedItem[]>('/item/getDeadlineItem').then((res) => { dlTask.value = res.data })
 }
 
 
