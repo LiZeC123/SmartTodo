@@ -13,7 +13,36 @@ from app.tools.time import get_month_bounds, now, the_month_begin, today, today_
 
 icon_map = {"运动": "🏃🏻‍♀️", "早起": "🛏", "琴": "🎵", "体重": "🏋"}
 
-normal_emoji = ['✅', '⏳', '📅', '⏰', '🔔', '📊', '🏆', '⭐', '❌', '✏️', '🌟', '🎯', '🔄', '📌', '🗓️', '⏲️', '🔥', '💡', '📝', '🧩', '🧘', '🎲', '🧭', '🫧', '🔁']
+normal_emoji = [
+    "✅",
+    "⏳",
+    "📅",
+    "⏰",
+    "🔔",
+    "📊",
+    "🏆",
+    "⭐",
+    "❌",
+    "✏️",
+    "🌟",
+    "🎯",
+    "🔄",
+    "📌",
+    "🗓️",
+    "⏲️",
+    "🔥",
+    "💡",
+    "📝",
+    "🧩",
+    "🧘",
+    "🎲",
+    "🧭",
+    "🫧",
+    "🔁",
+]
+
+# 连续完成21天打卡可以获得一次补卡机会
+MAKE_UP_DAYS = 21
 
 
 class CheckinManager:
@@ -66,7 +95,6 @@ class CheckinManager:
             for name in names:
                 self.update_checkin_state(name=name, end_day=end_day, owner=user)
 
-
     def update_checkin_state(self, name: str, end_day: date, owner: str):
         """注意: 不要混用datetime和date类型, 两者具有继承关系, 但无法进行比较"""
         start = datetime(year=2025, month=1, day=1)
@@ -106,6 +134,12 @@ class CheckinManager:
         else:
             state.start_prg_date = cursor
             state.progress = streak
+
+        # 计算补卡相关逻辑
+        if state.progress >= MAKE_UP_DAYS:
+            state.start_prg_date += timedelta(days=MAKE_UP_DAYS)
+            state.make_up_count += 1
+
         self.db.flush()
         return state
 
@@ -121,7 +155,7 @@ class CheckinManager:
                 "continuous_count": state.consecutive_days + 1,
                 "achievement_count": state.achievement_count,
                 "remaining_make_up": state.make_up_count,
-                "process": state.progress+1,
+                "process": state.progress + 1,
             }
         else:
             return {
