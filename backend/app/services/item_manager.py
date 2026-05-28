@@ -230,12 +230,6 @@ class ItemManager:
             return False
 
         item.expected_tomato += 1
-        if item.used_tomato > 0:
-            add_event_log(
-                self.db,
-                owner,
-                f"用户增加任务[{item.name}]的预计番茄钟数量, 该任务预计需要{item.expected_tomato}个番茄钟, 已完成{item.used_tomato}个番茄钟",
-            )
         self.db.flush()
         return item is not None
 
@@ -376,7 +370,6 @@ class ItemManager:
     def remove_by_id(self, xid: int, owner: str) -> bool:
         item = self.select_with_authority(xid, owner)
         self.remove(item)
-        add_event_log(self.db, owner, f"用户手动删除任务[{item.name}]")
         return True
 
     def garbage_collection(self):
