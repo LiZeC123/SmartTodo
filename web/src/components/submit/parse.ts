@@ -62,11 +62,28 @@ function inferFileType(name: string): boolean {
   const fileType = name.substring(dot + 1)
 
   const knowTypes = [
-        "zip", "rar", "tar", "gz", "7z",
-        "jpg", "png", "gif",
-        "exe", "msi",
-        "pdf", "xls", "xlsx", "doc", "docx", "ppt", "txt"
-    ];
+    // 压缩包
+    'zip',
+    'rar',
+    'tar',
+    'gz',
+    '7z',
+    // 常见图片
+    'jpg',
+    'png',
+    'gif',
+    // 安装包
+    'exe',
+    'msi',
+    // 常见文档
+    'pdf',
+    'xls',
+    'xlsx',
+    'doc',
+    'docx',
+    'ppt',
+    'txt'
+  ]
 
   if (knowTypes.indexOf(fileType) !== -1 && name.indexOf('http') !== -1) {
     return confirm('检测到链接类型为文件, 是否按照文件类型进行下载?')
@@ -103,15 +120,18 @@ function inferRepeatable(name: string): boolean {
 
 const DayMillisecond = 24 * 60 * 60 * 1000
 
-function parsePriority(priority: TodoPriority) {
+function parsePriority(priority: TodoPriority): number {
   const time = new Date()
+  // 高优任务当天完成, 非高优任务截止日期相对当前日期推迟一段时间
   switch (priority) {
     case 'p0':
-      return getTomorrowMidnight().getTime()
+      return getTodayEnd().getTime()
     case 'p1':
-      return getThisSaturdayEnd().getTime()
+      return time.getTime() + 3 * DayMillisecond
     case 'p2':
-      return getNextSaturdayEnd().getTime()
+      return time.getTime() + 7 * DayMillisecond
+    default:
+      throw new Error('未知的优先级类型')
   }
 }
 
@@ -121,33 +141,9 @@ function getEndOfDay(date: Date): Date {
   return result
 }
 
-function getTomorrowMidnight(): Date {
-  const now = new Date()
-  const tomorrow = new Date(now)
-  tomorrow.setDate(now.getDate() + 1)
-  return getEndOfDay(tomorrow)
-}
-
-function getThisSaturdayEnd(): Date {
-  const now = new Date()
-  const currentDay = now.getDay() // 0 = 周日, 6 = 周六
-  // 距离本周六的天数（0 表示今天就是周六）
-  const daysUntilSaturday = (6 - currentDay + 7) % 7
-  const thisSaturday = new Date(now)
-  thisSaturday.setDate(now.getDate() + daysUntilSaturday)
-  return getEndOfDay(thisSaturday)
-}
-
-function getNextSaturdayEnd(): Date {
-  const now = new Date()
-  const currentDay = now.getDay()
-  // 距离本周六的天数（0 表示今天就是周六，此时下周六是 7 天后）
-  let daysUntilThisSaturday = (6 - currentDay + 7) % 7
-  // 如果今天已经是周六，daysUntilThisSaturday = 0，下周六需再加 7 天
-  const daysUntilNextSaturday = daysUntilThisSaturday === 0 ? 7 : daysUntilThisSaturday + 7
-  const nextSaturday = new Date(now)
-  nextSaturday.setDate(now.getDate() + daysUntilNextSaturday)
-  return getEndOfDay(nextSaturday)
+function getTodayEnd(): Date {
+  const today = new Date()
+  return getEndOfDay(today)
 }
 
 function parseDeadline(deadline: string) {
@@ -167,15 +163,21 @@ function parseDeadline(deadline: string) {
   confirm(`截止日期解析异常: ${deadline}`)
 }
 
-function parseDate(tMonth: string, tDay: string, tHour: string, tMin: string, tSec: string): number {
-    const nowTime = new Date();
-    const nowYear = nowTime.getFullYear();
-    let ans = new Date(nowYear + "-" + tMonth + "-" + tDay + " " + tHour + ":" + tMin + ":" + tSec);
+function parseDate(
+  tMonth: string,
+  tDay: string,
+  tHour: string,
+  tMin: string,
+  tSec: string
+): number {
+  const nowTime = new Date()
+  const nowYear = nowTime.getFullYear()
+  let ans = new Date(nowYear + '-' + tMonth + '-' + tDay + ' ' + tHour + ':' + tMin + ':' + tSec)
   if (ans < nowTime) {
-        const nextYear = nowYear + 1;
-        ans = new Date(nextYear + "-" + tMonth + "-" + tDay + " " + tHour + ":" + tMin + ":" + tSec);
+    const nextYear = nowYear + 1
+    ans = new Date(nextYear + '-' + tMonth + '-' + tDay + ' ' + tHour + ':' + tMin + ':' + tSec)
   }
-    return ans.getTime();
+  return ans.getTime()
 }
 
 function parseWeek(weekDay: number) {
