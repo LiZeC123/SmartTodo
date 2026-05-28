@@ -7,9 +7,9 @@ import axios from 'axios'
 
 // fontAwesome相关配置
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faTrashAlt, faClock, faCheck, faUndo, faAngleDoubleDown, faListOl, faCalculator } from '@fortawesome/free-solid-svg-icons'
+import { faTrashAlt, faClock, faCheck, faUndo, faAngleDoubleDown, faAngleDoubleUp,  faListOl, faCalculator } from '@fortawesome/free-solid-svg-icons'
 import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
-library.add(faTrashAlt, faClock, faCheck, faUndo, faAngleDoubleDown, faListOl, faCalculator)
+library.add(faTrashAlt, faClock, faCheck, faUndo, faAngleDoubleDown, faAngleDoubleUp, faCalculator)
 
 
 // axios相关配置
