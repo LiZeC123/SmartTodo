@@ -315,6 +315,23 @@ class AssistantHistoryManager:
                 return datetime.strptime(day, "%Y-%m-%d")
         return start_day
 
+    def select_recent_tool_call_msgs(self, assistant_name: str, limit: int, owner: str) -> Sequence[History]:
+        stmt = (
+            sal.select(History)
+            .where(
+                History.owner == owner,
+                History.assistant_name == assistant_name,
+                History.role == "assistant",
+                History.tool_call_list_json != "",
+            )
+            .order_by(History.id.desc())
+            .limit(limit)
+        )
+        return list(reversed(self.db.scalars(stmt).all()))
+
+    def select_tool_result_msg(self, tool_call_id: str) -> History | None:
+        return self.db.scalar(sal.select(History).where(History.tool_call_id == tool_call_id, History.role == "tool"))
+
 
 class AssistantMemoryManager:
     RUMOR_ROLE_NAME = "公共"
@@ -1071,6 +1088,28 @@ class AssistantManager:
     def dump_memory(self, owner: str) -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)
         content = self.memory_manager.dump_memory_detail(status.assistant_name, owner)
+        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
+
+    def dump_tool(self, owner: str) -> Iterator[str]:
+        status = self.history_manager.query_or_init_status(owner)
+        msgs = self.history_manager.select_recent_tool_call_msgs(status.assistant_name, 3, owner)
+        if not msgs:
+            yield f"data: {json.dumps({'text': '最近没有工具调用记录', 'done': True})}\n\n"
+            return
+
+        lines: list[str] = []
+        for i, msg in enumerate(msgs):
+            lines.append(f"--- 工具调用 #{i + 1} ---")
+            lines.append(f"时间: {get_str_from_datetime(msg.create_time)}")
+            for tc in json.loads(msg.tool_call_list_json):
+                name = tc["function"]["name"]
+                args = tc["function"]["arguments"]
+                lines.append(f"调用: {name}({args})")
+                result = self.history_manager.select_tool_result_msg(tc["id"])
+                if result:
+                    lines.append(f"返回: {result.content}")
+            lines.append("")
+        content = "\n".join(lines)
         yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
 
     def rumor(self, owner: str) -> Iterator[str]:

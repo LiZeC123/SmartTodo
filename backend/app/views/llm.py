@@ -34,6 +34,8 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.new_topic(owner)
     elif prompt == "/dump_memory":
         g = assistant_manager.dump_memory(owner)
+    elif prompt == "/dump_tool":
+        g = assistant_manager.dump_tool(owner)
     elif prompt == "/debug_compress":
         g = assistant_manager.debug_update_memory()
     elif prompt.startswith("/switch "):
