@@ -45,7 +45,7 @@ from app.template.prompt import (
     RolePalyingSp,
     RumorMemoryPrompt,
 )
-from app.template.tools import AnyQueryTool, CreatItemTool
+from app.template.tools import AnyQueryTool, CreatItemTool, GetDeadlineItemTool
 from app.tools.llm import LLMClient
 from app.tools.log import logger
 from app.tools.time import (
@@ -902,7 +902,36 @@ class AssistantManager:
                 logger.exception(e)
                 return f"error: {e}"
 
-        return [CreatItemTool, AnyQueryTool], {"create_item": create_f, "query_info": query_f}
+        def get_deadline_f(arg_json: str) -> str:
+            try:
+                items = self.item_manager.get_deadline_item(owner)
+                if not items:
+                    return "当前没有过期的待办事项。"
+                lines = ["以下是所有过期的待办事项：", ""]
+                idx = 1
+                for group in items:
+                    parent = group.get("self", {})
+                    children = group.get("children", [])
+                    all_items: list[dict] = [parent] if parent.get("id") != 0 else []
+                    all_items.extend(children)
+                    for d in all_items:
+                        name = d.get("name", "(无名称)")
+                        deadline = d.get("deadline", "(无截止时间)")
+                        priority = d.get("priority", "(无优先级)")
+                        lines.append(f"{idx}. {name}")
+                        lines.append(f"   截止时间: {deadline}")
+                        lines.append(f"   优先级: {priority}")
+                        idx += 1
+                return "\n".join(lines)
+            except Exception as e:
+                logger.exception(e)
+                return f"error: {e}"
+
+        return [CreatItemTool, AnyQueryTool, GetDeadlineItemTool], {
+            "create_item": create_f,
+            "query_info": query_f,
+            "get_deadline_item": get_deadline_f,
+        }
 
     def chat(self, prompt: str, owner: str) -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)

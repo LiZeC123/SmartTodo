@@ -53,3 +53,16 @@ AnyQueryTool = ChatCompletionFunctionToolParam(
         },
     ),
 )
+
+GetDeadlineItemTool = ChatCompletionFunctionToolParam(
+    type="function",
+    function=FunctionDefinition(
+        name="get_deadline_item",
+        description="查询当前用户所有已过期的待办事项, 返回每个过期事项的名称、截止时间和优先级",
+        parameters={
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    ),
+)
