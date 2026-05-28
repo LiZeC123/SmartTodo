@@ -1,7 +1,7 @@
 <template>
     <li :class="['active', { done: doneItem(item) }, mapTypeToClass(item)]">
         <label><input type="checkbox" @change="$emit('done', index, item.id)" :checked="doneItem(item)"
-                :disabled="doneItem(item)" /></label>
+                :disabled="disableItem" /></label>
         <p @mousedown="clickItem(item, $event)">{{ mapName(item) }}</p>
 
         <ButtonGroup :btn-cfg="btnCfg" :index="index" :item="item"></ButtonGroup>
@@ -14,17 +14,21 @@ import { mapName } from './mapper'
 
 import ButtonGroup from "./ButtonGroup.vue";
 import router from '@/router'
+import { computed } from 'vue';
 
 const props = defineProps<{
     item: Item
     index: number
     btnCfg?: Array<ButtonConfig>
+    disable?: boolean
 }>()
 
 const emit = defineEmits<{
     (e: 'done', idx: number, id: string): void
     (e: 'click', event: MouseEvent, item: Item): void
 }>()
+
+
 
 
 function doneItem(item: Item): boolean {
@@ -34,6 +38,12 @@ function doneItem(item: Item): boolean {
         return false
     }
 }
+
+const disableItem = computed(() => {
+    // console.log(props.disable, doneItem(props.item))
+    return props.disable || doneItem(props.item)
+})
+
 
 function mapTypeToClass(item: Item): string {
     if (item.repeatable) {

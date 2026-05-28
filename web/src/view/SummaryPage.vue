@@ -4,8 +4,8 @@
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
     <EventTime :items="eventLineItem"></EventTime>
     <SmartAnalysis :report="smartReport"></SmartAnalysis>
-    <ItemGroupedList title="" :data="tTask"></ItemGroupedList>
-    <ItemGroupedList title="临期任务汇总" :data="dlTask"></ItemGroupedList>
+    <ItemGroupedList title="" :data="tTask" :disable="true"></ItemGroupedList>
+    <ItemGroupedList title="临期任务汇总" :data="dlTask" :disable="true"></ItemGroupedList>
     <Footer :is-admin="false" :config="footerConfig"></Footer>
   </div>
 </template>
