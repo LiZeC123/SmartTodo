@@ -11,7 +11,7 @@ export function parseTitleToData(todoContent: string, priority: TodoPriority) {
   }
 
   // 分析类型
-  let data: CreateItem = {
+  const data: CreateItem = {
     name: name,
     itemType: inferType(name),
     priority: priority,

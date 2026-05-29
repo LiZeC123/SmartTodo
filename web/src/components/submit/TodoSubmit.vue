@@ -56,17 +56,19 @@ function commitTodo() {
     return
   }
 
-  // 当显示优先级选择器时，必须选择有效优先级
-  if (props.enableSubmit && !priority.value) {
-    alert('请先选择优先级')
-    return
-  }
 
   let match = /func (\S+) (.+)/.exec(content)
   if (match !== null) {
+    // 执行指令无需选择优先级
     const data: FuncData = { cmd: match[1], data: match[2] }
     emit('commit', 'func', data)
   } else {
+    // 创建待办事项时, 如果显示优先级选择器，则必须选择有效优先级
+    if (props.enableSubmit && !priority.value) {
+      alert('请先选择优先级')
+      return
+    }
+
     const data = parseTitleToData(todoContent.value, priority.value)
     if (data.itemType === 'file') {
       emit('commit', 'file', data)
