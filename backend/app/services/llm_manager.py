@@ -722,8 +722,6 @@ class AssistantMemoryManager:
                 content_time=content_time,
             )
             ans.append(item)
-        else:
-            has_error = True
 
         diary = details.get("个人日记", "").strip()
         if len(diary) > 0:
