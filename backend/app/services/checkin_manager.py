@@ -164,7 +164,7 @@ class CheckinManager:
 
         state.total_count = total_count
         state.consecutive_days = streak
-        if state.start_prg_date <= cursor:
+        if state.start_prg_date >= cursor:
             # 上次打卡起始日期位于有效区间内, 因此可以直接计算差值
             state.progress = (end_day - state.start_prg_date).days
         else:
