@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterator
 
 from flask import Blueprint, Response, request
@@ -74,7 +75,7 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.chat(prompt, owner)
 
     return Response(
-        g,
+        generate_sse_from(g),
         mimetype="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -82,6 +83,24 @@ def assistant_chat_stream(owner: str):
             "X-Accel-Buffering": "no",  # 禁用Nginx缓冲
         },
     )
+
+
+def generate_sse_from(g: Iterator[str]):
+    """
+    返回一个新迭代器, 对原迭代器的内容进行SSE格式封装
+    """
+    it = iter(g)
+    try:
+        prev = next(it)  # 尝试获取第一个元素
+    except StopIteration:
+        return  # 迭代器为空，直接返回（空生成器）
+
+    for curr in it:  # 遍历剩下的元素
+        # 当前 prev 不是最后一个, done 为False
+        yield f"data: {json.dumps({'text': prev, 'done': False})}\n\n"
+        prev = curr
+    # 循环结束后，prev 是原迭代器的最后一个元素
+    yield f"data: {json.dumps({'text': prev, 'done': True})}\n\n"
 
 
 def parse_switch_args(prompt: str) -> tuple[str, str]:
@@ -100,12 +119,14 @@ def parse_switch_args(prompt: str) -> tuple[str, str]:
 def assistant_history(owner: str):
     return assistant_manager.get_web_history(owner)
 
+
 @llm_bp.post("/api/assistant/history/more")
 @authority_check()
 def more_assistant_history(owner: str):
     f: dict = request.get_json()
-    end_time_str = f.get('before_time', '')
+    end_time_str = f.get("before_time", "")
     return assistant_manager.get_more_web_history(end_time_str, owner)
+
 
 @llm_bp.post("/api/assistant/delete")
 @authority_check()

@@ -828,7 +828,6 @@ class AssistantManager:
             yield from self._consume_simple_stream(stream, owner)
         else:
             yield from self._consume_tool_stream(owner)
-            yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
 
     def _consume_simple_stream(self, stream: Iterator[str], owner: str) -> Iterator[str]:
         """消费简单模式的流"""
@@ -836,8 +835,7 @@ class AssistantManager:
         try:
             for token in stream:
                 full_answer.append(token)
-                yield f"data: {json.dumps({'text': token, 'done': False})}\n\n"
-            yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
+                yield token
         except GeneratorExit as e:
             logger.error(f"推送LLM模型消息到客户端中断: {e}")
             # 继续消费上游数据, 确保已经生成的内容依然可以落库
@@ -846,7 +844,7 @@ class AssistantManager:
         except Exception as e:
             # 发生其他异常时，先尝试发送错误信息（如果客户端还在）
             logger.error(f"推送LLM模型消息到客户端异常: {e}")
-            yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
+            yield str(e)
         finally:
             content = "".join(full_answer)
             self.history_manager.add_assistant_answer(content, owner)
@@ -861,7 +859,7 @@ class AssistantManager:
             stream = self.llm_manager.generate_steam_with_tools(history, tool_desc, tool_calls_list)
             for token in stream:
                 full_answer.append(token)
-                yield f"data: {json.dumps({'text': token, 'done': False})}\n\n"
+                yield token
             if not full_answer:
                 return
 
@@ -977,13 +975,11 @@ class AssistantManager:
     def auto_switch(self, *, role_keyword: str, owner: str) -> Iterator[str]:
         config = self.role_manager.get_role(keyword=role_keyword)
         self.history_manager.switch(role_config=config, owner=owner)
-        content = f"切换到角色: {config.name}"
-        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
+        yield f"切换到角色: {config.name}"
 
     def change_mode(self, role_mode: int, owner: str) -> Iterator[str]:
         self.history_manager.change_mode(role_mode, owner)
-        content = f"切换到模式: {assistant_mode_str(role_mode)}"
-        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
+        yield f"切换到模式: {assistant_mode_str(role_mode)}"
 
     def make_user_inject_content(self, status: Status, owner: str) -> str:
         # 扮演模式不注入任何系统相关的信息
@@ -1011,9 +1007,7 @@ class AssistantManager:
         for role in raw_list:
             name = role.name
             desc = role.short_desc
-            content = f"{name}: {desc}\n"
-            yield f"data: {json.dumps({'text': content, 'done': False})}\n\n"
-        yield f"data: {json.dumps({'text': '', 'done': True})}\n\n"
+            yield f"{name}: {desc}\n"
 
     def show_cost(self, owner: str) -> Iterator[str]:
         head = "角色: 记忆字符数+对话字符数（轮数）= 总字符数(预计token数)"
@@ -1030,7 +1024,7 @@ class AssistantManager:
             delta_times = format_timedelta(now() - start_time)
             txt = f"{name:>8s}: {memory_cost / 1024:2.1f}KB+{char_cost // 1024:3d}KB({conv_cnt:3d}轮)={all_char_cost // 1024:3d}KB({token_cost / 1024:3.1f}K) / {delta_times} "
             report.append(txt)
-        yield f"data: {json.dumps({'text': '\n'.join(report), 'done': False})}\n\n"
+        yield "\n".join(report)
 
         head = "\n\n当前角色成本明细:"
         report = [head]
@@ -1038,14 +1032,14 @@ class AssistantManager:
         start_day = now() - timedelta(days=14)
         rows = self.history_manager.evalute_day_cost(state.assistant_name, start_day, owner)
         report.extend([f"{d}: {total_cnt / KB:6.2f} KB / {msg_cnt // 2:4d} Msg" for d, total_cnt, msg_cnt in rows])
-        yield f"data: {json.dumps({'text': '\n'.join(report), 'done': True})}\n\n"
+        yield "\n".join(report)
 
     def show_memory(self, owner: str) -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)
         start_time = self.memory_manager.query_msg_start_time(status.assistant_name, owner)
         content = f"原始对话起始时间: {get_str_from_datetime(start_time)}\n"
         content += self.memory_manager.query_memory_detail(status.assistant_name, owner)
-        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
+        yield content
 
     def show_last_reason(self, owner: str) -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)
@@ -1055,7 +1049,7 @@ class AssistantManager:
         rumor_reason = rumor_detail.reason if rumor_detail else ""
 
         content = f"压缩记忆: \n{memory_reason}\n\n流言蜚语: \n {rumor_reason}"
-        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
+        yield content
 
     def new_topic(self, owner: str) -> Iterator[str]:
         inject = "你需要根据现有的近期话题主动发起一个新话题"
@@ -1086,14 +1080,13 @@ class AssistantManager:
 
     def dump_memory(self, owner: str) -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)
-        content = self.memory_manager.dump_memory_detail(status.assistant_name, owner)
-        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
+        yield self.memory_manager.dump_memory_detail(status.assistant_name, owner)
 
     def dump_tool(self, owner: str) -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)
         msgs = self.history_manager.select_recent_tool_call_msgs(status.assistant_name, 3, owner)
         if not msgs:
-            yield f"data: {json.dumps({'text': '最近没有工具调用记录', 'done': True})}\n\n"
+            yield "最近没有工具调用记录"
             return
 
         lines: list[str] = []
@@ -1109,20 +1102,19 @@ class AssistantManager:
                     lines.append(f"返回: {result.content}")
             lines.append("")
         content = "\n".join(lines)
-        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
+        yield content
 
     def rumor(self, owner: str) -> Iterator[str]:
         yestoday = today_begin() - timedelta(days=1)
-        yield f"data: {json.dumps({'text': '正在生成流言蜚语\n', 'done': False})}\n\n"
+        yield "正在生成流言蜚语\n"
         self.memory_manager.rumor_propagation(yestoday, owner)
         rumor = self.memory_manager.query_rumor(owner)
-        rumor_text = rumor.content if rumor else ""
-        yield f"data: {json.dumps({'text': rumor_text, 'done': False})}\n\n"
+        yield rumor.content if rumor else ""
 
     def rumor_propagation(self, target_keyword: str, owner: str) -> Iterator[str]:
         rumor_detail = self.memory_manager.query_rumor(owner)
         if not rumor_detail:
-            yield f"data: {json.dumps({'text': '当前没有流言蜚语', 'done': True})}\n\n"
+            yield "当前没有流言蜚语"
             return
 
         target = ""
@@ -1279,7 +1271,7 @@ class AssistantManager:
         to_inject_content = self.make_user_inject_content(status, owner)
         content += f"\n\n【即将注入的信息】\n{to_inject_content}\n"
 
-        yield f"data: {json.dumps({'text': content, 'done': True})}\n\n"
+        yield content
 
     def auto_update_memory(self):
         if not self.config_manager.is_production():
@@ -1297,6 +1289,6 @@ class AssistantManager:
             self.memory_manager.rumor_propagation(start_time, user)
 
     def debug_update_memory(self) -> Iterator[str]:
-        yield f"data: {json.dumps({'text': '正在执行记忆压缩操作\n', 'done': False})}\n\n"
+        yield "正在执行记忆压缩操作\n"
         self.auto_update_memory()
-        yield f"data: {json.dumps({'text': '记忆压缩完毕\n', 'done': True})}\n\n"
+        yield "记忆压缩完毕\n"
