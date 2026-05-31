@@ -25,7 +25,7 @@ db = scoped_session(sessionmaker(autocommit=False, bind=engine))
 # 初始化Server层
 config_manager = ConfigManager()
 event_manager = EventManager(db)
-item_manager = ItemManager(db, event_manager)
+item_manager = ItemManager(event_manager)
 op_interpreter = OpInterpreter(item_manager)
 tomato_manager = TomatoManager(item_manager)
 tomato_record_manager = TomatoRecordManager(tomato_manager)

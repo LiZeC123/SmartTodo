@@ -63,8 +63,8 @@ def done_item_handler(db: DataBase, item: Item):
 
 
 class ItemManager:
-    def __init__(self, db: scoped_session[Session], em: EventManager):
-        self.db = db
+    def __init__(self, em: EventManager):
+        self.db = em.db
         self.event_manager = em
 
         self.before_create_event: list[ItemEvent] = [http_url_handler, download_file_handler]

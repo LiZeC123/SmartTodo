@@ -1,14 +1,14 @@
-from app.services.config_manager import *
+from app.services.config_manager import ConfigManager
 
 
 def test_base():
     manager = ConfigManager()
-    assert manager.try_login("admin", "123456") == True
-    assert manager.try_login("admin", "") == False
+    assert manager.try_login("admin", "123456")
+    assert not manager.try_login("admin", "")
 
-    assert manager.is_admin_user("admin") == True
-    assert manager.is_admin_user("user") == False
-    assert manager.is_admin_user("sxa") == False
+    assert manager.is_admin_user("admin")
+    assert not manager.is_admin_user("user")
+    assert not manager.is_admin_user("sxa")
 
     assert manager.get_users_msg_info() != []
 

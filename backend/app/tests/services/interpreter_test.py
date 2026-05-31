@@ -1,13 +1,16 @@
 import pytest
 
-from app.services.interpreter import *
+from app.services.event_log_manager import EventManager
+from app.services.interpreter import OpInterpreter, parse_renew_data, parse_sn_data, parse_sx_data
+from app.services.item_manager import ItemManager
 from app.tests.services.item_test import make_base_item
 from app.tests.services.make_db import make_new_file_db
-from app.tools.exception import NotUniqueItemException
+from app.tools.exception import IllegalArgumentException, NotUniqueItemException
 from app.tools.time import now, the_day_after
 
 owner = "user"
-item_manager = ItemManager(make_new_file_db())
+event_manager = EventManager(make_new_file_db())
+item_manager = ItemManager(event_manager)
 op = OpInterpreter(item_manager)
 
 
@@ -24,6 +27,7 @@ def test_split():
     op.exec_function(command="sn", data="split 6 章节", parent=None, owner=owner)
     op.exec_function(command="sx", data="Item -Ta", parent=None, owner=owner)
     op.exec_function(command="sx", data="XX -Ta", parent=None, owner=owner)
+
 
 def test_split_sp():
     base_item = make_base_item("split_sp_item")
@@ -65,7 +69,7 @@ def test_parse_sn_data():
         ("task 5 suffix", ("task", 5, "suffix")),
     ]
 
-    for (data, (name, count, suffix)) in usages:
+    for data, (name, count, suffix) in usages:
         assert parse_sn_data(data) == (name, count, suffix)
 
     usages = [
@@ -88,14 +92,10 @@ def test_parse_sx_data():
         parse_sx_data("task")
 
 
-
 def test_parse_renew_data():
-    usages = [
-        ("X 2", "X", 2),
-        ("XX  -1", "XX", -1)
-    ]
+    usages = [("X 2", "X", 2), ("XX  -1", "XX", -1)]
 
-    for (data, name, count) in usages:
+    for data, name, count in usages:
         assert parse_renew_data(data) == (name, count)
 
     usages = [

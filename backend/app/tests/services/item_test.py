@@ -3,12 +3,14 @@ from datetime import timedelta
 import pytest
 
 from app.models.item import Item, ItemType, TomatoType
+from app.services.event_log_manager import EventManager
 from app.services.item_manager import ItemManager
 from app.tests.services.make_db import make_new_db
 from app.tools.exception import UnauthorizedException, UnmatchedException
 from app.tools.time import now, the_day_after
 
-manager = ItemManager(make_new_db())
+event_manager = EventManager(make_new_db())
+manager = ItemManager(event_manager)
 owner = "user"
 
 
@@ -389,7 +391,7 @@ def test_get_deadline_item():
     # 该分组中只包含1个过期的任务
     groups = manager.get_deadline_item(owner)
     assert len(groups) == 1
-    assert len(groups[0].get('children', [])) == 1
+    assert len(groups[0].get("children", [])) == 1
 
     manager.remove(item1)
     manager.remove(item2)

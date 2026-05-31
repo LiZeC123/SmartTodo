@@ -1,6 +1,6 @@
 import pytest
 
-from app.tools.web import *
+from app.tools.web import extract_host, extract_title, parse_encoding, parse_title
 
 
 def test_extract_host():
@@ -13,10 +13,10 @@ def test_extract_title():
 
 
 def test_parse_encoding():
-    assert parse_encoding("<meta charset=\"utf-8\">", 'gbk') == 'utf-8'
-    assert parse_encoding("<meta charset='utf-8'>", 'gbk') == 'utf-8'
-    assert parse_encoding("<meta name=\"viewport\" content=\"width=device-width\">", 'utf-8') == 'utf-8'
-    assert parse_encoding("", 'gbk') == 'gbk'
+    assert parse_encoding('<meta charset="utf-8">', "gbk") == "utf-8"
+    assert parse_encoding("<meta charset='utf-8'>", "gbk") == "utf-8"
+    assert parse_encoding('<meta name="viewport" content="width=device-width">', "utf-8") == "utf-8"
+    assert parse_encoding("", "gbk") == "gbk"
 
 
 def test_parse_title():
@@ -27,5 +27,3 @@ def test_parse_title():
 
     with pytest.raises(Exception):
         assert parse_title("")
-
-
