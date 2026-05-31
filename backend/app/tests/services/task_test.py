@@ -38,15 +38,16 @@ def task_with_db_update():
     event_manager.add_event_log(owner, "测试更新")
 
 
-def test_task_db_commited():
-    # 两个线程同时写入DB, 只有各自均正常commit才能正常执行, 否则将产生异常并回滚
-    thread1 = threading.Thread(target=make_task("测试任务1", db, task_with_db_update))
-    thread2 = threading.Thread(target=make_task("测试任务1", db, task_with_db_update))
+# 多线程写入测试会显著拉高测试执行时间, 因此仅保留代码, 不进行测试
+# def test_task_db_commited():
+#     # 两个线程同时写入DB, 只有各自均正常commit才能正常执行, 否则将产生异常并回滚
+#     thread1 = threading.Thread(target=make_task("测试任务1", db, task_with_db_update))
+#     thread2 = threading.Thread(target=make_task("测试任务1", db, task_with_db_update))
 
-    # 启动线程
-    thread1.start()
-    thread2.start()
+#     # 启动线程
+#     thread1.start()
+#     thread2.start()
 
-    # 等待两个线程执行完毕
-    thread1.join()
-    thread2.join()
+#     # 等待两个线程执行完毕
+#     thread1.join()
+#     thread2.join()

@@ -1,4 +1,6 @@
 from datetime import timedelta
+import os
+from unittest.mock import patch
 
 import pytest
 
@@ -7,6 +9,7 @@ from app.services.event_log_manager import EventManager
 from app.services.item_manager import ItemManager
 from app.tests.services.make_db import make_new_db
 from app.tools.exception import UnauthorizedException, UnmatchedException
+from app.tools.file import FILE_FOLDER
 from app.tools.time import now, the_day_after
 
 event_manager = EventManager(make_new_db())
@@ -28,11 +31,15 @@ def test_base_create():
     manager.remove(item)
 
 
-# 先禁用依赖网络的测试用例, 后续将网络能力Mock
-# def test_url_item_create():
-#     item = make_base_item("https://blog.csdn.net/")
-#     manager.create(item)
-#     manager.remove(item)
+def test_url_item_create():
+    with patch("app.services.item_manager.extract_title") as extract_title:
+        mock_title = "Mock-Title"
+        extract_title.return_value = mock_title
+        item = make_base_item("https://not_a_web.abcd.def/")
+        manager.create(item)
+
+        assert item.name == mock_title
+        manager.remove(item)
 
 
 def test_create_item_with_attr():
@@ -83,11 +90,17 @@ def test_parent_item():
 
 
 # 先禁用依赖网络的测试用例, 后续将网络能力Mock
-# def test_file_create():
-#     item = make_base_item("https://pic2.zhimg.com/80/v2-f6b1f64a098b891b4ea1e3104b5b71f6_720w.png")
-#     item.item_type = ItemType.File
-#     item = manager.create(item)
-#     manager.remove(item)
+def test_file_create():
+    with patch("app.tools.file.download") as mock_download:
+        mock_file_name = os.path.join(FILE_FOLDER, "mock_download.txt")
+        mock_url = "https://mock.test.com/w.png"
+        mock_download.return_value = mock_file_name
+        item = make_base_item(mock_url)
+        item.item_type = ItemType.File
+        item = manager.create(item)
+        assert item.name == mock_url
+        assert item.url == os.path.join("/file", "mock_download.txt")
+        manager.remove(item)
 
 
 class MockFile:
