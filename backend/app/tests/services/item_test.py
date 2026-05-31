@@ -28,10 +28,11 @@ def test_base_create():
     manager.remove(item)
 
 
-def test_url_item_create():
-    item = make_base_item("https://blog.csdn.net/")
-    manager.create(item)
-    manager.remove(item)
+# 先禁用依赖网络的测试用例, 后续将网络能力Mock
+# def test_url_item_create():
+#     item = make_base_item("https://blog.csdn.net/")
+#     manager.create(item)
+#     manager.remove(item)
 
 
 def test_create_item_with_attr():
@@ -81,11 +82,12 @@ def test_parent_item():
     manager.remove(sub_item2)
 
 
-def test_file_create():
-    item = make_base_item("https://pic2.zhimg.com/80/v2-f6b1f64a098b891b4ea1e3104b5b71f6_720w.png")
-    item.item_type = ItemType.File
-    item = manager.create(item)
-    manager.remove(item)
+# 先禁用依赖网络的测试用例, 后续将网络能力Mock
+# def test_file_create():
+#     item = make_base_item("https://pic2.zhimg.com/80/v2-f6b1f64a098b891b4ea1e3104b5b71f6_720w.png")
+#     item.item_type = ItemType.File
+#     item = manager.create(item)
+#     manager.remove(item)
 
 
 class MockFile:
