@@ -5,6 +5,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from app.models.base import Base
 from app.services.checkin_manager import CheckinManager
 from app.services.config_manager import ConfigManager
+from app.services.event_log_manager import EventManager
 from app.services.interpreter import OpInterpreter
 from app.services.item_manager import ItemManager
 from app.services.llm_manager import AssistantManager
@@ -13,7 +14,7 @@ from app.services.tomato_manager import TomatoManager, TomatoRecordManager
 from app.tools.gen import generate_token_str
 
 # 初始化数据库对象
-engine = create_engine(url='sqlite:///data/data.db', future=True)
+engine = create_engine(url="sqlite:///data/data.db", future=True)
 
 # 定义一个基于线程的Session: https://docs.sqlalchemy.org/en/20/orm/contextual.html
 # scoped_session内部使用线程局部变量对每个线程维护一个独立的Session对象. 通常将scoped_session的返回值视为一个函数, 通过函数调用获得内部维护的属于当前线程的Session对象
@@ -23,13 +24,14 @@ db = scoped_session(sessionmaker(autocommit=False, bind=engine))
 
 # 初始化Server层
 config_manager = ConfigManager()
-item_manager = ItemManager(db)
+event_manager = EventManager(db)
+item_manager = ItemManager(db, event_manager)
 op_interpreter = OpInterpreter(item_manager)
-tomato_manager = TomatoManager(db, item_manager)
-tomato_record_manager = TomatoRecordManager(db, item_manager)
-checkin_manager = CheckinManager(db, config_manager, item_manager)
+tomato_manager = TomatoManager(item_manager)
+tomato_record_manager = TomatoRecordManager(tomato_manager)
+checkin_manager = CheckinManager(config_manager, item_manager)
 
-assistant_manager = AssistantManager(db, config_manager,  item_manager, tomato_manager, tomato_record_manager)
+assistant_manager = AssistantManager(config_manager, tomato_record_manager)
 
 # 初始化定时任务
 task_manager = TaskManager(db)
@@ -40,6 +42,7 @@ task_manager.add_daily_task("重置已完成的周期性任务", item_manager.re
 task_manager.add_daily_task("计算打卡相关统计数据", checkin_manager.update_all_checkin_state, "01:40")
 # 注意以下任务可能需要执行较长时间, 需要确保间隔时间充足
 task_manager.add_daily_task("个人助理记忆压缩与流言扩散", assistant_manager.auto_update_memory, "02:30")
+
 
 def create_app():
     # 创建Flask应用实例
@@ -57,6 +60,7 @@ def create_app():
     from app.views.note import note_bp
     from app.views.tomato import tomato_bp
     from app.views.weight import weight_bp
+
     app.register_blueprint(file_bp)
     app.register_blueprint(item_bp)
     app.register_blueprint(login_bp)

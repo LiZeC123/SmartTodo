@@ -4,7 +4,6 @@ from datetime import date, datetime, timedelta
 
 import sqlalchemy as sal
 
-from app.models.base import Database
 from app.models.event import CheckinState, EventLog
 from app.models.weight import WeightLog
 from app.services.config_manager import ConfigManager
@@ -47,8 +46,8 @@ MAKE_UP_DAYS = 21
 
 
 class CheckinManager:
-    def __init__(self, db: Database, config_manager: ConfigManager, item_manager: ItemManager) -> None:
-        self.db = db
+    def __init__(self, config_manager: ConfigManager, item_manager: ItemManager) -> None:
+        self.db = item_manager.db
         self.item_manager = item_manager
         self.config_manager = config_manager
         self._data_sources = [
@@ -175,6 +174,7 @@ class CheckinManager:
         if state.progress >= MAKE_UP_DAYS:
             state.start_prg_date += timedelta(days=MAKE_UP_DAYS)
             state.make_up_count += 1
+            state.progress = 0
 
         self.db.flush()
         return state

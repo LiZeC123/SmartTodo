@@ -7,14 +7,16 @@ from app.models.base import Database
 from app.models.event import EventLog
 
 
-def add_event_log(db: Database, owner: str, msg: str) -> bool:
-    event = EventLog(owner=owner, msg=msg)
-    db.add(event)
-    db.flush()
-    return True
+class EventManager:
+    def __init__(self, db: Database) -> None:
+        self.db = db
 
+    def add_event_log(self, owner: str, msg: str) -> bool:
+        event = EventLog(owner=owner, msg=msg)
+        self.db.add(event)
+        self.db.flush()
+        return True
 
-def get_event_log_after(db: Database, time: datetime, owner: str) -> Sequence[EventLog]:
-    stmt = sal.select(EventLog).where(EventLog.owner == owner, EventLog.create_time > time)
-    return db.execute(stmt).scalars().all()
-
+    def get_event_log_after(self, time: datetime, owner: str) -> Sequence[EventLog]:
+        stmt = sal.select(EventLog).where(EventLog.owner == owner, EventLog.create_time > time)
+        return self.db.execute(stmt).scalars().all()

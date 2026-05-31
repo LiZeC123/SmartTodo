@@ -21,7 +21,6 @@ from app.models.assistant import (
     assistant_mode_str,
     make_assistant_status,
 )
-from app.models.base import Database
 from app.models.item import Item
 from app.models.memory import (
     KB,
@@ -31,12 +30,9 @@ from app.models.memory import (
     MinCompressionSize,
     make_memory_detail,
 )
-from app.models.tomato import TomatoTaskRecord
 from app.services.config_manager import ConfigManager
-from app.services.event_log_manager import get_event_log_after
-from app.services.item_manager import ItemManager
 from app.services.role_manager import RoleConfig, RoleManager
-from app.services.tomato_manager import TomatoManager, TomatoRecordManager
+from app.services.tomato_manager import TomatoRecordManager
 from app.template.prompt import (
     AnyQueryPrompt,
     AssistantSp,
@@ -776,22 +772,19 @@ class AssistantMemoryManager:
 
 
 class AssistantManager:
-    def __init__(
-        self,
-        db: Database,
-        config_manager: ConfigManager,
-        item_manager: ItemManager,
-        tomato_manager: TomatoManager,
-        tomato_record_manager: TomatoRecordManager,
-    ) -> None:
-        self.config_manager = config_manager
-        self.llm_manager = LLMClient(config_manager)
+    def __init__(self, cm: ConfigManager, trm: TomatoRecordManager) -> None:
         self.role_manager = RoleManager()
-        self.item_manager = item_manager
-        self.tomato_manager = tomato_manager
-        self.tomato_record_manager = tomato_record_manager
-        self.history_manager = AssistantHistoryManager(db)
-        self.memory_manager = AssistantMemoryManager(db, self.role_manager, self.llm_manager, self.history_manager)
+
+        self.config_manager = cm
+        self.llm_manager = LLMClient(cm)
+
+        self.tomato_record_manager = trm
+        self.item_manager = trm.item_manager
+        self.history_manager = AssistantHistoryManager(self.item_manager.db)
+        self.memory_manager = AssistantMemoryManager(
+            self.item_manager.db, self.role_manager, self.llm_manager, self.history_manager
+        )
+        self.event_manager = self.item_manager.event_manager
 
         # 执行一些其他初始化逻辑
         self.print_check_info()
@@ -989,8 +982,7 @@ class AssistantManager:
         # 非扮演模式查询具体的状态信息
         # 当前番茄钟状态
         start = self.history_manager.get_last_assistant_mode_time(status)
-        begin_time, begin_state = self.get_tomato_state_begin_time()
-        state = self.get_tomato_state(owner=owner, begin_time=begin_time, begin_state=begin_state)
+        state = self.tomato_record_manager.get_tomato_state(owner=owner)
         content = f"番茄钟状态: {state}\n"
 
         # 事件信息, 可能没有事件
@@ -1140,96 +1132,11 @@ class AssistantManager:
     def get_event_info(self, owner: str, begin_time: datetime) -> str:
         content = ""
         # 新增番茄钟记录
-        events = get_event_log_after(self.item_manager.db, begin_time, owner)
+        events = self.event_manager.get_event_log_after(begin_time, owner)
         for e in events:
             content += f"{get_hour_str_from(e.create_time)}: {e.msg}\n"
 
         return content
-
-    def get_tomato_state_begin_time(self) -> tuple[datetime, str]:
-        now_time = now()
-        today_morning_start = datetime(now_time.year, now_time.month, now_time.day, 8, 0, 0)
-        today_morning_end = datetime(now_time.year, now_time.month, now_time.day, 12, 0, 0)
-        today_afternoon_end = datetime(now_time.year, now_time.month, now_time.day, 18, 0, 0)
-
-        if now_time < today_morning_end:
-            return today_morning_start, "上午"
-
-        if now_time < today_afternoon_end:
-            return today_morning_end, "下午"
-
-        return today_afternoon_end, "晚上"
-
-    def check_rest_time(self) -> str:
-        now_time = now()
-        noon_rest_start = datetime(now_time.year, now_time.month, now_time.day, 11, 30, 0)
-        noon_rest_end = datetime(now_time.year, now_time.month, now_time.day, 14, 30, 0)
-
-        evening_start = datetime(now_time.year, now_time.month, now_time.day, 17, 30, 0)
-        evening_end = datetime(now_time.year, now_time.month, now_time.day, 19, 00, 0)
-
-        night_start = datetime(now_time.year, now_time.month, now_time.day, 21, 00, 0)
-
-        if noon_rest_start < now_time < noon_rest_end:
-            return "午间休息时间"
-
-        if evening_start < now_time < evening_end:
-            return "晚间休息时间"
-
-        if now_time > night_start:
-            return "深夜休息时间"
-
-        return ""
-
-    def get_tomato_state(self, owner: str, begin_time: datetime, begin_state: str) -> str:
-        # 首先检查是否是番茄钟工作状态, 该状态优先级最高, 因此用户实际上可以在任意时间开始番茄钟
-        state = self.tomato_manager.query_task(owner=owner)
-        if state:
-            last_group_cnt, last_tomato_cnt, _ = self.get_tomoto_record_info(owner=owner, begin_time=begin_time)
-            work_finish_time = state.start_time + timedelta(minutes=25)
-            rest_finish_time = work_finish_time + timedelta(minutes=5)
-            now_time = now()
-            if now_time < work_finish_time:
-                remain_minutes = (work_finish_time - now_time).total_seconds() / 60
-                return f"正在进行{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt + 1}个番茄钟, 当前为工作状态, 番茄钟任务为[{state.name}], 工作时间剩余{remain_minutes:.2f}分钟\n"
-            elif now_time < rest_finish_time:
-                remain_minutes = (rest_finish_time - now_time).total_seconds() / 60
-                return f"正在进行{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt + 1}个番茄钟, 当前为休息状态, 番茄钟任务为[{state.name}], 休息时间剩余{remain_minutes:.2f}分钟\n"
-
-        # 其次检查是否为休息时间, 相当于可以覆盖番茄钟的休息和规划状态
-        reset_time = self.check_rest_time()
-        if reset_time != "":
-            return reset_time
-
-        # 当前不是番茄钟状态, 先检查是否为初始状态
-        last_group_cnt, last_tomato_cnt, last_record = self.get_tomoto_record_info(owner=owner, begin_time=begin_time)
-        if last_record is None:
-            # 没有开始任何番茄钟
-            return "还未开始任何番茄钟\n"
-
-        # 不是初始状态, 再检查休息和规划状态
-        elapsed_minutes = (now() - last_record.finish_time).total_seconds() / 60
-        # 如果上一个番茄钟是一组里的最后一个番茄钟, 则需要进行组之间的休息时间判断,
-        if last_tomato_cnt == 0:
-            if elapsed_minutes < 20:
-                # 最后一个番茄钟会让cnt+1所以输出时无需+1了
-                return f"已完成{begin_state}第{last_group_cnt}组番茄钟, 当前为大组之间的休息时间, 剩余{20 - elapsed_minutes:.2f}分钟\n"
-            else:
-                return f"已完成{begin_state}第{last_group_cnt}组番茄钟, 已完成大组之间的休息, 当前进入规划状态, 已持续{elapsed_minutes - 20:.2f}分钟\n"
-
-        # 如果不是最后一个番茄钟
-        return f"已完成{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt}个番茄钟, 当前进入规划状态, 已持续{elapsed_minutes - 5:.2f}分钟\n"
-
-    def get_tomoto_record_info(self, owner: str, begin_time: datetime) -> tuple[int, int, TomatoTaskRecord | None]:
-        tomato_records = self.tomato_record_manager.select_record_after(owner=owner, time=begin_time)
-        record_cnt = len(tomato_records)
-
-        if record_cnt == 0:
-            return 0, 0, None
-
-        last_group_cnt = record_cnt // 4
-        last_tomato_cnt = record_cnt % 4
-        return last_group_cnt, last_tomato_cnt, tomato_records[-1]
 
     def get_web_history(self, owner: str) -> list[dict]:
         status = self.history_manager.query_or_init_status(owner)

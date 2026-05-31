@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, scoped_session
 from app.models.item import Item, ItemType, TomatoType
 from app.models.note import Note
 from app.services.credit_manager import update_credit
-from app.services.event_log_manager import add_event_log
+from app.services.event_log_manager import EventManager
 from app.tools.exception import NotUniqueItemException, UnauthorizedException, UnmatchedException
 from app.tools.file import create_download_file, create_upload_file, delete_file_from_url
 from app.tools.log import logger
@@ -63,8 +63,9 @@ def done_item_handler(db: DataBase, item: Item):
 
 
 class ItemManager:
-    def __init__(self, db: scoped_session[Session]):
+    def __init__(self, db: scoped_session[Session], em: EventManager):
         self.db = db
+        self.event_manager = em
 
         self.before_create_event: list[ItemEvent] = [http_url_handler, download_file_handler]
         self.after_create_event: list[ItemEvent] = [create_note_handler]
@@ -215,7 +216,7 @@ class ItemManager:
     def undo(self, xid: int, owner: str):
         item = self.select_with_authority(xid=xid, owner=owner)
         self._undo(item)
-        add_event_log(self.db, owner, f"用户回退任务[{item.name}]到待执行列表")
+        self.event_manager.add_event_log(owner, f"用户回退任务[{item.name}]到待执行列表")
         return True
 
     def _undo(self, item: Item):
@@ -243,8 +244,7 @@ class ItemManager:
         item.update_time = now()
         self.db.flush()
 
-        add_event_log(
-            self.db,
+        self.event_manager.add_event_log(
             owner,
             f"用户完成番茄钟任务[{item.name}], 该任务预计需要{item.expected_tomato}个番茄钟, 已完成{item.used_tomato}个番茄钟",
         )
@@ -260,20 +260,20 @@ class ItemManager:
             # 如果当前是一个普通的任务, 即不需要消耗多个番茄钟, 则设置为完成状态
             item.used_tomato = 1
             item.update_time = now()
-            add_event_log(self.db, owner, f"用户标记完成任务[{item.name}]")
+            self.event_manager.add_event_log(owner, f"用户标记完成任务[{item.name}]")
         elif item.used_tomato == 0:
             # 直接手动完成了一个预计需要多个番茄钟的任务
             delta = item.expected_tomato
             item.used_tomato = 1
             item.expected_tomato = 1
-            add_event_log(self.db, owner, f"用户标记提前完成任务[{item.name}]并废弃{delta}个预计的番茄钟")
+            self.event_manager.add_event_log(owner, f"用户标记提前完成任务[{item.name}]并废弃{delta}个预计的番茄钟")
         else:
             # 当前任务规划需要多个番茄钟, 并且已经完成了一部分番茄钟
             # 此时手动点击完成, 则视为放弃原本预计需要的番茄钟, 直接调整为完成状态
             # 例如原本预计4个番茄钟, 已经使用了两个番茄钟, 则直接将预期番茄钟数量调整为2并将任务设置为完成
             delta = item.expected_tomato - item.used_tomato
             item.expected_tomato = item.used_tomato
-            add_event_log(self.db, owner, f"用户标记提前完成任务[{item.name}]并废弃{delta}个预计的番茄钟")
+            self.event_manager.add_event_log(owner, f"用户标记提前完成任务[{item.name}]并废弃{delta}个预计的番茄钟")
         self.db.flush()
 
         for f in self.on_done_event:
@@ -287,8 +287,7 @@ class ItemManager:
         item.update_time = now()
         item.tomato_type = TomatoType.Today
         deadline = item.deadline.strftime("%Y-%m-%d %H:%M:%S") if item.deadline is not None else "未指定"
-        add_event_log(
-            self.db,
+        self.event_manager.add_event_log(
             owner,
             f"用户添加任务[{item.name}]到今日任务列表, 该任务预计需要{item.expected_tomato}个番茄钟, 已完成{item.used_tomato}个番茄钟, 截止日期为{deadline}, 优先级为{item.priority}",
         )
@@ -340,7 +339,6 @@ class ItemManager:
             Item.deadline != None,  # noqa: E711
         )
         items = self.db.execute(stmt).scalars().all()
-
 
         now_time = now()
         return self.__group_sub_task((item for item in items if item.deadline and item.deadline < now_time), owner)
@@ -396,12 +394,16 @@ class ItemManager:
     def reset_daily_task(self):
         stmt = sal.select(Item).where(Item.repeatable == True)  # noqa: E712
         items = self.db.execute(stmt).scalars().all()
+
         for item in items:
             item.used_tomato = 0
             item.tomato_type = TomatoType.Today
             item.update_time = now()
-            add_event_log(self.db, item.owner, f"系统自动重置可重复任务[{item.name}]为未完成状态")
             logger.info(f"重置可重复任务: {item.name}")
+
+        for owner, group_items in groupby(items, lambda i: i.owner):
+            names = ",".join([f"[{item.name}]" for item in group_items])
+            self.event_manager.add_event_log(owner, f"系统自动重置可重复任务{names}为未完成状态")
 
     def reset_today_task(self):
         stmt = sal.select(Item).where(
