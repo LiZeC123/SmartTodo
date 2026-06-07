@@ -9,6 +9,9 @@
     }
   ],
   "compilerOptions": {
-    "baseUrl": "."
+    "paths": {
+      "@/*": ["./src/*"]    // 使用显式相对路径
+    },
+    "moduleResolution": "bundler"  // 或 "NodeNext"
   }
 }

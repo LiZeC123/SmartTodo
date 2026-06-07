@@ -1,4 +1,3 @@
-<!-- components/ChatComponent.vue -->
 <template>
   <div class="chat-container">
     <div class="chat-history" ref="chatHistoryRef" @scroll="handleScroll">
@@ -154,7 +153,6 @@ const completionPanelRef = ref<HTMLDivElement | null>(null)
 // 指令补全状态
 const showCompletion = ref(false)
 const selectedIndex = ref(0)
-let lastFilterWord = ''
 
 // ---------- 辅助函数 ----------
 // 获取当前时间的格式化字符串
@@ -369,7 +367,7 @@ const streamChat = async (prompt: string) => {
     // 先添加一个空的助手消息用于流式更新
     addTextMessage('assistant', '', true)
 
-    while (true) {
+    for(;;) {
       const { done, value } = await reader.read()
       if (done) break
 
@@ -571,7 +569,6 @@ const stopGeneration = () => {
 const filteredCommands = computed(() => {
   if (!inputText.value.startsWith('/')) return []
   const filterPart = inputText.value.slice(1)
-  lastFilterWord = filterPart
   if (!filterPart) return COMMANDS
   return COMMANDS.filter((cmd) => cmd.command.slice(1).toLowerCase().startsWith(filterPart.toLowerCase()))
 })

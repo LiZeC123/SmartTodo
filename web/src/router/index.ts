@@ -9,9 +9,9 @@ import WeightRecord from '@/view/me/WeightRecord.vue'
 import PomodoroTimer from '@/view/me/PomodoroTimer.vue'
 import WelfarePage from '@/view/me/WelfarePage.vue'
 import CreditAdd from '@/view/me/CreditAdd.vue'
-import Checkin from '@/view/Checkin.vue'
-import Assistant from '@/view/Assistant.vue'
-import Index from '@/view/Index.vue'
+import Checkin from '@/view/CheckinPage.vue'
+import Assistant from '@/view/AssistantPage.vue'
+import Index from '@/view/IndexPage.vue'
 
 
 const router = createRouter({

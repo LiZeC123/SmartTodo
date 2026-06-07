@@ -289,7 +289,6 @@ const calendarCells = computed<CalendarCell[]>(() => {
     const dateStr = formatDateStr(year, month, d);
     const isDone = recordDateSet.has(dateStr);
     const isToday = dateStr === todayDateStr.value;
-    const isFutureDate = dateStr > todayDateStr.value;
     const isPast = dateStr < todayDateStr.value;
 
     let status: CalendarCell['status'];
