@@ -3,12 +3,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from app.models.base import Base
+from app.services.assistant import AssistantManager
 from app.services.checkin_manager import CheckinManager
 from app.services.config_manager import ConfigManager
 from app.services.event_log_manager import EventManager
 from app.services.interpreter import OpInterpreter
 from app.services.item_manager import ItemManager
-from app.services.llm_manager import AssistantManager
 from app.services.task_manager import TaskManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
 from app.tools.gen import generate_token_str

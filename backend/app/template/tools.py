@@ -66,3 +66,16 @@ GetDeadlineItemTool = ChatCompletionFunctionToolParam(
         },
     ),
 )
+
+GetTodayItemTool = ChatCompletionFunctionToolParam(
+    type="function",
+    function=FunctionDefinition(
+        name="get_today_item",
+        description="查询当前用户今日的代办事项列表, 返回每个事项的名称、需要番茄钟数量以及完成情况",
+        parameters={
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    ),
+)
