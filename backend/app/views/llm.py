@@ -20,7 +20,7 @@ def assistant_chat_stream(owner: str):
     if prompt == "/info":
         # display user inject prompt
         g = assistant_manager.dump_user_prompt(owner)
-    elif prompt == "/rk":
+    elif prompt == "/re":
         # remake answer
         g = assistant_manager.remake(owner)
     elif prompt == "/role_list":
@@ -39,6 +39,8 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.dump_tool(owner)
     elif prompt == "/debug_compress":
         g = assistant_manager.debug_update_memory()
+    elif prompt == '/auto_answer':
+        g = assistant_manager.auto_answer(owner)
     elif prompt.startswith("/switch "):
         # 切换助理角色, 自动维持上一次使用的模式
         args = prompt.removeprefix("/switch ")
@@ -47,6 +49,9 @@ def assistant_chat_stream(owner: str):
         # 切换当前助理角色的模式
         args = prompt.removeprefix("/change_mode ")
         g = assistant_manager.change_mode(role_mode=parse_assistant_mode(args), owner=owner)
+    elif prompt.startswith("/set_auto_continue "):
+        args = prompt.removeprefix("/set_auto_continue ").strip()
+        g = assistant_manager.set_auto_continue(min_char_num=int(args), owner=owner)
     elif prompt.startswith("/rc "):
         # replace content
         args = [arg for arg in prompt.strip().split() if arg]

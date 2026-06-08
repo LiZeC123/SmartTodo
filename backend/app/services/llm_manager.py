@@ -21,6 +21,7 @@ from app.models.assistant import (
     assistant_mode_str,
     make_assistant_status,
 )
+from app.models.exception import LLMIllegalStatusException
 from app.models.item import Item
 from app.models.memory import (
     KB,
@@ -36,6 +37,8 @@ from app.services.tomato_manager import TomatoRecordManager
 from app.template.prompt import (
     AnyQueryPrompt,
     AssistantSp,
+    AutoAnswerPrompt,
+    ContinueWritingPrompt,
     InjectRumorPrompt,
     LongTermMemoryPrompt,
     RolePalyingSp,
@@ -123,33 +126,69 @@ class AssistantHistoryManager:
         self.db.flush()
         self.db.commit()
 
-    def remove_last_assistant(self, owner: str) -> bool:
+    def set_auto_continue(self, min_char_num: int, owner: str):
+        if min_char_num < 0:
+            min_char_num = 0
+
+        status = self.query_or_init_status(owner)
+        status.auto_continue = min_char_num
+        self.db.flush()
+        self.db.commit()
+
+    def merge_assistant_msg(self, owner: str):
+        assistant_msg_0 = self.remove_last_assistant(owner)
+        if not assistant_msg_0:
+            raise LLMIllegalStatusException(f"[{owner}]: 获取最后一条助手消息失败")
+
+        user_msg_0 = self.remove_last_user(owner)
+        if not user_msg_0:
+            raise LLMIllegalStatusException(f"[{owner}]: 获取最后一条用户消息失败")
+
+        assistant_msg_1 = self.remove_last_assistant(owner)
+        if not assistant_msg_1:
+            raise LLMIllegalStatusException(f"[{owner}]: 获取倒数第二条助手消息失败")
+
+        content = assistant_msg_1.content + assistant_msg_0.content
+        self.add_assistant_answer(content, owner)
+
+    def remove_anto_answer_msg(self, owner: str) -> str:
+        auto_answer = self.remove_last_assistant(owner)
+        if not auto_answer:
+            raise LLMIllegalStatusException(f"[{owner}]: 获取自动回答消息失败")
+
+        prompt = self.remove_last_user(owner)
+        if not prompt:
+            raise LLMIllegalStatusException(f"[{owner}]: 获取自动回答的用户提示词消息失败")
+
+        return auto_answer.content
+
+    def remove_last_assistant(self, owner: str) -> History | None:
         status = self.query_or_init_status(owner)
         last = self.select_last_msg(status.assistant_name, owner)
         if last is None:
-            return False
+            return None
 
         if last.role != AssistantType.Assistant:
-            return False
+            return None
 
         self.db.delete(last)
         self.db.flush()
         self.db.commit()
-        return True
+        return last
 
-    def remove_last_user(self, owner: str) -> bool:
+    def remove_last_user(self, owner: str) -> History | None:
         status = self.query_or_init_status(owner)
         last = self.select_last_msg(status.assistant_name, owner)
         if last is None:
-            return False
+            return None
 
         if last.role != AssistantType.User:
-            return False
+            return None
 
         self.db.delete(last)
         self.db.flush()
         self.db.commit()
-        return True
+        return last
 
     def remove_last_pair(self, owner: str) -> bool:
         status = self.query_or_init_status(owner)
@@ -186,6 +225,16 @@ class AssistantHistoryManager:
             .limit(1)
         )
         return self.db.scalar(stmt)
+
+    def query_last_assistant_msg_length(self, owner: str) -> int:
+        status = self.query_or_init_status(owner)
+        last = self.select_last_msg(status.assistant_name, owner)
+        if last is None:
+            raise LLMIllegalStatusException(f"[{owner}: {status.assistant_name}] 当前没有助手消息")
+        if last.role != AssistantType.Assistant:
+            raise LLMIllegalStatusException(f"[{owner}: {status.assistant_name}] 最后一条消息不是助手消息")
+
+        return len(last.content)
 
     def get_last_assistant_mode_time(self, status: Status) -> datetime:
         # 查询当前助手上一次助手模式的记录时间, 在非助手模式或者其他助手对话过程中产生的记录对当前助手来说是没有见过的
@@ -685,10 +734,10 @@ class AssistantMemoryManager:
         ans = []
         err = ""
         configs = {
-            "新增设定": (MemoryDetailType.RoleSetting, ),
-            "用户偏好": (MemoryDetailType.RoleSetting, ),
-            "近期话题": (MemoryDetailType.RecentTopic, ),
-            "个人日记": (MemoryDetailType.Diary, ),
+            "新增设定": (MemoryDetailType.RoleSetting,),
+            "用户偏好": (MemoryDetailType.RoleSetting,),
+            "近期话题": (MemoryDetailType.RecentTopic,),
+            "个人日记": (MemoryDetailType.Diary,),
         }
         for key, config in configs.items():
             value = details.get(key)
@@ -919,18 +968,34 @@ class AssistantManager:
             "get_deadline_item": get_deadline_f,
         }
 
-    def chat(self, prompt: str, owner: str) -> Iterator[str]:
+    def chat(self, prompt: str, owner: str, *, inject_content: str = "") -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)
         config = self.role_manager.get_role(name=status.assistant_name)
-        inject_content = self.make_user_inject_content(status, owner)
+        inject_content = self.make_user_inject_content(status, owner) if inject_content == "" else inject_content
         self.history_manager.add_user_prompt(prompt, inject_content, owner)
-        return self.generate(owner, enable_tools=bool(config.enable_tools))
+        yield from self.generate(owner, enable_tools=bool(config.enable_tools))
+
+        length = self.history_manager.query_last_assistant_msg_length(owner)
+        while status.auto_continue and length < status.auto_continue:
+            self.history_manager.add_user_prompt("", ContinueWritingPrompt, owner)
+            yield from self.generate(owner, enable_tools=bool(config.enable_tools))
+            self.history_manager.merge_assistant_msg(owner)
+            length = self.history_manager.query_last_assistant_msg_length(owner)
 
     def remake(self, owner: str) -> Iterator[str]:
-        status = self.history_manager.query_or_init_status(owner)
-        config = self.role_manager.get_role(name=status.assistant_name)
         self.history_manager.remove_last_assistant(owner)
-        return self.generate(owner, enable_tools=bool(config.enable_tools))
+        last_user_msg = self.history_manager.remove_last_user(owner)
+        if not last_user_msg:
+            raise LLMIllegalStatusException("")
+
+        return self.chat(last_user_msg.content, owner)
+
+    def auto_answer(self, owner: str) -> Iterator[str]:
+        self.history_manager.add_user_prompt("", AutoAnswerPrompt, owner)
+        yield from self.generate(owner)
+        msg = self.history_manager.remove_anto_answer_msg(owner)
+        yield "\n\\n"
+        yield from self.chat(msg, owner)
 
     def delete(self, num: int, owner: str) -> bool:
         if num < 1:
@@ -952,6 +1017,10 @@ class AssistantManager:
     def change_mode(self, role_mode: int, owner: str) -> Iterator[str]:
         self.history_manager.change_mode(role_mode, owner)
         yield f"切换到模式: {assistant_mode_str(role_mode)}"
+
+    def set_auto_continue(self, min_char_num: int, owner: str) -> Iterator[str]:
+        self.history_manager.set_auto_continue(min_char_num, owner=owner)
+        yield f"设置最小续写阈值为: {min_char_num} 个字符"
 
     def make_user_inject_content(self, status: Status, owner: str) -> str:
         # 扮演模式不注入任何系统相关的信息

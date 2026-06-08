@@ -40,28 +40,14 @@
     </div>
 
     <div class="input-area" ref="inputAreaRef">
-      <textarea
-        v-model="inputText"
-        @keydown="handleKeydown"
-        @input="handleInput"
-        placeholder="输入消息... (以 / 开头可查看指令补全)"
-        :disabled="isLoading"
-        ref="textareaRef"
-      ></textarea>
+      <textarea v-model="inputText" @keydown="handleKeydown" @input="handleInput" placeholder="输入消息... (以 / 开头可查看指令补全)"
+        :disabled="isLoading" ref="textareaRef"></textarea>
 
       <!-- 指令补全面板 -->
-      <div
-        v-if="showCompletion && filteredCommands.length"
-        class="completion-panel"
-        ref="completionPanelRef"
-      >
-        <div
-          v-for="(cmd, idx) in filteredCommands"
-          :key="cmd.command"
-          :class="['completion-item', { selected: idx === selectedIndex }]"
-          @click="selectCommand(cmd)"
-          @mouseenter="selectedIndex = idx"
-        >
+      <div v-if="showCompletion && filteredCommands.length" class="completion-panel" ref="completionPanelRef">
+        <div v-for="(cmd, idx) in filteredCommands" :key="cmd.command"
+          :class="['completion-item', { selected: idx === selectedIndex }]" @click="selectCommand(cmd)"
+          @mouseenter="selectedIndex = idx">
           <span class="cmd-text">{{ cmd.command }}</span>
           <span class="cmd-desc">{{ cmd.description }}</span>
         </div>
@@ -106,12 +92,14 @@ type DisplayItem = ChatMessage | DateDivider
 // 指令列表定义
 const COMMANDS = [
   { command: '/switch', description: '切换助理 (参数 [角色名])', needsSpace: true },
+  { command: '/re', description: '重新生成最后一次回答', needsSpace: false },
+  { command: '/delete', description: '删除n轮对话 (参数 [对话轮数])', needsSpace: true },
 
   { command: '/cost', description: '查看所有角色会话成本', needsSpace: false },
   { command: '/reason', description: '查看上一次模型思考内容', needsSpace: false },
   { command: '/memory', description: '查看当前角色的记忆', needsSpace: false },
   { command: '/info', description: '显示当前状态信息', needsSpace: false },
-  
+
   { command: '/set_memory', description: '覆盖当前角色的记忆 (参数 [类型("设定"或"偏好")] [记忆文本])', needsSpace: true },
   { command: '/set_time', description: '修改记忆截止时间 (参数 [时间字符串(月.日:时)])', needsSpace: true },
   { command: '/dump_memory', description: '显示该角色所有记忆项', needsSpace: false },
@@ -120,14 +108,12 @@ const COMMANDS = [
   { command: '/rumor', description: '注入流言蜚语(参数 [目标关注角色(可选)])', needsSpace: false },
   { command: '/topic', description: '要求助手发起一个新的话题', needsSpace: false },
   { command: '/inject', description: '注入数据 (参数 [数据名称] [prompt])', needsSpace: true },
+  { command: '/set_auto_continue', description: '设置自动续写阈值 (参数 [最小字符数])', needsSpace: true },
+  { command: '/auto_answer', description: '使用AI生成一个回复', needsSpace: false },
 
   { command: '/change_mode', description: '切换助理模式 (参数 [模式名("助理"或"扮演")])', needsSpace: true },
   { command: '/role_list', description: '显示所有角色信息', needsSpace: false },
   { command: '/da', description: '显示所有会话信息', needsSpace: false },
-
-  { command: '/rk', description: '重新生成最后一次回答', needsSpace: false },
-  { command: '/rc', description: '替换最后一条用户消息', needsSpace: true },
-  { command: '/delete', description: '删除n轮对话 (参数 [对话轮数])', needsSpace: true },
 
   { command: '/debug_compress', description: '触发自动压缩指令', needsSpace: false },
 ]
@@ -367,7 +353,7 @@ const streamChat = async (prompt: string) => {
     // 先添加一个空的助手消息用于流式更新
     addTextMessage('assistant', '', true)
 
-    for(;;) {
+    for (; ;) {
       const { done, value } = await reader.read()
       if (done) break
 
@@ -480,7 +466,7 @@ const sendMessage = async () => {
     addTextMessage('user', '[用户切换了助理角色]', false, getCurrentTimeStr())
     await streamChat(prompt)
     loadHistory() // 切换角色后刷新历史
-  } else if (prompt === '/rk') {
+  } else if (prompt === '/re') {
     // 修复 /rk 指令：删除最后一条 assistant 类型的文本消息
     // 从后往前找最后一条角色为 assistant 的文本消息
     let lastAssistantIndex = -1
@@ -494,38 +480,6 @@ const sendMessage = async () => {
     if (lastAssistantIndex !== -1) {
       messages.splice(lastAssistantIndex, 1)
     }
-    await streamChat(prompt)
-  } else if (prompt.startsWith('/rc ')) {
-    // 修复 /rc 指令：替换最后一条用户消息（同时删除对应的助手消息）
-    // 删除最后一条 user 文本消息
-    let lastUserIndex = -1
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i]
-      if (msg.type === 'text' && msg.role === 'user') {
-        lastUserIndex = i
-        break
-      }
-    }
-    if (lastUserIndex !== -1) {
-      messages.splice(lastUserIndex, 1)
-    }
-
-    // 删除最后一条 assistant 文本消息（可能位于被删除的用户消息之后，但需要重新查找）
-    let lastAssistantIndex = -1
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i]
-      if (msg.type === 'text' && msg.role === 'assistant') {
-        lastAssistantIndex = i
-        break
-      }
-    }
-    if (lastAssistantIndex !== -1) {
-      messages.splice(lastAssistantIndex, 1)
-    }
-
-    // 提取新的用户消息内容（去掉 "/rc " 前缀）
-    const newUserMsg = prompt.replace(/^\/rc\s*/, '')
-    addTextMessage('user', newUserMsg, false, getCurrentTimeStr())
     await streamChat(prompt)
   } else if (prompt.startsWith('/delete')) {
     const num_str = prompt.replace(/^\/delete\s*/, '')
@@ -700,24 +654,31 @@ onUnmounted(() => {
 .chat-container {
   max-width: 800px;
   margin: 0 auto;
-  height: 100dvh; /* 全屏高度 */
+  height: 100dvh;
+  /* 全屏高度 */
   display: flex;
   flex-direction: column;
   padding: 20px;
-  box-sizing: border-box; /* 避免 padding 导致溢出 */
-  overflow: hidden; /* 防止整个页面滚动 */
+  box-sizing: border-box;
+  /* 避免 padding 导致溢出 */
+  overflow: hidden;
+  /* 防止整个页面滚动 */
 }
 
 /* 聊天区域自动填充剩余空间 */
 .chat-history {
-  flex: 1; /* 自动占据剩余高度 */
-  overflow-y: auto; /* 内部滚动 */
+  flex: 1;
+  /* 自动占据剩余高度 */
+  overflow-y: auto;
+  /* 内部滚动 */
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 20px;
   background: #f9f9f9;
-  margin-bottom: 15px; /* 与输入区留一点空隙 */
-  min-height: 0; /* flex 子项防止溢出关键 */
+  margin-bottom: 15px;
+  /* 与输入区留一点空隙 */
+  min-height: 0;
+  /* flex 子项防止溢出关键 */
 }
 
 /* 加载更多指示器样式 */
@@ -784,10 +745,12 @@ onUnmounted(() => {
 }
 
 @keyframes blink {
+
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0;
   }

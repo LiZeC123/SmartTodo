@@ -94,8 +94,8 @@ class MemoryPolicy:
                 enable_role_setting=True,
                 enable_preference=False,
                 max_topic_num=0,
-                max_diary_num=2,
-                raw_content_size=5 * KB,
+                max_diary_num=3,
+                raw_content_size=15 * KB,
             )
         if policy_name == "S2":
             # 角色设定优先, 类似于S1, 但对于对话连续性要求更低
@@ -103,8 +103,8 @@ class MemoryPolicy:
                 enable_role_setting=True,
                 enable_preference=False,
                 max_topic_num=0,
-                max_diary_num=1,
-                raw_content_size=3 * KB,
+                max_diary_num=2,
+                raw_content_size=9 * KB,
             )
         if policy_name == "D1":
             # 对话连续性优先, 适合人设几乎不变, 话题快速更换的场景, 但需要对整体一致性要求较高的场景
@@ -112,8 +112,8 @@ class MemoryPolicy:
                 enable_role_setting=False,
                 enable_preference=False,
                 max_topic_num=0,
-                max_diary_num=3,
-                raw_content_size=3 * KB,
+                max_diary_num=5,
+                raw_content_size=9 * KB,
             )
         if policy_name == "D2":
             # 对话连续性优先, 类似D1, 但导入记忆更少, 更轻量
@@ -121,8 +121,8 @@ class MemoryPolicy:
                 enable_role_setting=False,
                 enable_preference=False,
                 max_topic_num=0,
-                max_diary_num=2,
-                raw_content_size=3 * KB,
+                max_diary_num=3,
+                raw_content_size=9 * KB,
             )
         if policy_name == "T1":
             # 话题优先, 适合人设几乎不会变化, 且历史对话没有太大关联, 经常讨论不同话题的场景
@@ -130,8 +130,8 @@ class MemoryPolicy:
                 enable_role_setting=False,
                 enable_preference=False,
                 max_topic_num=12,
-                max_diary_num=2,
-                raw_content_size=1 * KB,
+                max_diary_num=3,
+                raw_content_size=5 * KB,
             )
 
         # 默认 None, 禁用所有记忆内容
