@@ -556,8 +556,11 @@ class AssistantMemoryManager:
 
         # 更新记忆
         details = self.split_markdown_by_heading(content)
-        items = self.parse_markdown_item(details, config.name, owner)
+        items, err = self.parse_markdown_item(details, config.name, owner)
         self.db.add_all(items)
+        if err:
+            logger.warning(f"记忆项目存在提取失败: {err}\n原始内容:{content}")
+
         if reason:
             item = make_memory_detail(
                 reason,
@@ -674,65 +677,41 @@ class AssistantMemoryManager:
 
         return sections
 
-    def parse_markdown_item(self, details: dict[str, str], assistant_name: str, owner: str) -> Sequence[MemoryDetail]:
+    def parse_markdown_item(
+        self, details: dict[str, str], assistant_name: str, owner: str
+    ) -> tuple[Sequence[MemoryDetail], str]:
         content_time = today_begin() - timedelta(days=1)
+
         ans = []
+        err = ""
+        configs = {
+            "新增设定": (MemoryDetailType.RoleSetting, ),
+            "用户偏好": (MemoryDetailType.RoleSetting, ),
+            "近期话题": (MemoryDetailType.RecentTopic, ),
+            "个人日记": (MemoryDetailType.Diary, ),
+        }
+        for key, config in configs.items():
+            value = details.get(key)
+            if not value:
+                err += f"{key}提取失败 "
+                continue
 
-        has_error = False
-        setting = details.get("新增设定", "").strip()
-        if len(setting) > 0:
+            value = value.strip()
+            if not value:
+                # 可能出现这种情况, 先打日志看看表现
+                logger.info(f"[{owner}:{assistant_name}] 提取{key}内容为空")
+                continue
+
             item = make_memory_detail(
-                setting,
+                value,
                 assistant_name=assistant_name,
                 owner=owner,
-                tag=MemoryDetailType.RoleSetting,
-                content_time=content_time,
-            )
-            ans.append(item)
-        else:
-            has_error = True
-
-        preference = details.get("用户偏好", "").strip()
-        if len(preference) > 0:
-            item = make_memory_detail(
-                preference,
-                assistant_name=assistant_name,
-                owner=owner,
-                tag=MemoryDetailType.Preference,
-                content_time=content_time,
-            )
-            ans.append(item)
-        else:
-            has_error = True
-
-        topics = details.get("近期话题", "").strip().splitlines()
-        if not topics:
-            has_error = True
-
-        for topic in topics:
-            item = make_memory_detail(
-                topic,
-                assistant_name=assistant_name,
-                owner=owner,
-                tag=MemoryDetailType.RecentTopic,
+                tag=config[0],
                 content_time=content_time,
             )
             ans.append(item)
 
-        diary = details.get("个人日记", "").strip()
-        if len(diary) > 0:
-            item = make_memory_detail(
-                diary, assistant_name=assistant_name, owner=owner, tag=MemoryDetailType.Diary, content_time=content_time
-            )
-            ans.append(item)
-        else:
-            has_error = True
-
-        if has_error:
-            msg = "\n".join((f"{k}: {v}" for k, v in details.items()))
-            logger.warning(f"记忆项目存在提取失败: {msg}")
-
-        return ans
+        return ans, err
 
     def stabilize_role_setting(self, *, content: str, assistant_name: str, owner: str):
         detail = make_memory_detail(
