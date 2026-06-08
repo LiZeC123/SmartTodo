@@ -2,8 +2,8 @@
 import sqlalchemy as sal
 
 from app.models.base import Database
+from app.models.exception import UnauthorizedException
 from app.models.weight import WeightLog
-from app.tools.exception import UnauthorizedException
 
 
 def query_log(db: Database, owner: str) -> list[dict]:

@@ -1,8 +1,8 @@
 import pytest
 
+from app.models.exception import UnauthorizedException
 from app.services.weight_manager import add_log, query_log, remove_log
 from app.tests.services.make_db import make_new_db
-from app.tools.exception import UnauthorizedException
 
 db = make_new_db()
 

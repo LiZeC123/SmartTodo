@@ -13,7 +13,7 @@ from sqlalchemy import DateTime, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
-from app.tools.exception import IllegalArgumentException
+from app.models.exception import LLMIllegalStatusException
 from app.tools.time import get_str_from_datetime, now
 
 
@@ -84,7 +84,7 @@ class History(Base):
         if self.role == "system":
             return ChatCompletionSystemMessageParam(content=self.content, role="system")
         if self.role == "user":
-            content = f"当前时间: {self.create_time.strftime("%Y-%m-%d %H:%M:%S %a")}\n{self.system_inject_content}\n\n---\n\n{self.content}"
+            content = f"当前时间: {self.create_time.strftime("%Y-%m-%d %H:%M:%S %a")}\n<info>{self.system_inject_content}</info>\n{self.content}"
             return ChatCompletionUserMessageParam(content=content, role="user")
         if self.role == 'assistant':
             if self.tool_call_list_json == '':
@@ -94,7 +94,7 @@ class History(Base):
                 return ChatCompletionAssistantMessageParam(content=self.content, role='assistant', tool_calls=tool_call_list)
         if self.role == 'tool':
             return ChatCompletionToolMessageParam(content=self.content, role='tool', tool_call_id=self.tool_call_id)
-        raise IllegalArgumentException(f"unknown role: {self.role}")
+        raise LLMIllegalStatusException(f"unknown role: {self.role}")
 
     def to_str_msg(self) -> str | None:
         if self.role in ['system', 'tool']:
@@ -123,7 +123,7 @@ class Status(Base):
     owner: Mapped[str]              = mapped_column(String(15), nullable=False)
     assistant_name: Mapped[str]     = mapped_column(String(15), nullable=False, default='') # 当前助理的角色名
     assistant_mode: Mapped[int]     = mapped_column(Integer, nullable=False, default=0)     # 助理的模式 0: 助理模式 1: 扮演模式
-
+    auto_continue: Mapped[int]      = mapped_column(Integer, nullable=False, default=0)     # 自动序列控制 0: 关闭自动续写 正数: 续写触发阈值, 回复消息字符数小于该值自动触发续写
 
 def make_assistant_status(owner: str):
     return Status(owner=owner)

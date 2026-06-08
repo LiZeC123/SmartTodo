@@ -4,7 +4,7 @@ from typing import Any
 
 from flask import Response, abort, jsonify, session
 
-from app.tools.exception import UnauthorizedException
+from app.models.exception import UnauthorizedException
 from app.tools.log import logger
 
 

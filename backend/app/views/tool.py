@@ -1,7 +1,7 @@
 
 from flask import request
 
-from app.tools.exception import IllegalArgumentException
+from app.models.exception import IllegalArgumentException
 
 
 def get_xid_from_request() -> int:

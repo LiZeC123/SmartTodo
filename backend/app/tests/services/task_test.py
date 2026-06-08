@@ -1,4 +1,3 @@
-import threading
 from time import sleep
 
 from app.services.event_log_manager import EventManager
