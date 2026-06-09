@@ -3,6 +3,7 @@ from app.tools.log import logger
 
 app = create_app()
 
+
 @app.teardown_appcontext
 def remove_session(exception=None):
     if exception is None:
@@ -13,6 +14,5 @@ def remove_session(exception=None):
     db.remove()
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run("localhost", 4231, threaded=True)

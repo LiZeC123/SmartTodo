@@ -1,0 +1,1 @@
+flask --app run run --debug --host localhost --port 4231

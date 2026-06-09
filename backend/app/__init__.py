@@ -11,7 +11,7 @@ from app.services.interpreter import OpInterpreter
 from app.services.item_manager import ItemManager
 from app.services.task_manager import TaskManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
-from app.tools.gen import generate_token_str
+from app.tools.gen import get_or_create_secret_key
 
 # 初始化数据库对象
 engine = create_engine(url="sqlite:///data/data.db", future=True)
@@ -47,7 +47,7 @@ task_manager.add_daily_task("个人助理记忆压缩与流言扩散", assistant
 def create_app():
     # 创建Flask应用实例
     app = Flask(__name__)
-    app.secret_key = generate_token_str()
+    app.secret_key = get_or_create_secret_key()
 
     # 导入并注册蓝图
     from app.views.checkin import checkin_bp
