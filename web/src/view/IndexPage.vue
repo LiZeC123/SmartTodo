@@ -2,17 +2,12 @@
   <div class="card-page-container">
     <!-- 页面标题 -->
     <h1 class="page-title">功能导航</h1>
-    
+
     <!-- 卡片容器 -->
     <div class="cards-wrapper">
       <!-- 循环渲染卡片 -->
-      <router-link
-        v-for="(card, index) in cardList"
-        :key="index"
-        :to="card.path"
-        class="card-item"
-        :target="card.isExternal ? '_blank' : '_self'"
-      >
+      <router-link v-for="(card, index) in cardList" :key="index" :to="card.path" class="card-item"
+        :target="card.isExternal ? '_blank' : '_self'">
         <h3 class="card-title">{{ card.title }}</h3>
         <span class="card-path">{{ card.path }}</span>
       </router-link>
@@ -22,6 +17,7 @@
 
 <script setup lang="ts">
 import axios from 'axios';
+import path from 'path';
 import { computed, onMounted, ref, type Ref } from 'vue';
 
 // 定义卡片数据类型
@@ -40,7 +36,12 @@ const head: CardConfig[] = [
 
 ];
 
-const dyNote: Ref<CardConfig[]> = ref([])
+const dyNote: Ref<CardConfig[]> = ref([
+  { title: '加载中', path: '/' },
+  { title: '加载中', path: '/' },
+  { title: '加载中', path: '/' },
+  { title: '加载中', path: '/' },
+])
 
 const tail: CardConfig[] = [
   { title: '数据汇总', path: '/summary' },
@@ -92,15 +93,18 @@ const cardList = computed(() => {
 
 /* 单个卡片样式（router-link 本身是a标签） */
 .card-item {
-  display: block; /* 让链接占满整个卡片区域 */
+  display: block;
+  /* 让链接占满整个卡片区域 */
   background: #ffffff;
   border-radius: 8px;
   padding: 24px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
   transition: all 0.3s ease;
   border: 1px solid #f5f5f5;
-  text-decoration: none; /* 去掉链接默认下划线 */
-  cursor: pointer; /* 鼠标悬浮显示手型 */
+  text-decoration: none;
+  /* 去掉链接默认下划线 */
+  cursor: pointer;
+  /* 鼠标悬浮显示手型 */
 }
 
 /* 卡片悬浮效果 */
@@ -124,39 +128,41 @@ const cardList = computed(() => {
   color: #666666;
   font-size: 14px;
   opacity: 0.8;
-  font-family: 'Courier New', monospace; /* 路径用等宽字体更易读 */
+  font-family: 'Courier New', monospace;
+  /* 路径用等宽字体更易读 */
 }
 
 /* ========== 移动端紧凑布局（PC端效果完全不变） ========== */
 @media (max-width: 768px) {
+
   /* 容器内边距缩小，增加可视区域 */
   .card-page-container {
     padding: 16px 12px;
   }
-  
+
   /* 标题缩小，减少上下边距 */
   .page-title {
     font-size: 22px;
     margin-bottom: 20px;
   }
-  
+
   /* 改用两列等宽布局，大幅提升卡片密度 */
   .cards-wrapper {
     grid-template-columns: repeat(2, minmax(130px, 1fr));
     gap: 12px;
   }
-  
+
   /* 缩小卡片内边距，降低单个卡片高度 */
   .card-item {
     padding: 12px;
   }
-  
+
   /* 标题字体缩小，行距紧凑 */
   .card-title {
     font-size: 15px;
     margin-bottom: 4px;
   }
-  
+
   /* 路径字体缩小，更节省空间 */
   .card-path {
     font-size: 11px;
@@ -168,12 +174,15 @@ const cardList = computed(() => {
   .cards-wrapper {
     gap: 10px;
   }
+
   .card-item {
     padding: 10px;
   }
+
   .card-title {
     font-size: 14px;
   }
+
   .card-path {
     font-size: 10px;
   }
