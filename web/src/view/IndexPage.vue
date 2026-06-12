@@ -17,7 +17,6 @@
 
 <script setup lang="ts">
 import axios from 'axios';
-import path from 'path';
 import { computed, onMounted, ref, type Ref } from 'vue';
 
 // 定义卡片数据类型
