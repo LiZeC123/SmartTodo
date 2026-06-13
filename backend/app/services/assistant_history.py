@@ -28,7 +28,6 @@ class AssistantHistoryManager:
         )
         self.db.add(msg)
         self.db.flush()
-        self.db.commit()
 
     def add_assistant_answer(self, content: str, owner: str, *, tool_call_list_json="", tag: int = 0):
         status = self.query_or_init_status(owner)
@@ -43,7 +42,6 @@ class AssistantHistoryManager:
         )
         self.db.add(msg)
         self.db.flush()
-        self.db.commit()
 
     def add_tool_call_msg(self, tool_call_id: str, content: str, *, owner: str, tag: int = 0):
         status = self.query_or_init_status(owner)
@@ -58,7 +56,6 @@ class AssistantHistoryManager:
         )
         self.db.add(msg)
         self.db.flush()
-        self.db.commit()
 
     def switch(self, /, role_config: RoleConfig, owner: str):
         status = self.query_or_init_status(owner)
@@ -69,13 +66,11 @@ class AssistantHistoryManager:
         status.assistant_mode = role_mode
 
         self.db.flush()
-        self.db.commit()
 
     def change_mode(self, role_mode: int, owner: str):
         status = self.query_or_init_status(owner)
         status.assistant_mode = role_mode
         self.db.flush()
-        self.db.commit()
 
     def set_auto_continue(self, min_char_num: int, owner: str):
         if min_char_num < 0:
@@ -84,7 +79,6 @@ class AssistantHistoryManager:
         status = self.query_or_init_status(owner)
         status.auto_continue = min_char_num
         self.db.flush()
-        self.db.commit()
 
     def merge_assistant_msg(self, owner: str):
         assistant_msg_0 = self.remove_last_assistant(owner)
@@ -124,7 +118,6 @@ class AssistantHistoryManager:
 
         self.db.delete(last)
         self.db.flush()
-        self.db.commit()
         return last
 
     def remove_last_user(self, owner: str) -> History | None:
@@ -138,7 +131,6 @@ class AssistantHistoryManager:
 
         self.db.delete(last)
         self.db.flush()
-        self.db.commit()
         return last
 
     def remove_last_pair(self, owner: str) -> bool:
@@ -154,7 +146,6 @@ class AssistantHistoryManager:
             else:
                 self.db.delete(last)
         self.db.flush()
-        self.db.commit()
         return True
 
     def query_or_init_status(self, owner: str) -> Status:
@@ -164,7 +155,6 @@ class AssistantHistoryManager:
             t = make_assistant_status(owner=owner)
             self.db.add(t)
             self.db.flush()
-            self.db.commit()
         return t
 
     def select_last_msg(self, assistant_name: str, owner: str) -> History | None:

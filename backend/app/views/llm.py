@@ -3,7 +3,7 @@ from collections.abc import Iterator
 
 from flask import Blueprint, Response, request
 
-from app import assistant_manager
+from app import assistant_manager, db
 from app.models.assistant import parse_assistant_mode
 from app.views.authority import authority_check
 
@@ -39,7 +39,7 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.dump_tool(owner)
     elif prompt == "/debug_compress":
         g = assistant_manager.debug_update_memory()
-    elif prompt == '/auto_answer':
+    elif prompt == "/auto_answer":
         g = assistant_manager.auto_answer(owner)
     elif prompt.startswith("/switch "):
         # 切换助理角色, 自动维持上一次使用的模式
@@ -79,6 +79,10 @@ def assistant_chat_stream(owner: str):
     else:
         g = assistant_manager.chat(prompt, owner)
 
+
+    # 这里Return后此接口执行完毕, 会判定有无异常并决定是否提交数据库, 因此此处无需手动commit
+    # 但迭代器执行完毕后可能会产生一些其他数据库操作, 这一部分操作在统一commit操作之后, 因此需要额外手动提交
+    # 否则相关操作一直持有数据库锁, 将导致异常
     return Response(
         generate_sse_from(g),
         mimetype="text/event-stream",
@@ -106,6 +110,9 @@ def generate_sse_from(g: Iterator[str]):
         prev = curr
     # 循环结束后，prev 是原迭代器的最后一个元素
     yield f"data: {json.dumps({'text': prev, 'done': True})}\n\n"
+
+    # 生成器耗尽后执行一次数据库提交操作, 确保在这个请求结束时所有内容都已经提交
+    db.commit()
 
 
 def parse_switch_args(prompt: str) -> tuple[str, str]:

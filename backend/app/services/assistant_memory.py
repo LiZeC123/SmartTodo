@@ -268,7 +268,7 @@ class AssistantMemoryManager:
                 reason="自动更新",
             )
 
-        self.db.commit()
+        self.db.flush()
 
         logger.info(
             f"[{owner}:{config.name}] 记忆压缩完毕, 新对话起始时间为 {get_str_from_datetime(new_start_time)}, 新增记忆长度为 {len(content) / KB:.2f} KB, 思考长度为 {len(reason) / KB:.2f} KB"
@@ -318,7 +318,7 @@ class AssistantMemoryManager:
             content_time=start_time,
         )
         self.db.add(detail)
-        self.db.commit()
+        self.db.flush()
         return True
 
     def query_rumor(self, owner: str) -> MemoryDetail | None:
@@ -409,7 +409,7 @@ class AssistantMemoryManager:
             content_time=now(),
         )
         self.db.add(detail)
-        self.db.commit()
+        self.db.flush()
 
     def stabilize_preference(self, *, content: str, assistant_name: str, owner: str):
         detail = make_memory_detail(
@@ -421,7 +421,7 @@ class AssistantMemoryManager:
             content_time=now(),
         )
         self.db.add(detail)
-        self.db.commit()
+        self.db.flush()
 
     def set_process_time(self, *, content: str, assistant_name: str, owner: str, reason="手动设置"):
         detail = make_memory_detail(
@@ -433,4 +433,4 @@ class AssistantMemoryManager:
             content_time=now(),
         )
         self.db.add(detail)
-        self.db.commit()
+        self.db.flush()
