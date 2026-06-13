@@ -108,17 +108,67 @@ class AssistantHistoryManager:
         return auto_answer.content
 
     def remove_last_assistant(self, owner: str) -> History | None:
+        """移除最后一个助手回复及其关联的工具调用/返回结果消息。
+
+        一次助手回复可能因工具调用产生多条 DB 消息：
+            assistant (tool_calls) → tool (结果) → assistant (最终回复)
+        此方法从末尾向前扫描，删除所有非 user 消息，合并其内容后返回；
+        遇到 user 消息或没有更多消息时停止。
+        """
         status = self.query_or_init_status(owner)
+
         last = self.select_last_msg(status.assistant_name, owner)
         if last is None:
             return None
-
-        if last.role != AssistantType.Assistant:
+        if last.role == AssistantType.User:
             return None
 
-        self.db.delete(last)
+        # 从后向前扫描，收集并删除所有属于该助手回复的消息
+        content_parts: list[str] = []
+        tool_call_json = ""
+        # 记录最早（时序上最靠前）消息的元信息
+        first_create_time = last.create_time
+        first_assistant_name = last.assistant_name
+        first_assistant_mode = last.assistant_mode
+
+        while True:
+            last = self.select_last_msg(status.assistant_name, owner)
+            if last is None:
+                break
+            if last.role == AssistantType.User:
+                break  # 遇到用户消息，停止
+
+            if last.content:
+                content_parts.append(last.content)
+            if last.tool_call_list_json:
+                tool_call_json = last.tool_call_list_json
+
+            # 持续更新为更早消息的元信息
+            first_create_time = last.create_time
+            first_assistant_name = last.assistant_name
+            first_assistant_mode = last.assistant_mode
+
+            self.db.delete(last)
+            self.db.flush()
+
+        if not content_parts:
+            return None
+
         self.db.flush()
-        return last
+
+        # content_parts 是反向收集的（从晚到早），反转后拼接
+        content_parts.reverse()
+        merged_content = "".join(content_parts)
+
+        return History(
+            role=AssistantType.Assistant,
+            content=merged_content,
+            tool_call_list_json=tool_call_json,
+            create_time=first_create_time,
+            owner=status.owner,
+            assistant_name=first_assistant_name,
+            assistant_mode=first_assistant_mode,
+        )
 
     def remove_last_user(self, owner: str) -> History | None:
         status = self.query_or_init_status(owner)
@@ -142,10 +192,11 @@ class AssistantHistoryManager:
 
             if last.role == AssistantType.User:
                 self.db.delete(last)
+                self.db.flush()
                 break
             else:
                 self.db.delete(last)
-        self.db.flush()
+                self.db.flush()
         return True
 
     def query_or_init_status(self, owner: str) -> Status:
