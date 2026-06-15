@@ -45,15 +45,13 @@ class AssistantMemoryManager:
             preference: str = self.query_preference(assistant_name, owner)
             content += f"# 预测用户偏好\n{preference}\n" if preference else ""
 
+        # 话题和日记仅提取当前原始对话中不包含的, 避免重复信息太多
+        end_time = the_day_begin(self.query_msg_start_time(assistant_name, owner))
         if policy.max_topic_num > 0:
-            topic: str = self.query_topic(policy.max_topic_num, assistant_name, owner)
+            topic: str = self.query_topic(policy.max_topic_num, end_time, assistant_name, owner)
             content += f"# 近期话题\n{topic}\n" if topic else ""
 
         if policy.max_diary_num > 0:
-            # TODO: 日记和里程碑的处理与其他字段不一样, 还需要更细致的操作
-            # 原始对话文本的开始时间那一天就是日记的截止时间, 避免加载重复的内容
-            end_time = self.query_msg_start_time(assistant_name, owner)
-            end_time = the_day_begin(end_time)
             diary: str = self.query_diary(policy.max_diary_num, end_time, assistant_name, owner)
             content += f"# 角色近期日记\n{diary}\n" if diary else ""
 
@@ -71,16 +69,16 @@ class AssistantMemoryManager:
         preference: str = self.query_preference(assistant_name, owner)
         content += f"# 预测用户偏好\n{preference}\n\n" if preference else ""
 
-        topic: str = self.query_topic(15, assistant_name, owner)
+        end_time = now()
+        topic: str = self.query_topic(15, end_time, assistant_name, owner)
         content += f"# 近期话题\n{topic}\n\n" if topic else ""
 
-        end_time = now()
         diary: str = self.query_diary(5, end_time, assistant_name, owner)
         content += f"# 角色近期日记\n{diary}\n\n" if diary else ""
 
         return content
 
-    def query_topic(self, topic_num: int, assistant_name: str, owner: str) -> str:
+    def query_topic(self, topic_num: int, end_time: datetime, assistant_name: str, owner: str) -> str:
         if topic_num < 1 or topic_num > 15:
             topic_num = 1
 
@@ -90,6 +88,7 @@ class AssistantMemoryManager:
                 MemoryDetail.owner == owner,
                 MemoryDetail.assistant_name == assistant_name,
                 MemoryDetail.tag == MemoryDetailType.RecentTopic,
+                MemoryDetail.content_time < end_time,
             )
             .order_by(MemoryDetail.id.desc())
             .limit(topic_num)
