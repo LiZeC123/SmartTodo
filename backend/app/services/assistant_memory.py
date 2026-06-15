@@ -372,7 +372,7 @@ class AssistantMemoryManager:
         err = ""
         configs = {
             "新增设定": (MemoryDetailType.RoleSetting,),
-            "用户偏好": (MemoryDetailType.RoleSetting,),
+            "用户偏好": (MemoryDetailType.Preference,),
             "近期话题": (MemoryDetailType.RecentTopic,),
             "个人日记": (MemoryDetailType.Diary,),
         }
