@@ -94,7 +94,7 @@ class MemoryPolicy:
                 enable_role_setting=True,
                 enable_preference=False,
                 max_topic_num=0,
-                max_diary_num=3,
+                max_diary_num=5,
                 raw_content_size=15 * KB,
             )
         if policy_name == "S2":
@@ -103,7 +103,7 @@ class MemoryPolicy:
                 enable_role_setting=True,
                 enable_preference=False,
                 max_topic_num=0,
-                max_diary_num=2,
+                max_diary_num=3,
                 raw_content_size=9 * KB,
             )
         if policy_name == "D1":
@@ -112,8 +112,8 @@ class MemoryPolicy:
                 enable_role_setting=False,
                 enable_preference=False,
                 max_topic_num=0,
-                max_diary_num=5,
-                raw_content_size=9 * KB,
+                max_diary_num=7,
+                raw_content_size=15 * KB,
             )
         if policy_name == "D2":
             # 对话连续性优先, 类似D1, 但导入记忆更少, 更轻量
@@ -121,7 +121,7 @@ class MemoryPolicy:
                 enable_role_setting=False,
                 enable_preference=False,
                 max_topic_num=0,
-                max_diary_num=3,
+                max_diary_num=5,
                 raw_content_size=9 * KB,
             )
         if policy_name == "T1":
@@ -130,7 +130,7 @@ class MemoryPolicy:
                 enable_role_setting=False,
                 enable_preference=False,
                 max_topic_num=12,
-                max_diary_num=3,
+                max_diary_num=5,
                 raw_content_size=5 * KB,
             )
 
