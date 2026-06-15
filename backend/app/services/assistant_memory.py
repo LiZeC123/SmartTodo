@@ -1,4 +1,5 @@
 import json
+import random
 import re
 from collections.abc import Sequence
 from datetime import datetime, timedelta
@@ -210,7 +211,6 @@ class AssistantMemoryManager:
         # 否则直接返回记录的时间, 在执行记忆压缩时会重新计算时间
         return get_datetime_from_str(details[0].content)
 
-    # TODO: 二级内容提取, 里程碑等内容
     def update_long_term_memory(self, *, config: RoleConfig, owner: str) -> bool:
         # 判断记忆压缩策略
         if config.memory_policy == "None":
@@ -320,9 +320,20 @@ class AssistantMemoryManager:
         self.db.flush()
         return True
 
-    def query_rumor(self, owner: str) -> MemoryDetail | None:
-        records = self.__query_lastest(self.RUMOR_ROLE_NAME, owner, MemoryDetailType.Rumor)
-        return records[0] if records else None
+    def query_rumor_diary(self, owner: str) -> MemoryDetail | None:
+        stmt = (
+            sal.select(MemoryDetail)
+            .where(
+                MemoryDetail.owner == owner,
+                MemoryDetail.tag == MemoryDetailType.Diary,
+            )
+            .order_by(MemoryDetail.id.desc())
+            .limit(10)
+        )
+        records = self.db.scalars(stmt).all()
+        if not records:
+            return None
+        return random.choice(records)
 
     @staticmethod
     def split_markdown_by_heading(content: str) -> dict[str, str]:

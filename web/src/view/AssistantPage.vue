@@ -105,7 +105,7 @@ const COMMANDS = [
   { command: '/dump_memory', description: '显示该角色所有记忆项', needsSpace: false },
   { command: '/dump_tool', description: '显示最近3次工具调用记录', needsSpace: false },
 
-  { command: '/rumor', description: '注入流言蜚语(参数 [目标关注角色(可选)])', needsSpace: false },
+  { command: '/rumor', description: '注入流言蜚语', needsSpace: false },
   { command: '/topic', description: '要求助手发起一个新的话题', needsSpace: false },
   { command: '/inject', description: '注入数据 (参数 [数据名称] [prompt])', needsSpace: true },
   { command: '/set_auto_continue', description: '设置自动续写阈值 (参数 [最小字符数])', needsSpace: true },

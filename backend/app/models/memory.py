@@ -27,7 +27,7 @@ class MemoryDetailType:
 
     Thinking = 9  # 模型思考内容
     StartTime = 10  # 对话历史起始标记, 该时间之后的对话保持原始内容
-    Rumor = 11  # 流言蜚语
+    Rumor = 11  # [已废弃] 流言蜚语
 
 
 class MemoryDetail(Base):

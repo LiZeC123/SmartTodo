@@ -18,6 +18,7 @@ from app.models.assistant import (
 from app.models.exception import LLMIllegalStatusException
 from app.models.memory import (
     KB,
+    MemoryPolicy,
 )
 from app.services.assistant_history import AssistantHistoryManager
 from app.services.assistant_memory import AssistantMemoryManager
@@ -269,12 +270,7 @@ class AssistantManager:
     def show_last_reason(self, owner: str) -> Iterator[str]:
         status = self.history_manager.query_or_init_status(owner)
         memory_reason = self.memory_manager.query_last_reason(status.assistant_name, owner)
-
-        rumor_detail = self.memory_manager.query_rumor(owner)
-        rumor_reason = rumor_detail.reason if rumor_detail else ""
-
-        content = f"压缩记忆: \n{memory_reason}\n\n流言蜚语: \n {rumor_reason}"
-        yield content
+        yield memory_reason
 
     def new_topic(self, owner: str) -> Iterator[str]:
         inject = "你需要根据现有的近期话题主动发起一个新话题"
@@ -329,24 +325,20 @@ class AssistantManager:
         content = "\n".join(lines)
         yield content
 
-    def rumor(self, owner: str) -> Iterator[str]:
-        yestoday = today_begin() - timedelta(days=1)
-        yield "正在生成流言蜚语\n"
-        self.memory_manager.rumor_propagation(yestoday, owner)
-        rumor = self.memory_manager.query_rumor(owner)
-        yield rumor.content if rumor else ""
 
-    def rumor_propagation(self, target_keyword: str, owner: str) -> Iterator[str]:
-        rumor_detail = self.memory_manager.query_rumor(owner)
-        if not rumor_detail:
+    def rumor_propagation(self, owner: str) -> Iterator[str]:
+        detail = self.memory_manager.query_rumor_diary(owner)
+        if detail is None:
             yield "当前没有流言蜚语"
             return
 
-        target = ""
-        if target_keyword:
-            target = f"用户要求你关注{target_keyword}相关的流言蜚语."
+        target_name = detail.assistant_name
+        traget_text = detail.content
+        target_desc = self.role_manager.get_role(name=target_name).short_desc
 
-        inject_content = InjectRumorPrompt.format(target=target, rumor_text=rumor_detail.content)
+        inject_content = InjectRumorPrompt.format(
+            target_name=target_name, traget_text=traget_text, target_desc=target_desc
+        )
         self.history_manager.add_user_prompt("", inject_content, owner, tag=AssistantTagType.Rumor)
 
         status = self.history_manager.query_or_init_status(owner)
@@ -396,13 +388,10 @@ class AssistantManager:
         status = self.history_manager.query_or_init_status(owner)
         mode = assistant_mode_str(status.assistant_mode)
         config = self.role_manager.get_role(name=status.assistant_name)
+        policy = MemoryPolicy.to_str(config.memory_policy)
         content = (
-            f"【当前状态信息】\n角色名: {status.assistant_name}\n角色模式: {mode}\n角色描述: {config.short_desc}\n"
+            f"【当前状态信息】\n角色名: {status.assistant_name}\n角色模式: {mode}\n角色描述: {config.short_desc}\n角色记忆策略: {policy}\n"
         )
-
-        rumor = self.memory_manager.query_rumor(owner)
-        rumor_text = rumor.content if rumor else ""
-        content += f"\n【流言蜚语】\n{rumor_text}\n"
 
         records = self.history_manager.select_inject_history(status.assistant_name, 4, owner)
         content += "\n【最近几条注入信息】\n"
@@ -419,14 +408,11 @@ class AssistantManager:
             return
 
         users = self.config_manager.get_all_users()
-        start_time = today_begin() - timedelta(days=1)
         for user in users:
             # 检查该用户所有助理的历史对话长度, 更新满足要求的助理的记忆
             for role in self.history_manager.get_recent_assistant_list(user):
                 config = self.role_manager.get_role(name=role)
                 self.memory_manager.update_long_term_memory(config=config, owner=user)
-            # 基于已经更新的日记, 计算用户行为轨迹, 作为流言蜚语传播的素材
-            self.memory_manager.rumor_propagation(start_time, user)
 
     def debug_update_memory(self) -> Iterator[str]:
         yield "正在执行记忆压缩操作\n"

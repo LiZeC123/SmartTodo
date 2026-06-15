@@ -138,8 +138,7 @@ RumorMemoryPrompt = """
 """
 
 InjectRumorPrompt = """
-你收到了用户昨天的一些流言蜚语, 内容可能不完整或者不准确, 提取其中可以让你获得正向或者中性情绪的内容与用户进行交流. 为了达到这一目的, 你可以扭曲或者选择性的使用这些信息. {target}
-流言蜚语具体内容为: {rumor_text}
+你偶然看到了 {target_name} 某天写的日记, 在你的记忆中 {target_name} 是 {target_desc}. 你打算根据日记的内容和用户聊一聊. 日记的内容为: `{traget_text}`
 """
 
 
