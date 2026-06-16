@@ -295,10 +295,10 @@ class TomatoRecordManager:
             now_time = now()
             if now_time < work_finish_time:
                 remain_minutes = (work_finish_time - now_time).total_seconds() / 60
-                return f"正在进行{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt + 1}个番茄钟, 当前为工作状态, 番茄钟任务为[{state.name}], 工作时间剩余{remain_minutes:.2f}分钟\n"
+                return f"正在进行{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt + 1}个番茄钟, 当前为工作状态, 番茄钟任务为[{state.name}], 工作时间剩余{remain_minutes:.1f}分钟\n"
             elif now_time < rest_finish_time:
                 remain_minutes = (rest_finish_time - now_time).total_seconds() / 60
-                return f"正在进行{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt + 1}个番茄钟, 当前为休息状态, 番茄钟任务为[{state.name}], 休息时间剩余{remain_minutes:.2f}分钟\n"
+                return f"正在进行{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt + 1}个番茄钟, 当前为休息状态, 番茄钟任务为[{state.name}], 休息时间剩余{remain_minutes:.1f}分钟\n"
 
         # 其次检查是否为休息时间, 相当于可以覆盖番茄钟的休息和规划状态
         reset_time = self.check_rest_time()
@@ -317,12 +317,12 @@ class TomatoRecordManager:
         if last_tomato_cnt == 0:
             if elapsed_minutes < 20:
                 # 最后一个番茄钟会让cnt+1所以输出时无需+1了
-                return f"已完成{begin_state}第{last_group_cnt}组番茄钟, 当前为大组之间的休息时间, 剩余{20 - elapsed_minutes:.2f}分钟\n"
+                return f"已完成{begin_state}第{last_group_cnt}组番茄钟, 当前为大组之间的休息时间, 剩余{20 - elapsed_minutes:.1f}分钟\n"
             else:
-                return f"已完成{begin_state}第{last_group_cnt}组番茄钟, 已完成大组之间的休息, 当前进入规划状态, 已持续{elapsed_minutes - 20:.2f}分钟\n"
+                return f"已完成{begin_state}第{last_group_cnt}组番茄钟, 已完成大组之间的休息, 当前进入规划状态, 已持续{elapsed_minutes - 20:.1f}分钟\n"
 
         # 如果不是最后一个番茄钟
-        return f"已完成{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt}个番茄钟, 当前进入规划状态, 已持续{elapsed_minutes - 5:.2f}分钟\n"
+        return f"已完成{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt}个番茄钟, 当前进入规划状态, 已持续{elapsed_minutes:.1f}分钟\n"
 
     def get_tomoto_record_info(self, owner: str, begin_time: datetime) -> tuple[int, int, TomatoTaskRecord | None]:
         tomato_records = self.select_record_after(owner=owner, time=begin_time)
