@@ -5,6 +5,7 @@ from flask import Blueprint, Response, request
 
 from app import assistant_manager, db
 from app.models.assistant import parse_assistant_mode
+from app.tools.log import logger
 from app.views.authority import authority_check
 
 llm_bp = Blueprint("llm", __name__)
@@ -106,15 +107,19 @@ def generate_sse_from(g: Iterator[str]):
     except StopIteration:
         return  # 迭代器为空，直接返回（空生成器）
 
-    for curr in it:  # 遍历剩下的元素
-        # 当前 prev 不是最后一个, done 为False
-        yield f"data: {json.dumps({'text': prev, 'done': False})}\n\n"
-        prev = curr
-    # 循环结束后，prev 是原迭代器的最后一个元素
-    yield f"data: {json.dumps({'text': prev, 'done': True})}\n\n"
-
-    # 生成器耗尽后执行一次数据库提交操作, 确保在这个请求结束时所有内容都已经提交
-    db.commit()
+    try:
+        for curr in it:  # 遍历剩下的元素
+            # 当前 prev 不是最后一个, done 为False
+            yield f"data: {json.dumps({'text': prev, 'done': False})}\n\n"
+            prev = curr
+        # 循环结束后，prev 是原迭代器的最后一个元素
+        yield f"data: {json.dumps({'text': prev, 'done': True})}\n\n"
+    except Exception as e:
+        logger.exception(f"SSE封装过程出现异常: {e}")
+        yield f"data: {json.dumps({'text': str(e), 'done': True})}\n\n"
+    finally:
+        # 确保任何情况下, 请求处理完毕都执行了提交操作.
+        db.commit()
 
 
 def parse_switch_args(prompt: str) -> tuple[str, str]:

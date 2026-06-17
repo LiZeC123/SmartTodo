@@ -42,6 +42,8 @@ class AssistantHistoryManager:
         )
         self.db.add(msg)
         self.db.flush()
+        # 由于助手消息需要等待流式输出完毕才能添加, 因此通常会滞后插入数据, 为了避免长时间持有锁, 插入完毕立即提交
+        self.db.commit()
 
     def add_tool_call_msg(self, tool_call_id: str, content: str, *, owner: str, tag: int = 0):
         status = self.query_or_init_status(owner)

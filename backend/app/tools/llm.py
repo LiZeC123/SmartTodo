@@ -133,12 +133,14 @@ class OpenAIProvider(LLMProvider):
             if delta.tool_calls:
                 tc_deltas = []
                 for tc in delta.tool_calls:
-                    tc_deltas.append({
-                        "index": tc.index,
-                        "id": tc.id,
-                        "name": tc.function.name if tc.function else None,
-                        "arguments": tc.function.arguments if tc.function else None,
-                    })
+                    tc_deltas.append(
+                        {
+                            "index": tc.index,
+                            "id": tc.id,
+                            "name": tc.function.name if tc.function else None,
+                            "arguments": tc.function.arguments if tc.function else None,
+                        }
+                    )
 
             yield StreamChunk(
                 content=delta.content,
@@ -181,9 +183,7 @@ class LLMClient:
         self.history_space: dict[str, list[ChatCompletionMessageParam]] = {}
 
     def generate_stream(self, history: list[ChatCompletionMessageParam]) -> Generator[str, Any]:
-        stream = self.provider.create_stream(
-            self.model_name, history, extra_body=thinking_disable
-        )
+        stream = self.provider.create_stream(self.model_name, history, extra_body=thinking_disable)
 
         for chunk in stream:
             if chunk.content is not None:
@@ -286,9 +286,7 @@ class LLMClient:
         tools: Iterable[ChatCompletionToolUnionParam],
         tool_calls_list: list,
     ) -> Generator[str, Any]:
-        stream = self.provider.create_stream(
-            self.model_name, history, tools=tools, extra_body=thinking_disable
-        )
+        stream = self.provider.create_stream(self.model_name, history, tools=tools, extra_body=thinking_disable)
 
         tool_calls_buffer: dict[int, dict[str, str]] = {}
         msg_buffer: list[str] = []
