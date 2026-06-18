@@ -1,4 +1,4 @@
-import json
+import csv
 from collections.abc import Iterable
 from dataclasses import dataclass
 
@@ -6,13 +6,11 @@ from dataclasses import dataclass
 @dataclass
 class RoleConfig:
     name: str  # 角色姓名
-    enable_tools: bool  # 是否允许调用工具
-    memory_compress: str  # 记忆压缩策略
-    enable_rumor: bool  # 是否启用流言蜚语系统(获得流言蜚语信息)
-    visible_in_rumor: bool  # 是否在流言蜚语系统中可见(可以产生传闻并被其他角色获知)
     short_desc: str  # 角色的简短描述
-    long_desc: str  # 角色的详细设定
     memory_policy: str  # 使用记忆的策略
+    enable_tools: bool  # 是否允许调用工具
+    visible_in_rumor: bool  # 是否在流言蜚语系统中可见(可以产生传闻并被其他角色获知)
+    long_desc: str  # 角色的详细设定
 
     def get_self_desc(self):
         return f"你是一位{self.short_desc}, 名叫{self.name}. {self.long_desc}"
@@ -21,8 +19,6 @@ class RoleConfig:
 DefaultRoleConfig = RoleConfig(
     name="默认助手",
     enable_tools=False,
-    memory_compress="No",
-    enable_rumor=False,
     visible_in_rumor=False,
     short_desc="有用的助手.",
     long_desc="",
@@ -59,5 +55,21 @@ class RoleManager:
         self.role_map = {item.name: item for item in self.get_role_list()}
 
     def __load_file(self) -> Iterable[RoleConfig]:
-        with open("config/role/Assistant.jsonl") as f:
-            return [RoleConfig(**json.loads(s)) for role in f if (s := role.strip()) != "" and not s.startswith("//")]
+        configs = []
+        with open("config/role/Assistant.csv") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                # 布尔值转换：假设文件中为 'true'/'false' 或 'True'/'False'
+                enable_tools = row["enable_tools"].strip().lower() == "true"
+                visible_in_rumor = row["visible_in_rumor"].strip().lower() == "true"
+
+                config = RoleConfig(
+                    name=row["name"],
+                    short_desc=row["short_desc"],
+                    memory_policy=row["memory_policy"],
+                    enable_tools=enable_tools,
+                    visible_in_rumor=visible_in_rumor,
+                    long_desc=row["long_desc"],
+                )
+                configs.append(config)
+            return configs
