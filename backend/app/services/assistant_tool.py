@@ -7,9 +7,9 @@ from openai.types.chat import (
 from openai.types.chat.chat_completion_function_tool_param import ChatCompletionFunctionToolParam
 from openai.types.shared_params.function_definition import FunctionDefinition
 
+from app.models.exception import LLMIllegalStatusException
 from app.models.item import Item
 from app.services.assistant import AssistantManager
-from app.template.prompt import AnyQueryPrompt
 from app.tools.log import logger
 from app.tools.time import get_datetime_from_str
 
@@ -33,7 +33,7 @@ def with_metadata(struct: ChatCompletionFunctionToolParam):
 CreatItemTool = ChatCompletionFunctionToolParam(
     type="function",
     function=FunctionDefinition(
-        name="",
+        name="{}",
         description="为用户创建一个待办事项",
         parameters={
             "type": "object",
@@ -64,50 +64,18 @@ CreatItemTool = ChatCompletionFunctionToolParam(
     ),
 )
 
-AnyQueryTool = ChatCompletionFunctionToolParam(
+SupportQueryTyep = ["今日待办", "已逾期任务"]
+QueryTodoSystemTool = ChatCompletionFunctionToolParam(
     type="function",
     function=FunctionDefinition(
-        name="",
-        description="向系统查询需要的信息",
+        name="{}",
+        description="查询用户待办事项系统的数据. 指定一个查询的类别, 按照分组的形式返回相关数据的明细.",
         parameters={
             "type": "object",
             "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "你的名字, 该字段用于权限检查",
-                },
-                "question": {
-                    "type": "string",
-                    "description": "查询的问题, 使用自然语言清晰准确的描述背景和你要问的问题",
-                },
+                "query_type": {"type": "string", "description": "要查询的数据的类别", "enum": SupportQueryTyep},
             },
-            "required": ["name", "question"],
-        },
-    ),
-)
-
-GetDeadlineItemTool = ChatCompletionFunctionToolParam(
-    type="function",
-    function=FunctionDefinition(
-        name="",
-        description="查询当前用户所有已过期的待办事项, 返回每个过期事项的名称、截止时间和优先级",
-        parameters={
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
-    ),
-)
-
-GetTodayItemTool = ChatCompletionFunctionToolParam(
-    type="function",
-    function=FunctionDefinition(
-        name="get_today_item",
-        description="精确查询当前用户最新版本的今日待办事项列表, 返回每个事项的名称以及完成情况",
-        parameters={
-            "type": "object",
-            "properties": {},
-            "required": [],
+            "required": [type],
         },
     ),
 )
@@ -155,39 +123,23 @@ class AssistantTool:
             return f"error: {e}"
         return "success"
 
-    @with_metadata(AnyQueryTool)
-    def query_info(self, arg_json: str) -> str:
-        try:
-            args: dict[str, str] = json.loads(arg_json)
-            role_name = args.get("name", "")
-            question = args.get("question", "")
-            if role_name == "" or question == "":
-                return f"查询信息不完整. name={role_name}, question={question}"
-            # TODO: 角色名存在校验
-            config = self.role_manager.get_role(name=role_name)
-            short_info = f"{config.name}({config.short_desc})"
-            prompt = AnyQueryPrompt.format(role_short_info=short_info, question=question)
-            content = self.llm_manager.generate_one_shot_with_history(prompt, f"{self.owner}_AnyQ", simple_client=True)
-            logger.info(f"[{config.name}] 提问 [{question}] 获得回答 [{content}]")
-            return content or "查询结果为空"
-        except Exception as e:
-            logger.exception(e)
-            return f"error: {e}"
+    @with_metadata(QueryTodoSystemTool)
+    def get_today_item(self, arg_json: str) -> str:
+        args: dict[str, str] = json.loads(arg_json)
+        query_type = args.get("query_type")
+        if query_type not in SupportQueryTyep:
+            return f"未知的查询类型: {query_type}"
 
-    @with_metadata(GetDeadlineItemTool)
-    def get_deadline_item(self, _: str) -> str:
         try:
-            groups = self.item_manager.get_deadline_item(self.owner)
-            return self.format_group(groups)
-        except Exception as e:
-            logger.exception(e)
-            return f"error: {e}"
+            if query_type == "今日待办":
+                groups = self.item_manager.get_item_with_sub_task(owner=self.owner)
+                return self.format_group(groups)
+            if query_type == "已逾期任务":
+                groups = self.item_manager.get_deadline_item(self.owner)
+                return self.format_group(groups)
 
-    @with_metadata(GetTodayItemTool)
-    def get_today_item(self, _: str) -> str:
-        try:
-            groups = self.item_manager.get_item_with_sub_task(owner=self.owner)
-            return self.format_group(groups)
+            # 不应该存在这种情况, 如果确实出现了, 那么就先手动抛出异常, 然后在下面被捕获
+            raise LLMIllegalStatusException(f"{query_type} 已经注册但未提供逻辑支持")
         except Exception as e:
             logger.exception(e)
             return f"error: {e}"
