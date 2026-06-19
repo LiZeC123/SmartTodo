@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, scoped_session
 from app.models.memory import KB, MemoryDetail, MemoryDetailType, MemoryPolicy, MinCompressionSize, make_memory_detail
 from app.services.assistant_history import AssistantHistoryManager
 from app.services.role_manager import RoleConfig, RoleManager
-from app.template.prompt import LongTermMemoryPrompt, RumorMemoryPrompt
+from app.template.prompt import LongTermMemoryPrompt
 from app.tools.llm import LLMClient
 from app.tools.log import logger
 from app.tools.time import get_datetime_from_str, get_str_from_datetime, now, the_day_begin, today_begin
@@ -272,52 +272,6 @@ class AssistantMemoryManager:
         logger.info(
             f"[{owner}:{config.name}] 记忆压缩完毕, 新对话起始时间为 {get_str_from_datetime(new_start_time)}, 新增记忆长度为 {len(content) / KB:.2f} KB, 思考长度为 {len(reason) / KB:.2f} KB"
         )
-        return True
-
-    def rumor_propagation(self, start_time: datetime, owner: str) -> bool:
-        roles = self.history_manager.get_recent_assistant_list(owner)
-        if len(roles) == 0:
-            return False
-
-        end_time = start_time + timedelta(days=1)
-        stmt = sal.select(MemoryDetail).where(
-            MemoryDetail.owner == owner,
-            MemoryDetail.content_time >= start_time,
-            MemoryDetail.content_time <= end_time,
-            MemoryDetail.tag == MemoryDetailType.Diary,
-            MemoryDetail.assistant_name.in_(roles),
-        )
-
-        records = self.db.scalars(stmt).all()
-        if len(records) == 0:
-            logger.warning(f"[{owner}] 由于没有可用日记, 流言蜚语传播计算取消")
-            return False
-
-        diaries = []
-        for r in records:
-            name = r.assistant_name
-            desc = self.role_manager.get_role(name=r.assistant_name).short_desc
-            text = r.content
-            diaries.append(f"{name}({desc}): {text}")
-
-        diary_text = "\n".join(diaries)
-        # 根据所有人的日记获得一个用户全天行为的客观描述
-        prompt = RumorMemoryPrompt.format(diary_text=diary_text)
-        reason, content = self.client.generate_one_shot(prompt)
-        if not content:
-            logger.warning(f"{owner}: 流言蜚语计算, 模型返回为空")
-            return False
-
-        detail = make_memory_detail(
-            content,
-            reason=reason,
-            assistant_name=self.RUMOR_ROLE_NAME,
-            owner=owner,
-            tag=MemoryDetailType.Rumor,
-            content_time=start_time,
-        )
-        self.db.add(detail)
-        self.db.flush()
         return True
 
     def query_rumor_diary(self, owner: str) -> MemoryDetail | None:
