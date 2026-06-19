@@ -9,7 +9,6 @@ from openai.types.chat import (
 )
 
 from app.services.config_manager import ConfigManager
-from app.template.prompt import AnyQuerySystemPrompt
 from app.tools.log import logger
 
 thinking_enable = {"thinking": {"type": "enabled"}}
@@ -189,25 +188,6 @@ class LLMClient:
             if chunk.content is not None:
                 yield chunk.content
 
-    def generate_stream_with_prompt(self, prompt: str, *, thinking=True, simple_client=False):
-        """单次流式请求模型, 返回思考内容和模型回复"""
-        provider, model_name, extra_body = self._get_provider_and_body(thinking, simple_client)
-
-        stream = provider.create_stream(
-            model_name,
-            [
-                {"role": "system", "content": "You are a helpful assistant"},
-                {"role": "user", "content": prompt},
-            ],
-            extra_body=extra_body,
-        )
-
-        for chunk in stream:
-            if chunk.reasoning_content is not None:
-                yield chunk.reasoning_content
-            if chunk.content is not None:
-                yield chunk.content
-
     def generate_one_shot(self, prompt: str, *, thinking=True, simple_client=False):
         """单次非流式请求模型, 返回思考内容和模型回复"""
         provider, model_name, extra_body = self._get_provider_and_body(thinking, simple_client)
@@ -225,60 +205,11 @@ class LLMClient:
         content = result.content
         return reasoning_content, content
 
-    def generate_one_shot_with_history(
-        self, prompt: str, history_tag: str, *, thinking=True, simple_client=False
-    ) -> str:
-        provider, model_name, extra_body = self._get_provider_and_body(thinking, simple_client)
-        history_list = self.get_history(history_tag)
-        history_list.append({"role": "user", "content": prompt})
-
-        result = provider.create_completion(
-            model_name,
-            history_list,
-            extra_body=extra_body,
-        )
-
-        content = result.content
-        if content:
-            history_list.append({"role": "assistant", "content": content})
-            return content
-        return "查询结果为空"
-
     def _get_provider_and_body(self, thinking: bool, simple_client: bool) -> tuple[LLMProvider, str, dict]:
         provider = self.simple_provider if simple_client else self.provider
         model_name = self.simple_model_name if simple_client else self.model_name
         extra_body = thinking_enable if thinking else thinking_disable
         return provider, model_name, extra_body
-
-    def get_history(self, name: str) -> list[ChatCompletionMessageParam]:
-        history = self.history_space.get(name)
-        if history is None:
-            init_history: list[ChatCompletionMessageParam] = [{"role": "system", "content": AnyQuerySystemPrompt}]
-            self.history_space[name] = init_history
-            return init_history
-
-        return history
-
-    @staticmethod
-    def truncate_list_by_threshold(
-        str_list: list[ChatCompletionMessageParam], threshold: int
-    ) -> list[ChatCompletionMessageParam]:
-        # 边界处理：空列表直接返回
-        if not str_list:
-            return []
-
-        total_length = 0
-        # 从后往前遍历列表，记录索引
-        for idx in reversed(range(len(str_list))):
-            # 累加当前字符串长度
-            content: str = str_list[idx].get("content")  # type: ignore
-            total_length += len(content)
-            # 达到阈值，保留从当前索引到末尾的所有元素
-            if total_length >= threshold:
-                return str_list[idx:]
-
-        # 所有元素累加都未达到阈值，返回全部
-        return str_list
 
     def generate_steam_with_tools(
         self,

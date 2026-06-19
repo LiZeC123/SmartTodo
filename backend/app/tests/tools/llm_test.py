@@ -10,7 +10,6 @@ from openai.types.chat import (
 )
 
 from app.services.config_manager import ConfigManager
-from app.template.prompt import AnyQuerySystemPrompt
 from app.tests.tools.llm_mock import MockLLMProvider
 from app.tools.llm import Completion, LLMClient, StreamChunk
 
@@ -35,7 +34,9 @@ def mock_simple_provider() -> MockLLMProvider:
 
 
 @pytest.fixture
-def client(config_manager: ConfigManager, mock_provider: MockLLMProvider, mock_simple_provider: MockLLMProvider) -> LLMClient:
+def client(
+    config_manager: ConfigManager, mock_provider: MockLLMProvider, mock_simple_provider: MockLLMProvider
+) -> LLMClient:
     return LLMClient(config_manager, provider=mock_provider, simple_provider=mock_simple_provider)
 
 
@@ -127,47 +128,6 @@ def test_generate_one_shot_thinking_disabled(client: LLMClient, mock_provider: M
 
     assert reasoning == ""
     assert content == "hello"
-
-
-# ---------------------------------------------------------------------------
-# generate_one_shot_with_history
-# ---------------------------------------------------------------------------
-
-
-def test_generate_one_shot_with_history_accumulates(client: LLMClient, mock_simple_provider: MockLLMProvider) -> None:
-    """多次调用同一 history_tag 时，历史应逐次累积"""
-    mock_simple_provider.register_completion("turn 1", Completion(content="resp 1"))
-    mock_simple_provider.register_completion("turn 2", Completion(content="resp 2"))
-
-    tag = "test_tag"
-    r1 = client.generate_one_shot_with_history("turn 1", tag, simple_client=True)
-    r2 = client.generate_one_shot_with_history("turn 2", tag, simple_client=True)
-
-    assert r1 == "resp 1"
-    assert r2 == "resp 2"
-
-    # 验证 history 累积了 2 轮 user + assistant
-    history = client.get_history(tag)
-    # history 包含: [system_prompt, user("turn 1"), assistant("resp 1"), user("turn 2"), assistant("resp 2")]
-    assert len(history) == 5
-    assert history[0] == {"role": "system", "content": AnyQuerySystemPrompt}
-    assert history[1] == {"role": "user", "content": "turn 1"}
-    assert history[2] == {"role": "assistant", "content": "resp 1"}
-    assert history[3] == {"role": "user", "content": "turn 2"}
-    assert history[4] == {"role": "assistant", "content": "resp 2"}
-
-
-def test_generate_one_shot_with_history_empty_response(client: LLMClient, mock_provider: MockLLMProvider) -> None:
-    """模型返回空 content 时，应返回 "查询结果为空" 且不追加 assistant 消息"""
-    mock_provider.register_completion("ask empty", Completion(content=""))
-
-    tag = "empty_tag"
-    result = client.generate_one_shot_with_history("ask empty", tag)
-
-    assert result == "查询结果为空"
-    history = client.get_history(tag)
-    # 只有 system_prompt + user 消息，没有 assistant 消息
-    assert len(history) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -265,38 +225,3 @@ def test_generate_steam_with_tools_no_tool_call(client: LLMClient, mock_provider
 
     assert result == "Just a normal reply."
     assert len(tool_calls_list) == 0
-
-
-# ---------------------------------------------------------------------------
-# truncate_list_by_threshold
-# ---------------------------------------------------------------------------
-
-
-def test_truncate_empty_list() -> None:
-    assert LLMClient.truncate_list_by_threshold([], 100) == []
-
-
-def test_truncate_below_threshold_returns_full_list() -> None:
-    """总长度未达阈值，返回全部"""
-    msgs: list[ChatCompletionMessageParam] = [
-        {"role": "user", "content": "short"},
-        {"role": "assistant", "content": "reply"},
-    ]
-    result = LLMClient.truncate_list_by_threshold(msgs, 9999)
-    assert result == msgs
-
-
-def test_truncate_cuts_from_front() -> None:
-    """从前往后累加到阈值，截掉前面的消息"""
-    msgs: list[ChatCompletionMessageParam] = [
-        {"role": "user", "content": "AAAA"},  # 4
-        {"role": "assistant", "content": "BB"},  # 2 → 累计 6
-        {"role": "user", "content": "CCCCCCCC"},  # 8 → 累计 14
-        {"role": "assistant", "content": "DD"},  # 2 → 累计 16
-    ]
-    # 阈值 10：从后往前累加，DD(2) + CCCCCCCC(8) = 10 → 达到阈值
-    # 返回 [{"role": "user", "content": "CCCCCCCC"}, {"role": "assistant", "content": "DD"}]
-    result = LLMClient.truncate_list_by_threshold(msgs, 10)
-    assert len(result) == 2
-    assert result[0] == msgs[2]
-    assert result[1] == msgs[3]
