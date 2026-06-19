@@ -11,6 +11,7 @@ from app.services.interpreter import OpInterpreter
 from app.services.item_manager import ItemManager
 from app.services.task_manager import TaskManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
+from app.services.weight_manager import WeightManager
 from app.tools.gen import get_or_create_secret_key
 
 # 初始化数据库对象
@@ -30,6 +31,7 @@ op_interpreter = OpInterpreter(item_manager)
 tomato_manager = TomatoManager(item_manager)
 tomato_record_manager = TomatoRecordManager(tomato_manager)
 checkin_manager = CheckinManager(config_manager, item_manager)
+weight_manager = WeightManager(event_manager)
 
 assistant_manager = AssistantManager(config_manager, tomato_record_manager)
 

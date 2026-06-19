@@ -1,32 +1,28 @@
-
 from flask import Blueprint, request
 
-from app import db
-from app.services.weight_manager import *
+from app import weight_manager
 from app.views.authority import authority_check
 
-weight_bp = Blueprint('weight', __name__)
+weight_bp = Blueprint("weight", __name__)
 
 
 @weight_bp.post("/api/me/weight/query")
 @authority_check()
 def query(owner: str):
-    return query_log(db, owner)
+    return weight_manager.query_log(owner)
 
 
 @weight_bp.post("/api/me/weight/add")
 @authority_check()
 def add(owner: str):
     data: dict = request.get_json()
-    weight = float(data.get('weight', 0))
-    return add_log(db, owner, weight)
+    weight = float(data.get("weight", 0))
+    return weight_manager.add_log(owner, weight)
 
 
 @weight_bp.post("/api/me/weight/remove")
 @authority_check()
 def remove(owner: str):
     data = request.get_json()
-    id = int(data.get('id'))
-    return remove_log(db, owner, id)
-
-
+    id = int(data.get("id"))
+    return weight_manager.remove_log(owner, id)
