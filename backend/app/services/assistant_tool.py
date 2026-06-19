@@ -75,7 +75,7 @@ QueryTodoSystemTool = ChatCompletionFunctionToolParam(
             "properties": {
                 "query_type": {"type": "string", "description": "要查询的数据的类别", "enum": SupportQueryTyep},
             },
-            "required": [type],
+            "required": ['query_type'],
         },
     ),
 )
@@ -124,7 +124,7 @@ class AssistantTool:
         return "success"
 
     @with_metadata(QueryTodoSystemTool)
-    def get_today_item(self, arg_json: str) -> str:
+    def query_todo_system(self, arg_json: str) -> str:
         args: dict[str, str] = json.loads(arg_json)
         query_type = args.get("query_type")
         if query_type not in SupportQueryTyep:

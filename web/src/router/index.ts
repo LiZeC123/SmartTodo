@@ -4,11 +4,8 @@ import Todo from '@/view/TodoPage.vue'
 import Message from '@/view/MessagePage.vue'
 import TomatoPage from '@/view/TomatoPage.vue'
 import SummaryPage from '@/view/SummaryPage.vue'
-import CreditsPage from '@/view/me/CreditsPage.vue'
 import WeightRecord from '@/view/me/WeightRecord.vue'
 import PomodoroTimer from '@/view/me/PomodoroTimer.vue'
-import WelfarePage from '@/view/me/WelfarePage.vue'
-import CreditAdd from '@/view/me/CreditAdd.vue'
 import Checkin from '@/view/CheckinPage.vue'
 import Assistant from '@/view/AssistantPage.vue'
 import Index from '@/view/IndexPage.vue'
@@ -27,11 +24,8 @@ const router = createRouter({
     { path: '/assistant', component: Assistant },
     { path: '/checkin', component: Checkin },
     { path: '/summary', component: SummaryPage },
-    { path: '/me/credits', component: CreditsPage },
     { path: '/me/weight', component: WeightRecord },
     { path: '/me/tomato', component: PomodoroTimer },
-    { path: '/me/welfare', component: WelfarePage },
-    { path: '/me/credit/add', component: CreditAdd },
   ]
 })
 
