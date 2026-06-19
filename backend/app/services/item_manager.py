@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session, scoped_session
 from app.models.exception import NotUniqueItemException, UnauthorizedException, UnmatchedException
 from app.models.item import Item, ItemType, TomatoType
 from app.models.note import Note
-from app.services.credit_manager import update_credit
 from app.services.event_log_manager import EventManager
 from app.tools.file import create_download_file, create_upload_file, delete_file_from_url
 from app.tools.log import logger
@@ -57,11 +56,6 @@ def remove_note_handler(db: DataBase, item: Item):
         db.execute(stmt)
 
 
-def done_item_handler(db: DataBase, item: Item):
-    if item.repeatable or item.url is None:
-        update_credit(db, item.owner, 1, f"完成任务 {item.name}")
-
-
 class ItemManager:
     def __init__(self, em: EventManager):
         self.db = em.db
@@ -69,7 +63,7 @@ class ItemManager:
 
         self.before_create_event: list[ItemEvent] = [http_url_handler, download_file_handler]
         self.after_create_event: list[ItemEvent] = [create_note_handler]
-        self.on_done_event: list[ItemEvent] = [done_item_handler]
+        self.on_done_event: list[ItemEvent] = []
         self.on_delete_event: list[ItemEvent] = [remove_file_handler, remove_note_handler]
 
     def create(self, item: Item) -> Item:

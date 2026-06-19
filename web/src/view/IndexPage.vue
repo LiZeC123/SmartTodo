@@ -45,10 +45,7 @@ const dyNote: Ref<CardConfig[]> = ref([
 const tail: CardConfig[] = [
   { title: '数据汇总', path: '/summary' },
   { title: '体重记录', path: '/me/weight' },
-  { title: '积分管理', path: '/me/credits' },
   { title: '番茄计时', path: '/me/tomato' },
-  { title: '福利中心', path: '/me/welfare' },
-  { title: '添加积分', path: '/me/credit/add' }
 ]
 
 

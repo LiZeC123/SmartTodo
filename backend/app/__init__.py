@@ -53,7 +53,6 @@ def create_app():
 
     # 导入并注册蓝图
     from app.views.checkin import checkin_bp
-    from app.views.credit import credit_bp
     from app.views.file import file_bp
     from app.views.item import item_bp
     from app.views.llm import llm_bp
@@ -70,7 +69,6 @@ def create_app():
     app.register_blueprint(note_bp)
     app.register_blueprint(tomato_bp)
     app.register_blueprint(weight_bp)
-    app.register_blueprint(credit_bp)
     app.register_blueprint(llm_bp)
     app.register_blueprint(checkin_bp)
 

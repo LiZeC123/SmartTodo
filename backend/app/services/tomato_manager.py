@@ -6,7 +6,6 @@ import sqlalchemy as sal
 
 from app.models.item import Item, ItemType, TomatoType
 from app.models.tomato import TomatoStatus, TomatoTaskRecord
-from app.services.credit_manager import update_credit
 from app.services.item_manager import ItemManager
 from app.tools.log import logger
 from app.tools.time import get_hour_str_from, last_month, now, parse_time, today_begin
@@ -61,7 +60,6 @@ class TomatoManager:
         # 如果增加番茄钟操作失败, 则不进行后续操作
         if self.item_manager.increase_used_tomato(xid, owner):
             self.__insert_record(status)
-            update_credit(self.db, owner, 2, f"完成番茄钟 {status.name}")
             return True
         return False
 
