@@ -33,8 +33,8 @@ def test_task_manager():
     sleep(0.02)
 
 
-def task_with_db_update():
-    event_manager.add_event_log(owner, "测试更新")
+# def task_with_db_update():
+#     event_manager.add_event_log(owner, "测试更新")
 
 
 # 多线程写入测试会显著拉高测试执行时间, 因此仅保留代码, 不进行测试

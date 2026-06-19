@@ -7,7 +7,14 @@ from datetime import datetime, timedelta
 import sqlalchemy as sal
 from sqlalchemy.orm import Session, scoped_session
 
-from app.models.memory import KB, MemoryDetail, MemoryDetailType, MemoryPolicy, MinCompressionSize, make_memory_detail
+from app.models.memory import (
+    KB,
+    MemoryDetail,
+    MemoryDetailType,
+    MinCompressionSize,
+    get_policy_from,
+    make_memory_detail,
+)
 from app.services.assistant_history import AssistantHistoryManager
 from app.services.role_manager import RoleConfig, RoleManager
 from app.template.prompt import LongTermMemoryPrompt
@@ -36,7 +43,7 @@ class AssistantMemoryManager:
         """基于角色的记忆使用策略, 按照配置加载对应的记忆项, 返回提示词文本"""
         content = ""
         config = self.role_manager.get_role(name=assistant_name)
-        policy = MemoryPolicy.get_policy(config.memory_policy)
+        policy = get_policy_from(config.memory_policy)
 
         if policy.enable_role_setting:
             setting: str = self.query_role_setting(assistant_name, owner)
@@ -200,7 +207,7 @@ class AssistantMemoryManager:
         if not details:
             # 没有设置过时间时, 进行初始化计算
             config = self.role_manager.get_role(name=assistant_name)
-            policy = MemoryPolicy.get_policy(config.memory_policy)
+            policy = get_policy_from(config.memory_policy)
             start_day = self.history_manager.evalute_first_memory_datetime(
                 policy.raw_content_size, assistant_name, owner
             )
@@ -256,7 +263,7 @@ class AssistantMemoryManager:
             )
             self.db.add(item)
 
-        policy = MemoryPolicy.get_policy(config.memory_policy)
+        policy = get_policy_from(config.memory_policy)
         old_start_time = self.query_msg_start_time(config.name, owner)
         new_start_time = self.history_manager.evalute_first_memory_datetime(policy.raw_content_size, config.name, owner)
         if new_start_time > old_start_time:

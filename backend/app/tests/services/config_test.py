@@ -14,3 +14,6 @@ def test_base():
 
     base_url, api_key, model_name = manager.get_llm_info()
     assert base_url is not None and api_key is not None and model_name is not None
+
+    users = manager.get_all_users()
+    assert len(list(users)) != 0

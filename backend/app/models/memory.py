@@ -87,63 +87,6 @@ class MemoryPolicy:
     raw_content_size: int
 
     @staticmethod
-    def get_policy(policy_name: str) -> "MemoryPolicy":
-        if policy_name == "S1":
-            # 角色设定优先, 适合人设与故事背景会缓慢变化, 但对于对话连续性要求一般的场景
-            return MemoryPolicy(
-                enable_role_setting=True,
-                enable_preference=False,
-                max_topic_num=0,
-                max_diary_num=5,
-                raw_content_size=15 * KB,
-            )
-        if policy_name == "S2":
-            # 角色设定优先, 类似于S1, 但对于对话连续性要求更低
-            return MemoryPolicy(
-                enable_role_setting=True,
-                enable_preference=False,
-                max_topic_num=0,
-                max_diary_num=3,
-                raw_content_size=9 * KB,
-            )
-        if policy_name == "D1":
-            # 对话连续性优先, 适合人设几乎不变, 话题快速更换的场景, 但需要对整体一致性要求较高的场景
-            return MemoryPolicy(
-                enable_role_setting=False,
-                enable_preference=False,
-                max_topic_num=0,
-                max_diary_num=7,
-                raw_content_size=15 * KB,
-            )
-        if policy_name == "D2":
-            # 对话连续性优先, 类似D1, 但导入记忆更少, 更轻量
-            return MemoryPolicy(
-                enable_role_setting=False,
-                enable_preference=False,
-                max_topic_num=0,
-                max_diary_num=5,
-                raw_content_size=9 * KB,
-            )
-        if policy_name == "T1":
-            # 话题优先, 适合人设几乎不会变化, 且历史对话没有太大关联, 经常讨论不同话题的场景
-            return MemoryPolicy(
-                enable_role_setting=False,
-                enable_preference=False,
-                max_topic_num=12,
-                max_diary_num=5,
-                raw_content_size=5 * KB,
-            )
-
-        # 默认 None, 禁用所有记忆内容
-        return MemoryPolicy(
-            enable_role_setting=False,
-            enable_preference=False,
-            max_topic_num=0,
-            max_diary_num=0,
-            raw_content_size=10 * KB,
-        )
-
-    @staticmethod
     def to_str(policy_name: str) -> str:
         if policy_name.startswith("S"):
             return f"角色设定优先({policy_name})"
@@ -155,3 +98,36 @@ class MemoryPolicy:
             return "未开启记忆策略"
 
         return f"无效的记忆策略({policy_name})"
+
+
+MemoryPolicyDict = {
+    # 角色设定优先, 适合人设与故事背景会缓慢变化, 但对于对话连续性要求一般的场景
+    "S1": MemoryPolicy(
+        enable_role_setting=True, enable_preference=False, max_topic_num=0, max_diary_num=5, raw_content_size=15 * KB
+    ),
+    # 角色设定优先, 类似于S1, 但对于对话连续性要求更低
+    "S2": MemoryPolicy(
+        enable_role_setting=True, enable_preference=False, max_topic_num=0, max_diary_num=3, raw_content_size=9 * KB
+    ),
+    # 对话连续性优先, 适合人设几乎不变, 话题快速更换的场景, 但需要对整体一致性要求较高的场景
+    "D1": MemoryPolicy(
+        enable_role_setting=False, enable_preference=False, max_topic_num=0, max_diary_num=7, raw_content_size=15 * KB
+    ),
+    # 对话连续性优先, 类似D1, 但导入记忆更少, 更轻量
+    "D2": MemoryPolicy(
+        enable_role_setting=False, enable_preference=False, max_topic_num=0, max_diary_num=5, raw_content_size=9 * KB
+    ),
+    # 话题优先, 适合人设几乎不会变化, 且历史对话没有太大关联, 经常讨论不同话题的场景
+    "T1": MemoryPolicy(
+        enable_role_setting=False, enable_preference=False, max_topic_num=12, max_diary_num=5, raw_content_size=5 * KB
+    ),
+}
+
+DefaultMemoryPolicy = MemoryPolicy(
+    enable_role_setting=False, enable_preference=False, max_topic_num=0, max_diary_num=0, raw_content_size=10 * KB
+)
+
+
+def get_policy_from(policy_name: str) -> MemoryPolicy:
+    policy = MemoryPolicyDict.get(policy_name)
+    return policy if policy else DefaultMemoryPolicy

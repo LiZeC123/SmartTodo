@@ -18,19 +18,18 @@ def today() -> date:
     return now().date()
 
 
-def today_str() -> str:
-    return now().strftime("%Y-%m-%d")
-
-
 def today_begin() -> datetime:
     return the_day_begin(now())
 
-def the_day_begin(t:datetime):
-    return t - timedelta(hours=t.hour,minutes=t.minute,seconds=t.second,microseconds=t.microsecond)
+
+def the_day_begin(t: datetime):
+    return t - timedelta(hours=t.hour, minutes=t.minute, seconds=t.second, microseconds=t.microsecond)
+
 
 def the_month_begin() -> datetime:
     t = now()
     return datetime(year=t.year, month=t.month, day=1)
+
 
 def this_week_begin() -> datetime:
     now_time = now()
@@ -55,13 +54,16 @@ def this_year_str() -> str:
 
 
 def get_datetime_from_str(t: str) -> datetime:
-    return datetime.strptime(t, '%Y-%m-%d %H:%M:%S')
+    return datetime.strptime(t, "%Y-%m-%d %H:%M:%S")
+
 
 def get_str_from_datetime(t: datetime):
     return t.strftime("%Y-%m-%d %H:%M:%S")
 
+
 def get_datetime_from_month_str(t: str):
-    return datetime.strptime(t, '%Y-%m')
+    return datetime.strptime(t, "%Y-%m")
+
 
 def get_day_from_str(t: str) -> date:
     return get_datetime_from_str(t).date()
@@ -80,7 +82,8 @@ def the_day_after(day: datetime, after_day: int):
 
 
 def get_hour_str_from(t: datetime) -> str:
-    return datetime.strftime(t, '%H:%M')
+    return datetime.strftime(t, "%H:%M")
+
 
 def format_timedelta(delta: timedelta) -> str:
     days = delta.days
@@ -121,6 +124,7 @@ def parse_deadline_str(date_str: str) -> str:
         return this_year.strftime("%Y-%m-%d %H:%M:%S")
     else:
         return next_year.strftime("%Y-%m-%d %H:%M:%S")
+
 
 def parse_befeore_time_str(date_str: str) -> datetime:
     """解析日期字符串, 与parse_deadline_str逻辑正好相反, 始终返回过去的时间"""
