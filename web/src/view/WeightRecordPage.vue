@@ -122,7 +122,7 @@ onMounted( () => {
 function reloadChart() {
   if (chartInstance) {
     chartInstance.data.labels = reversedHistory.value.map(entry => formatDate(entry.create_time))
-    chartInstance.data.datasets[0].data = reversedHistory.value.map(entry => entry.weight)
+    chartInstance.data.datasets[0].data = reversedHistory.value.map(entry => entry.weight) 
     chartInstance.update()
   }
 }

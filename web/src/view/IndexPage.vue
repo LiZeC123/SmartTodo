@@ -31,8 +31,9 @@ const head: CardConfig[] = [
   { title: '待办事项', path: '/todo' },
   { title: '番茄时钟', path: '/tomato' },
   { title: '私人助理', path: '/assistant' },
+  { title: '体重记录', path: '/weight/record' },
   { title: '打卡记录', path: '/checkin' },
-
+  { title: '体重计划', path: '/weight/plan' },
 ];
 
 const dyNote: Ref<CardConfig[]> = ref([
@@ -44,7 +45,6 @@ const dyNote: Ref<CardConfig[]> = ref([
 
 const tail: CardConfig[] = [
   { title: '数据汇总', path: '/summary' },
-  { title: '体重记录', path: '/me/weight' },
   { title: '番茄计时', path: '/me/tomato' },
 ]
 

@@ -4,12 +4,12 @@ import Todo from '@/view/TodoPage.vue'
 import Message from '@/view/MessagePage.vue'
 import TomatoPage from '@/view/TomatoPage.vue'
 import SummaryPage from '@/view/SummaryPage.vue'
-import WeightRecord from '@/view/me/WeightRecord.vue'
+import WeightRecordPage from '@/view/WeightRecordPage.vue'
 import PomodoroTimer from '@/view/me/PomodoroTimer.vue'
 import Checkin from '@/view/CheckinPage.vue'
 import Assistant from '@/view/AssistantPage.vue'
 import Index from '@/view/IndexPage.vue'
-
+import WeightPlanPage from '@/view/WeightPlanPage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -24,8 +24,9 @@ const router = createRouter({
     { path: '/assistant', component: Assistant },
     { path: '/checkin', component: Checkin },
     { path: '/summary', component: SummaryPage },
-    { path: '/me/weight', component: WeightRecord },
-    { path: '/me/tomato', component: PomodoroTimer },
+    { path: '/weight/plan', component: WeightPlanPage },
+    { path: '/weight/record', component: WeightRecordPage },
+    { path: '/me/tomato', component: PomodoroTimer }
   ]
 })
 

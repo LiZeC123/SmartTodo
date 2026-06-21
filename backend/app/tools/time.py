@@ -14,6 +14,10 @@ def now_str_fn() -> str:
     return now().strftime("%Y%m%d_%H%M%S")
 
 
+def the_day_str(t: datetime) -> str:
+    return t.strftime("%Y-%m-%d")
+
+
 def today() -> date:
     return now().date()
 
