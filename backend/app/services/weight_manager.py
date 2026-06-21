@@ -29,7 +29,12 @@ class WeightManager:
     def add_log(self, owner: str, weight: float) -> bool:
         log = WeightLog(owner=owner, weight=weight)
         self.db.add(log)
-        self.event_manager.add_event_log(owner, f"用户更新当前体重为 {weight:.1f} 斤")
+        plan = self.query_plan(owner)
+        if plan:
+            target_weight = self.__fast_get_target_weight(plan)
+            self.event_manager.add_event_log(owner, f"用户更新当前体重为 {weight:.1f} 斤, 当前目标体重为 {target_weight:.1f} 斤")
+        else:
+            self.event_manager.add_event_log(owner, f"用户更新当前体重为 {weight:.1f} 斤")
         # 两个插入操作一起flush, 因此无需再手动flush
         return True
 
@@ -96,3 +101,8 @@ class WeightManager:
             value = plan.target_weight + args["C"] * math.exp(args["a"] * i)
             line[the_day] = value
         return line
+
+    def __fast_get_target_weight(self, plan: WeightPlan) -> float:
+        args = json.loads(plan.args)
+        i = (now() - plan.start_day).days
+        return plan.target_weight + args["C"] * math.exp(args["a"] * i)
