@@ -349,14 +349,14 @@ class AssistantMemoryManager:
         }
         for key, config in configs.items():
             value = details.get(key)
-            if not value:
+            if value is None:
+                # key不存在是异常情况, 需要告警
                 err += f"{key}提取失败 "
                 continue
 
             value = value.strip()
             if not value:
-                # 可能出现这种情况, 先打日志看看表现
-                logger.info(f"[{owner}:{assistant_name}] 提取{key}内容为空")
+                # 可能存在对应的字段内容为空, 符合预期无需额外处理
                 continue
 
             item = make_memory_detail(
