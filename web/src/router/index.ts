@@ -19,7 +19,7 @@ const router = createRouter({
     { path: '/login', component: Login },
     { path: '/todo', component: Todo },
     { path: '/note/:id', component: Todo },
-    { path: '/log/:type', component: Message },
+    { path: '/log/', component: Message },
     { path: '/tomato', component: TomatoPage },
     { path: '/assistant', component: Assistant },
     { path: '/checkin', component: Checkin },

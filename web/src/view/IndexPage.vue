@@ -44,6 +44,7 @@ const dyNote: Ref<CardConfig[]> = ref([
 ])
 
 const tail: CardConfig[] = [
+  { title: '系统日志', path: '/log' },
   { title: '数据汇总', path: '/summary' },
   { title: '番茄计时', path: '/me/tomato' },
 ]
