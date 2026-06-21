@@ -20,7 +20,7 @@ def test_add_log():
     rst = weight_manager.query_log(owner=owner)
     assert len(rst) == 1
 
-    i = int(rst[0]["id"])
+    i = int(rst[0].id)
     with pytest.raises(UnauthorizedException):
         rst = weight_manager.remove_log(owner=fake_owner, id=i)
 
