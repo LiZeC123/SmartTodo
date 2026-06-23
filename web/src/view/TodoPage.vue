@@ -196,7 +196,7 @@ function saveNote(content: string) {
 let footerConfig: FooterConfig[] = [
   { name: '总结列表', needAdmin: false, f: () => router.push({ path: '/summary' }) },
   { name: '上传文件', needAdmin: false, f: selectFile },
-  { name: '查看日志', needAdmin: true, f: () => router.push({ path: '/log/log' }) },
+  { name: '查看日志', needAdmin: true, f: () => router.push({ path: '/log' }) },
   {
     name: '退出登录',
     needAdmin: false,
