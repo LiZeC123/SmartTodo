@@ -38,8 +38,6 @@ def assistant_chat_stream(owner: str):
         g = assistant_manager.dump_memory(owner)
     elif prompt == "/dump_tool":
         g = assistant_manager.dump_tool(owner)
-    elif prompt == "/debug_compress":
-        g = assistant_manager.debug_update_memory()
     elif prompt == "/auto_answer":
         g = assistant_manager.auto_answer(owner)
     elif prompt == "/rumor":

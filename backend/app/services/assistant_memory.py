@@ -5,45 +5,35 @@ from collections.abc import Sequence
 from datetime import datetime, timedelta
 
 import sqlalchemy as sal
-from sqlalchemy.orm import Session, scoped_session
 
 from app.models.memory import (
     KB,
     MemoryDetail,
     MemoryDetailType,
-    MinCompressionSize,
-    get_policy_from,
     make_memory_detail,
 )
+from app.models.role import RoleConfig
 from app.services.assistant_history import AssistantHistoryManager
-from app.services.role_manager import RoleConfig, RoleManager
+from app.services.role_manager import RoleManager
 from app.template.prompt import LongTermMemoryPrompt
 from app.tools.llm import LLMClient
 from app.tools.log import logger
 from app.tools.time import get_datetime_from_str, get_str_from_datetime, now, the_day_begin, today_begin
 
+MinCompressionSize = 2 * KB
+
 
 class AssistantMemoryManager:
-    RUMOR_ROLE_NAME = "公共"
-    CACHE_EXPIRE_TIME = 20 * 3600
-
-    def __init__(
-        self,
-        db: scoped_session[Session],
-        role_manager: RoleManager,
-        llm_client: LLMClient,
-        history_manager: AssistantHistoryManager,
-    ) -> None:
-        self.db = db
-        self.role_manager = role_manager
-        self.client = llm_client
-        self.history_manager = history_manager
+    def __init__(self, rm: RoleManager, lc: LLMClient, hm: AssistantHistoryManager) -> None:
+        self.db = hm.db
+        self.role_manager = rm
+        self.client = lc
+        self.history_manager = hm
 
     def query_memory_detail(self, assistant_name: str, owner: str) -> str:
         """基于角色的记忆使用策略, 按照配置加载对应的记忆项, 返回提示词文本"""
         content = ""
-        config = self.role_manager.get_role(name=assistant_name)
-        policy = get_policy_from(config.memory_policy)
+        policy = self.role_manager.get_role(name=assistant_name).get_memory_policy()
 
         if policy.enable_role_setting:
             setting: str = self.query_role_setting(assistant_name, owner)
@@ -216,8 +206,7 @@ class AssistantMemoryManager:
         details = self.__query_lastest(assistant_name, owner, MemoryDetailType.StartTime)
         if not details:
             # 没有设置过时间时, 进行初始化计算
-            config = self.role_manager.get_role(name=assistant_name)
-            policy = get_policy_from(config.memory_policy)
+            policy = self.role_manager.get_role(name=assistant_name).get_memory_policy()
             start_day = self.history_manager.evalute_first_memory_datetime(
                 policy.raw_content_size, assistant_name, owner
             )
@@ -273,7 +262,7 @@ class AssistantMemoryManager:
             )
             self.db.add(item)
 
-        policy = get_policy_from(config.memory_policy)
+        policy = config.get_memory_policy()
         old_start_time = self.query_msg_start_time(config.name, owner)
         new_start_time = self.history_manager.evalute_first_memory_datetime(policy.raw_content_size, config.name, owner)
         if new_start_time > old_start_time:

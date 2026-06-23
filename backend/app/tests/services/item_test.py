@@ -10,7 +10,7 @@ from app.services.event_log_manager import EventManager
 from app.services.item_manager import ItemManager
 from app.tests.services.make_db import make_new_db
 from app.tools.file import FILE_FOLDER
-from app.tools.time import now, the_day_after
+from app.tools.time import now, the_day_after, today_begin
 
 event_manager = EventManager(make_new_db())
 manager = ItemManager(event_manager)
@@ -244,7 +244,8 @@ def test_select_summary():
         item.tomato_type = TomatoType.Today
         manager.create(item)
 
-    manager.select_summary(owner)
+    assert len(manager.select_summary(owner)) == 2
+    assert len(manager.select_recent_note_config(owner)) == 2
 
     items = [noteA, noteB, sub_itemA, sub_itemB, sub_itemC]
     for item in items:
@@ -268,6 +269,7 @@ def test_select_done_item():
 
     assert len(manager.select_done_item(owner)) == 1
     assert len(manager.select_undone_item(owner)) == 1
+    assert len(manager.select_done_itme_after(owner, today_begin()))
 
     for item in items:
         manager.remove(item)
@@ -290,10 +292,10 @@ def test_increase_expected_tomato():
     item = make_base_item("test_increase_expected_tomato")
     manager.create(item)
 
-    # 直接增加预期时间
+    # 直接增加预期使用番茄钟数量
     assert manager.increase_expected_tomato(item.id, owner)
 
-    # 完成一次后再次增加预期时间
+    # 完成一次后再次增加预期使用番茄钟数量
     assert manager.increase_used_tomato(item.id, owner)
     assert manager.increase_expected_tomato(item.id, owner)
 
@@ -301,11 +303,10 @@ def test_increase_expected_tomato():
         manager.increase_expected_tomato(item.id + 999, owner)
 
     # 最多设置四个番茄钟
-    assert manager.increase_used_tomato(item.id, owner)
-    assert manager.increase_used_tomato(item.id, owner)
+    assert manager.increase_expected_tomato(item.id, owner)
 
     # 继续增加番茄钟数量会失败
-    assert not manager.increase_used_tomato(item.id, owner)
+    assert not manager.increase_expected_tomato(item.id, owner)
 
     manager.remove(item)
 
@@ -331,6 +332,9 @@ def test_finish_used_tomato():
     manager.create(item)
     assert manager.finish_used_tomato(item.id, owner)
     assert item.expected_tomato == item.used_tomato
+
+    # 无法再次完成
+    assert not manager.finish_used_tomato(item.id, owner)
 
     # 完成有有多个番茄钟, 且已经完成部分番茄种的任务
     manager.increase_expected_tomato(item.id, owner)

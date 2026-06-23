@@ -1,5 +1,4 @@
 import json
-import warnings
 from datetime import datetime
 
 from openai.types.chat import (
@@ -127,33 +126,5 @@ class Status(Base):
 
 def make_assistant_status(owner: str):
     return Status(owner=owner)
-
-
-@warnings.deprecated("Use MemoryDetail instead")
-class Memory(Base):
-    """助手记忆表, 流水存储用户的每一个助理的记忆, 只插入不更新"""
-    __tablename__ = "assistant_memory"
-
-    id: Mapped[int]                 = mapped_column(Integer, primary_key=True, autoincrement=True)
-    owner: Mapped[str]              = mapped_column(String(15), nullable=False)
-    assistant_name: Mapped[str]     = mapped_column(String(15), nullable=False, default='') # 当前助理的角色名
-    short_term_memory: Mapped[str]  = mapped_column(String(15), nullable=False, default='')
-    long_term_memory: Mapped[str]   = mapped_column(String(15), nullable=False, default='')
-    compression_reason: Mapped[str] = mapped_column(Text, nullable=False, default='') # 记忆压缩的思考过程
-    rumor_reason: Mapped[str]       = mapped_column(Text, nullable=False, default='') # 流言蜚语扩散的思考过程
-    processed_time: Mapped[datetime]= mapped_column(DateTime, nullable=False, default=datetime(year=2026, month=5, day=1)) # 已经处理过的记录的截止时间
-
-    def deep_copy(self, processed_time:datetime) -> 'Memory':
-        return Memory(owner=self.owner, assistant_name=self.assistant_name,
-                      short_term_memory='', long_term_memory='', compression_reason='', rumor_reason='', processed_time=processed_time)
-
-    def to_assistant(self) -> str:
-        content = f"#内容说明\n这是你之前梳理的截止对话开始前你与用户之间的已经发生过的重要事件信息\n{self.long_term_memory}"
-        return content
-
-    def to_dump(self) -> str:
-        return f"角色名: {self.assistant_name}\n记忆处理时间: {self.processed_time}\n短期记忆:\n{self.short_term_memory}\n长期记忆:\n{self.long_term_memory}"
-
-
 
 

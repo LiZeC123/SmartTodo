@@ -18,7 +18,6 @@ from app.models.assistant import (
 from app.models.exception import LLMIllegalStatusException
 from app.models.memory import (
     KB,
-    MemoryPolicy,
 )
 from app.services.assistant_history import AssistantHistoryManager
 from app.services.assistant_memory import AssistantMemoryManager
@@ -56,9 +55,7 @@ class AssistantManager:
         self.tomato_record_manager = trm
         self.item_manager = trm.item_manager
         self.history_manager = AssistantHistoryManager(self.item_manager.db)
-        self.memory_manager = AssistantMemoryManager(
-            self.item_manager.db, self.role_manager, self.llm_manager, self.history_manager
-        )
+        self.memory_manager = AssistantMemoryManager(self.role_manager, self.llm_manager, self.history_manager)
         self.event_manager = self.item_manager.event_manager
 
         # 执行一些其他初始化逻辑
@@ -325,7 +322,6 @@ class AssistantManager:
         content = "\n".join(lines)
         yield content
 
-
     def rumor_propagation(self, owner: str) -> Iterator[str]:
         detail = self.memory_manager.query_rumor_diary(owner)
         if detail is None:
@@ -388,10 +384,8 @@ class AssistantManager:
         status = self.history_manager.query_or_init_status(owner)
         mode = assistant_mode_str(status.assistant_mode)
         config = self.role_manager.get_role(name=status.assistant_name)
-        policy = MemoryPolicy.to_str(config.memory_policy)
-        content = (
-            f"【当前状态信息】\n角色名: {status.assistant_name}\n角色模式: {mode}\n角色描述: {config.short_desc}\n角色记忆策略: {policy}\n"
-        )
+        policy = config.memory_policy
+        content = f"【当前状态信息】\n角色名: {status.assistant_name}\n角色模式: {mode}\n角色描述: {config.short_desc}\n角色记忆策略: {policy}\n"
 
         records = self.history_manager.select_inject_history(status.assistant_name, 4, owner)
         content += "\n【最近几条注入信息】\n"
@@ -413,8 +407,3 @@ class AssistantManager:
             for role in self.history_manager.get_recent_assistant_list(user):
                 config = self.role_manager.get_role(name=role)
                 self.memory_manager.update_long_term_memory(config=config, owner=user)
-
-    def debug_update_memory(self) -> Iterator[str]:
-        yield "正在执行记忆压缩操作\n"
-        self.auto_update_memory()
-        yield "记忆压缩完毕\n"

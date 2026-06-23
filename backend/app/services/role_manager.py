@@ -1,29 +1,7 @@
 import csv
 from collections.abc import Iterable
-from dataclasses import dataclass
 
-
-@dataclass
-class RoleConfig:
-    name: str  # 角色姓名
-    short_desc: str  # 角色的简短描述
-    memory_policy: str  # 使用记忆的策略
-    enable_tools: bool  # 是否允许调用工具
-    visible_in_rumor: bool  # 是否在流言蜚语系统中可见(可以产生传闻并被其他角色获知)
-    long_desc: str  # 角色的详细设定
-
-    def get_self_desc(self):
-        return f"你是一位{self.short_desc}, 名叫{self.name}. {self.long_desc}"
-
-
-DefaultRoleConfig = RoleConfig(
-    name="默认助手",
-    enable_tools=False,
-    visible_in_rumor=False,
-    short_desc="有用的助手.",
-    long_desc="",
-    memory_policy="None",
-)
+from app.models.role import DefaultRoleConfig, RoleConfig
 
 
 class RoleManager:
