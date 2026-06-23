@@ -71,23 +71,23 @@ class AssistantMemoryManager:
 
     def dump_memory_detail(self, assistant_name: str, owner: str) -> str:
         content = "当前角色所有生效的记忆项\n\n"
-        setting: str = self.query_role_setting(assistant_name, owner)
+        setting: str = self.query_role_setting(assistant_name, owner, limit=99)
         content += f"# 角色新增设定\n{setting}\n\n" if setting else ""
 
-        preference: str = self.query_preference(assistant_name, owner)
+        preference: str = self.query_preference(assistant_name, owner, limit=99)
         content += f"# 预测用户偏好\n{preference}\n\n" if preference else ""
 
         end_time = now()
-        topic: str = self.query_topic(15, end_time, assistant_name, owner)
+        topic: str = self.query_topic(20, end_time, assistant_name, owner)
         content += f"# 近期话题\n{topic}\n\n" if topic else ""
 
-        diary: str = self.query_diary(5, end_time, assistant_name, owner)
+        diary: str = self.query_diary(20, end_time, assistant_name, owner)
         content += f"# 角色近期日记\n{diary}\n\n" if diary else ""
 
         return content
 
     def query_topic(self, topic_num: int, end_time: datetime, assistant_name: str, owner: str) -> str:
-        if topic_num < 1 or topic_num > 15:
+        if topic_num < 1:
             topic_num = 1
 
         stmt = (
@@ -109,13 +109,18 @@ class AssistantMemoryManager:
         total_content = "\n".join([r.content for r in records])
         return total_content
 
-    def query_role_setting(self, assistant_name: str, owner: str) -> str:
+    def query_role_setting(self, assistant_name: str, owner: str, limit=10) -> str:
         min_id, content = self.__query_watermark(assistant_name, owner, MemoryDetailType.FixedSetting)
-        stmt = sal.select(MemoryDetail).where(
-            MemoryDetail.owner == owner,
-            MemoryDetail.assistant_name == assistant_name,
-            MemoryDetail.tag == MemoryDetailType.RoleSetting,
-            MemoryDetail.id > min_id,
+        stmt = (
+            sal.select(MemoryDetail)
+            .where(
+                MemoryDetail.owner == owner,
+                MemoryDetail.assistant_name == assistant_name,
+                MemoryDetail.tag == MemoryDetailType.RoleSetting,
+                MemoryDetail.id > min_id,
+            )
+            .order_by(MemoryDetail.id.desc())
+            .limit(limit)
         )
 
         content.extend([r.content for r in self.db.scalars(stmt)])
@@ -125,13 +130,18 @@ class AssistantMemoryManager:
         total = "\n".join(content)
         return total
 
-    def query_preference(self, assistant_name: str, owner: str) -> str:
+    def query_preference(self, assistant_name: str, owner: str, limit=10) -> str:
         min_id, content = self.__query_watermark(assistant_name, owner, MemoryDetailType.FixedPreference)
-        stmt = sal.select(MemoryDetail).where(
-            MemoryDetail.owner == owner,
-            MemoryDetail.assistant_name == assistant_name,
-            MemoryDetail.tag == MemoryDetailType.Preference,
-            MemoryDetail.id > min_id,
+        stmt = (
+            sal.select(MemoryDetail)
+            .where(
+                MemoryDetail.owner == owner,
+                MemoryDetail.assistant_name == assistant_name,
+                MemoryDetail.tag == MemoryDetailType.Preference,
+                MemoryDetail.id > min_id,
+            )
+            .order_by(MemoryDetail.id.desc())
+            .limit(limit)
         )
 
         content.extend([r.content for r in self.db.scalars(stmt)])
