@@ -61,10 +61,10 @@ class AssistantMemoryManager:
 
     def dump_memory_detail(self, assistant_name: str, owner: str) -> str:
         content = "当前角色所有生效的记忆项\n\n"
-        setting: str = self.query_role_setting(assistant_name, owner, limit=99)
+        setting: str = self.query_role_setting(assistant_name, owner, limit=30)
         content += f"# 角色新增设定\n{setting}\n\n" if setting else ""
 
-        preference: str = self.query_preference(assistant_name, owner, limit=99)
+        preference: str = self.query_preference(assistant_name, owner, limit=30)
         content += f"# 预测用户偏好\n{preference}\n\n" if preference else ""
 
         end_time = now()
