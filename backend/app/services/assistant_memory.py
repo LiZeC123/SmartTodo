@@ -142,7 +142,7 @@ class AssistantMemoryManager:
         return total
 
     def query_diary(self, diary_num: int, end_time: datetime, assistant_name: str, owner: str) -> str:
-        if diary_num < 1 or diary_num > 10:
+        if diary_num < 1:
             diary_num = 1
 
         min_id, content = self.__query_watermark(assistant_name, owner, MemoryDetailType.Milestone)
