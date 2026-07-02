@@ -259,6 +259,13 @@ def test_auto_continue_disabled_by_default() -> None:
 #     assert merged.role == AssistantType.Assistant
 
 
+def test_remake():
+    _consume(assistant_manager.chat("你好", owner))
+    assistant_manager.remake(owner)
+    _consume(assistant_manager.auto_answer(owner))
+    _consume(assistant_manager.new_topic(owner))
+
+
 def test_tool_collect():
     metadata_list, method_dict = assistant_tool.collect()
     assert metadata_list
@@ -278,4 +285,13 @@ def test_inject():
 
 
 def test_web_history():
-    pass
+    am = assistant_manager
+    am.get_web_history(owner)
+    am.get_more_web_history("2006-01-02 15:04:05", owner)
+    am.get_more_web_history("", owner)
+
+
+def test_rumor_and_memory():
+    am = assistant_manager
+    _consume(am.rumor_propagation(owner))
+    am.auto_update_memory()
