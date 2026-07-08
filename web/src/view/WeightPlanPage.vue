@@ -380,10 +380,10 @@ function processStats(detail: PlanDetailResponse) {
 
     stats.ddw = ddw.toFixed(1) + '斤'
     if (ddw > 0.2) {
-        stats.ddwSub = '↓ 与目标差距在增大'
+        stats.ddwSub = '↑ 与目标差距在增大'
         stats.ddwClass = 'negative'
     } else if (ddw < -0.2) {
-        stats.ddwSub = '↑ 与目标差距在缩下'
+        stats.ddwSub = '↓ 与目标差距在缩小'
         stats.ddwClass = 'positive'
     } else {
         stats.ddwSub = '→ 与目标差距持平'
