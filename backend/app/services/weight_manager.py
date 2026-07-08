@@ -85,16 +85,25 @@ class WeightManager:
             raise IllegalArgumentException(f"{owner}: 还未初始化体重计划")
 
         logs = self.query_log_between(owner, plan.start_day, plan.end_day)
+        user_line = {the_day_str(log.create_time): log.weight for log in logs}
+        target_line = self.__gen_target_line(plan)
 
         return {
             "target_weight": plan.target_weight,
-            "delta_weight": 1.23,
-            "BMI": 22,
-            "target_line": self.__gen_target_line(plan),
-            "user_line": {the_day_str(log.create_time): log.weight for log in logs},
+            "delta_weight": self.__get_delta_weight(user_line, target_line),
+            "target_line": target_line,
+            "user_line": user_line,
         }
 
-    def __gen_target_line(self, plan: WeightPlan) -> dict:
+    def __get_delta_weight(self, user_line: dict[str, float], target_line: dict[str, float]) -> float:
+        # 取交集获得实际有效的数据
+        ckey = user_line.keys() & target_line.keys()
+        acc = 0
+        for day in ckey:
+            acc += user_line[day] - target_line[day]
+        return acc
+
+    def __gen_target_line(self, plan: WeightPlan) -> dict[str, float]:
         args = json.loads(plan.args)
         line = {}
         days = (plan.end_day - plan.start_day).days

@@ -1,9 +1,6 @@
 from collections.abc import Iterator
 
-import pytest
-
 from app.models.assistant import AssistantModeType, AssistantType, History
-from app.models.exception import LLMIllegalStatusException
 from app.services.assistant import AssistantManager
 from app.services.assistant_tool import AssistantTool
 from app.services.config_manager import ConfigManager

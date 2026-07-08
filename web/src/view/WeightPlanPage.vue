@@ -81,11 +81,11 @@
                 <span class="stat-value">{{ stats.deviationText }}</span>
                 <span class="stat-sub" :class="stats.deviationClass">{{ stats.deviationSub }}</span>
             </div>
-            <div class="stat-card accent-purple">
-                <span class="stat-icon-mini">🏁</span>
-                <span class="stat-label">目标体重</span>
-                <span class="stat-value">{{ stats.targetWeight }}</span>
-                <span class="stat-sub neutral">计划结束时达成</span>
+            <div class="stat-card">
+                <span class="stat-icon-mini">🧮</span>
+                <span class="stat-label">偏差变化量</span>
+                <span class="stat-value">{{ stats.ddw }}</span>
+                <span class="stat-sub" :class="stats.ddwClass">{{ stats.ddwSub }}</span>
             </div>
             <div class="stat-card accent-green">
                 <span class="stat-icon-mini">🔽</span>
@@ -117,11 +117,11 @@
                 <span class="stat-value">{{ stats.weeklyChange }}</span>
                 <span class="stat-sub" :class="stats.weeklyClass">{{ stats.weeklySub }}</span>
             </div>
-            <div class="stat-card">
-                <span class="stat-icon-mini">🧮</span>
-                <span class="stat-label">BMI 指数</span>
-                <span class="stat-value">{{ stats.bmi }}</span>
-                <span class="stat-sub neutral">{{ stats.bmiSub }}</span>
+            <div class="stat-card accent-purple">
+                <span class="stat-icon-mini">🏁</span>
+                <span class="stat-label">目标体重</span>
+                <span class="stat-value">{{ stats.targetWeight }}</span>
+                <span class="stat-sub neutral">计划结束时达成</span>
             </div>
             <div class="stat-card accent-green">
                 <span class="stat-icon-mini">✅</span>
@@ -154,7 +154,6 @@ Chart.register(...registerables)
 interface PlanDetailResponse {
     target_weight: number
     delta_weight: number
-    BMI: number
     target_line: Record<string, number>
     user_line: Record<string, number>
 }
@@ -181,8 +180,9 @@ interface StatsData {
     weeklyChange: string
     weeklySub: string
     weeklyClass: string
-    bmi: string
-    bmiSub: string
+    ddw: string
+    ddwSub: string
+    ddwClass: string
     progressPercent: string
     progressBarWidth: string
     progressLabel: string
@@ -226,8 +226,9 @@ const stats = reactive<StatsData>({
     weeklyChange: '--',
     weeklySub: '--',
     weeklyClass: 'neutral',
-    bmi: '--',
-    bmiSub: '--',
+    ddw: '--',
+    ddwSub: '--',
+    ddwClass: 'neutral',
     progressPercent: '--',
     progressBarWidth: '0%',
     progressLabel: '--',
@@ -297,12 +298,12 @@ function processStats(detail: PlanDetailResponse) {
     const targetWeight = detail.target_weight
 
     const lastUserDateStr = userDates.length > 0 ? userDates[userDates.length - 1] : targetDates[0]
+    const yestodayDateStr = userDates.length > 1 ? userDates[userDates.length - 2] : targetDates[0]
     const currentDate = parseDate(lastUserDateStr)
     const currentWeight = userLine[lastUserDateStr] ?? startWeight
     const recommendedWeight = targetLine[lastUserDateStr] ?? targetWeight
 
     // 天数
-    // const totalDays = daysBetween(startDate, endDate) + 1
     const elapsedDays = daysBetween(startDate, currentDate) + 1
     const remainingDays = daysBetween(currentDate, endDate)
 
@@ -311,6 +312,11 @@ function processStats(detail: PlanDetailResponse) {
     const lostWeight = startWeight - currentWeight
     const remainingWeight = currentWeight - targetWeight
     const progressPercent = startWeight !== targetWeight ? (lostWeight / (startWeight - targetWeight)) * 100 : 0
+
+    // 体重与目标值的二阶偏差
+    const yestodayUW = userLine[yestodayDateStr] ?? startWeight
+    const yestodayRW = targetLine[yestodayDateStr] ?? targetWeight
+    const ddw = deviation - (yestodayUW - yestodayRW)
 
     // 最近7天变化
     let weeklyChange = 0
@@ -372,9 +378,17 @@ function processStats(detail: PlanDetailResponse) {
         stats.weeklyClass = 'neutral'
     }
 
-    stats.bmi = detail.BMI.toFixed(1)
-    const bmiCat = getBmiCategory(detail.BMI)
-    stats.bmiSub = bmiCat
+    stats.ddw = ddw.toFixed(1) + '斤'
+    if (ddw > 0.2) {
+        stats.ddwSub = '↓ 与目标差距在增大'
+        stats.ddwClass = 'negative'
+    } else if (ddw < -0.2) {
+        stats.ddwSub = '↑ 与目标差距在缩下'
+        stats.ddwClass = 'positive'
+    } else {
+        stats.ddwSub = '→ 与目标差距持平'
+        stats.ddwClass = 'neutral'
+    }
 
     stats.progressPercent = progressPercent.toFixed(1) + '%'
     stats.progressBarWidth = Math.min(100, progressPercent) + '%'
@@ -403,13 +417,6 @@ function processStats(detail: PlanDetailResponse) {
         statusText.value = '计划进行中'
         statusWarning.value = false
     }
-}
-
-function getBmiCategory(bmi: number): string {
-    if (bmi < 18.5) return '偏瘦'
-    if (bmi < 24) return '正常'
-    if (bmi < 28) return '偏重'
-    return '肥胖'
 }
 
 // ---------- 图表渲染 ----------
