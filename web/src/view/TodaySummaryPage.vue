@@ -2,8 +2,6 @@
   <TodoSubmit></TodoSubmit>
   <div class="container">
     <TimeLine :items="timeLineItem" :count="countInfo"></TimeLine>
-    <!-- <EventTime :items="eventLineItem"></EventTime> -->
-    <SmartAnalysis :report="smartReport"></SmartAnalysis>
     <ItemGroupedList title="" :data="tTask" :disable="true"></ItemGroupedList>
     <ItemGroupedList title="临期任务汇总" :data="dlTask" :disable="true"></ItemGroupedList>
     <Footer :is-admin="false" :config="footerConfig"></Footer>
@@ -16,19 +14,16 @@ import { onMounted, ref, type Ref } from 'vue'
 
 import TodoSubmit from '@/components/submit/TodoSubmit.vue'
 import TimeLine from "@/components/timeline/TimeLine.vue"
-import SmartAnalysis from '@/components/analysis/SmartAnalysis.vue'
 import ItemGroupedList from '@/components/item/ItemGroupedList.vue'
 import Footer from '@/components/footer/TodoFooter.vue'
 
 import type { CountInfo, TimeLineItem, Report } from '@/components/timeline/types'
-import type { SmartAnalysisReport } from '@/components/analysis/types'
 import type { FooterConfig } from '@/components/footer/types'
 import type { GroupedItem } from '@/components/item/types'
 
 
 onMounted(() => {
   loadTimeLineItems()
-  loadAnalysisReport()
   loadItemWithSubTask()
   loadDLItem()
   document.title = '总结列表'
@@ -47,17 +42,6 @@ function loadTimeLineItems() {
   })
 }
 
-
-// ========================================================== SmartAnalysis 相关配置 ==========================================================
-
-let smartReport = ref<SmartAnalysisReport>({ count: 0, groups: [] })
-
-
-function loadAnalysisReport() {
-  axios.post<SmartAnalysisReport>("/summary/getSmartReport").then(res => {
-    smartReport.value = res.data
-  })
-}
 
 // ========================================================== ItemGroupedList 相关配置 ==========================================================
 

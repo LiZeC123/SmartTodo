@@ -1,5 +1,5 @@
+from app.algo.rowing_machine import generate_rowing_workout
 from app.services.event_log_manager import EventManager
-from app.tools.exercise import generate_rowing_workout
 
 
 class ExerciseManager:

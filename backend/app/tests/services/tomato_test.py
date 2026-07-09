@@ -113,4 +113,4 @@ def test_tomato_record_base():
     item_manager.create(itemB)
 
     record_manager.get_time_line_summary(owner)
-    record_manager.get_smart_analysis_report(owner)
+

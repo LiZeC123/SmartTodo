@@ -13,7 +13,7 @@ class RowingModule:
         self.spm_sequence = spm_sequence
         self.resistance_offset = resistance_offset
         self.stage_tags = stage_tags
-        self.recovery_spm = 16  # 末尾恢复分钟固定为16 SPM
+        self.recovery_spm = 20  # 末尾恢复分钟固定频率
         self.duration = len(spm_sequence) + 1  # 总时长 = 前段分钟数 + 1（恢复）
 
     def get_spm_pattern(self) -> list[int]:
@@ -30,33 +30,33 @@ def build_module_pool() -> list[RowingModule]:
     modules = []
 
     # ---- 力量流 (高阻, +1偏移) ----
-    modules.append(RowingModule("短距重锤", [18, 18], +1, ["peak"]))
-    modules.append(RowingModule("力量爬坡", [16, 18, 20], +1, ["peak"]))
-    modules.append(RowingModule("重型间歇", [17, 19, 19, 17], +1, ["peak"]))
+    modules.append(RowingModule("短距重锤", [20, 20], +1, ["peak"]))
+    modules.append(RowingModule("力量爬坡", [20, 21, 22], +1, ["peak"]))
+    modules.append(RowingModule("重型间歇", [19, 21, 21, 10], +1, ["peak"]))
     # 新增力量耐力变种
-    modules.append(RowingModule("力量持久", [18, 19, 19], +1, ["peak"]))
+    modules.append(RowingModule("力量持久", [19, 21, 21], +1, ["peak"]))
 
     # ---- 速度/节奏流 (低阻, -1偏移) ----
-    modules.append(RowingModule("极速双响", [27, 28], -1, ["ascend", "descend"]))
+    modules.append(RowingModule("极速双响", [26, 27], -1, ["ascend", "descend"]))
     modules.append(RowingModule("节奏湍流", [24, 26, 25], -1, ["ascend", "descend"]))
     modules.append(RowingModule("高速耐力", [22, 24, 26, 24], -1, ["ascend", "descend"]))
     modules.append(RowingModule("轻快踩踏", [26, 26, 26], -1, ["ascend", "descend"]))
     # 新增：高频短促
-    modules.append(RowingModule("高频脉冲", [28, 28], -1, ["ascend", "descend"]))
+    modules.append(RowingModule("高频脉冲", [27, 27], -1, ["ascend", "descend"]))
 
     # ---- 耐力/渐变流 (中阻, 0偏移) ----
-    modules.append(RowingModule("稳态阶梯", [20, 21, 22], 0, ["ascend", "peak", "descend"]))
-    modules.append(RowingModule("长呼吸窗", [19, 20, 20, 21], 0, ["ascend", "peak", "descend"]))
-    modules.append(RowingModule("温和金字塔", [18, 20, 22, 20], 0, ["ascend", "peak", "descend"]))
+    modules.append(RowingModule("稳态阶梯", [22, 24, 26], 0, ["ascend", "peak", "descend"]))
+    modules.append(RowingModule("长呼吸窗", [22, 24, 24, 22], 0, ["ascend", "peak", "descend"]))
+    modules.append(RowingModule("温和金字塔", [21, 23, 25, 21], 0, ["ascend", "peak", "descend"]))
     # 新增低阻耐力（适合上升/下降）
-    modules.append(RowingModule("低阻巡航", [22, 22, 22], -1, ["ascend", "descend"]))
+    modules.append(RowingModule("低阻巡航", [24, 24, 24], -1, ["ascend", "descend"]))
     # 新增高阻耐力（适合峰值）
-    modules.append(RowingModule("高阻巡航", [18, 19, 20, 19], +1, ["peak"]))
+    modules.append(RowingModule("高阻巡航", [20, 21, 22, 21], +1, ["peak"]))
 
     # ---- 技术/特效流 (偏移不定) ----
-    modules.append(RowingModule("暂停式冥想", [16, 16], 0, ["peak"]))  # 虽慢但核心紧张
-    modules.append(RowingModule("交替发力", [18, 18, 18], 0, ["ascend", "peak", "descend"]))
-    modules.append(RowingModule("闭眼平衡", [20, 20, 20, 20], -1, ["descend"]))
+    modules.append(RowingModule("暂停式冥想", [20, 20], 0, ["peak"]))  # 虽慢但核心紧张
+    modules.append(RowingModule("交替发力", [22, 22, 22], 0, ["ascend", "peak", "descend"]))
+    modules.append(RowingModule("闭眼平衡", [24, 24, 24, 24], -1, ["descend"]))
     modules.append(RowingModule("呼吸控制", [22, 22], -1, ["ascend", "descend"]))
 
     return modules
@@ -64,8 +64,8 @@ def build_module_pool() -> list[RowingModule]:
 
 def generate_rowing_workout(
     target_minutes: int = 20,
-    base_resistance: int = 10,
-    warmup_spm: tuple = (16, 18, 20),
+    base_resistance: int = 12,
+    warmup_spm: tuple = (20, 20, 22),
     warmup_resistance_offset: int = -2,  # 热身相对基准的偏移（例如0表示直接用base）
     ascend_offset: int = -1,  # 上升期相对基准的偏移
     peak_offset: int = +3,  # 峰值期相对基准的偏移
@@ -135,7 +135,6 @@ def generate_rowing_workout(
                 phase_remaining -= 1
                 # 注意：phase_remaining 减去了模块的总时长（包括恢复分钟）
 
-
     # ----- 最后，如果总时间仍小于目标，在下降阶段继续补充（保持下降阻力）-----
     while total_time < target_minutes:
         # 从下降阶段候选池中挑选
@@ -155,24 +154,3 @@ def generate_rowing_workout(
         # 注意：上述循环会完整添加一个模块，可能会超出不少。如果希望不要超出太多，可以限制添加分钟数。
 
     return spm_result, res_result
-
-
-# # ---------- 4. 使用示例 ----------
-# if __name__ == "__main__":
-#     # random.seed(42)  # 固定随机种子，便于复现
-#     target = 20
-#     base = 10
-
-#     spm_arr, res_arr = generate_workout(
-#         target_minutes=target,
-#         base_resistance=base,
-#         phase_ratios=(0.30, 0.40, 0.30),  # 可调整
-#     )
-
-#     print(f"总时长: {len(spm_arr)} 分钟")
-#     print("SPM数组:", spm_arr)
-#     print("阻力数组:", res_arr)
-
-#     # 简单展示前20分钟
-#     for i in range(min(20, len(spm_arr))):
-#         print(f"第{i + 1:2d}分钟: SPM={spm_arr[i]:2d}, 阻力={res_arr[i]:2d}")
