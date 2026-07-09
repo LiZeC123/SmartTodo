@@ -190,7 +190,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import axios from 'axios';
 
 // ==================== 类型定义 ====================
@@ -831,8 +831,8 @@ function updateCadenceAnimation(timestamp: number) {
 // ==================== 横屏处理 ====================
 function setupRowingOrientation() {
     orientationLocked.value = false;
-    if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock('landscape').then(() => {
+    if (screen.orientation && (screen.orientation as any).lock) {
+        (screen.orientation as any).lock('landscape').then(() => {
             orientationLocked.value = true;
             showRotateHint.value = false;
         }).catch(() => {
