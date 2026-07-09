@@ -8,7 +8,7 @@ class ExerciseManager:
         self.event_manager = em
 
     def add_record(self, exercise_type: str, time: int, extra: dict, owner: str) -> bool:
-        msg = f"用户完成运动: {exercise_type}, 时长: {time / 60:.1} 分钟, 附加信息: {extra}"
+        msg = f"用户完成运动: {exercise_type}, 时长: {time / 60:.1f} 分钟, 附加信息: {extra}"
         return self.event_manager.add_event_log(owner, msg)
 
     def plan_rowing(self, owner: str) -> dict:
