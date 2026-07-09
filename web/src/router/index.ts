@@ -10,6 +10,7 @@ import Checkin from '@/view/CheckinPage.vue'
 import Assistant from '@/view/AssistantPage.vue'
 import Index from '@/view/IndexPage.vue'
 import WeightPlanPage from '@/view/WeightPlanPage.vue'
+import ExercisePage from '@/view/ExercisePage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -26,6 +27,7 @@ const router = createRouter({
     { path: '/summary', component: SummaryPage },
     { path: '/weight/plan', component: WeightPlanPage },
     { path: '/weight/record', component: WeightRecordPage },
+    { path: '/exercise', component: ExercisePage },
     { path: '/me/tomato', component: PomodoroTimer }
   ]
 })

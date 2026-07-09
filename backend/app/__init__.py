@@ -7,6 +7,7 @@ from app.services.assistant import AssistantManager
 from app.services.checkin_manager import CheckinManager
 from app.services.config_manager import ConfigManager
 from app.services.event_log_manager import EventManager
+from app.services.exercise_manager import ExerciseManager
 from app.services.interpreter import OpInterpreter
 from app.services.item_manager import ItemManager
 from app.services.task_manager import TaskManager
@@ -32,6 +33,7 @@ tomato_manager = TomatoManager(item_manager)
 tomato_record_manager = TomatoRecordManager(tomato_manager)
 checkin_manager = CheckinManager(config_manager, item_manager)
 weight_manager = WeightManager(event_manager)
+exercise_manager = ExerciseManager(event_manager)
 
 assistant_manager = AssistantManager(config_manager, tomato_record_manager)
 
@@ -53,6 +55,7 @@ def create_app():
 
     # 导入并注册蓝图
     from app.views.checkin import checkin_bp
+    from app.views.exercise import exercise_bp
     from app.views.file import file_bp
     from app.views.item import item_bp
     from app.views.llm import llm_bp
@@ -71,6 +74,7 @@ def create_app():
     app.register_blueprint(weight_bp)
     app.register_blueprint(llm_bp)
     app.register_blueprint(checkin_bp)
+    app.register_blueprint(exercise_bp)
 
     # 初始化所有的表
     Base.metadata.create_all(engine)

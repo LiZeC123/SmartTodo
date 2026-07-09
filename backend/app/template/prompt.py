@@ -87,7 +87,8 @@ InjectRumorPrompt = """
 你偶然看到了 {target_name} 某天写的日记, 在你的记忆中 {target_name} 是 {target_desc}. 你打算根据日记的内容和用户聊一聊. 日记的内容为: `{traget_text}`"""
 
 
-ContinueWritingPrompt = """
-根据现有的对话以助手的视角, 参考助手回复的消息的风格继续输出后续内容, 不要描写前面已经提到的内容"""
+ContinueWritingPrompt = (
+    """根据现有的对话以助手的视角, 参考助手回复的消息的风格继续输出后续内容, 不要描写前面已经提到的内容"""
+)
 
 AutoAnswerPrompt = "现在停止扮演助手, 切换为扮演用户. 根据上面提供的对话内容, 以用户的视角生成一个给助手的回复. 直接给出回复的内容, 不要进行额外的解释"
