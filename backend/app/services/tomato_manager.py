@@ -1,6 +1,5 @@
 from collections.abc import Sequence
 from datetime import datetime, timedelta
-from itertools import groupby
 
 import sqlalchemy as sal
 
@@ -153,22 +152,8 @@ class TomatoRecordManager:
         records = self.select_record_after(owner, start_time)
         return calculate_metrics(records)
 
-    def get_tomato_state_begin_time(self) -> tuple[datetime, str]:
-        now_time = now()
-        today_morning_start = datetime(now_time.year, now_time.month, now_time.day, 8, 0, 0)
-        today_morning_end = datetime(now_time.year, now_time.month, now_time.day, 12, 0, 0)
-        today_afternoon_end = datetime(now_time.year, now_time.month, now_time.day, 18, 0, 0)
-
-        if now_time < today_morning_end:
-            return today_morning_start, "上午"
-
-        if now_time < today_afternoon_end:
-            return today_morning_end, "下午"
-
-        return today_afternoon_end, "晚上"
-
-    def check_rest_time(self) -> str:
-        now_time = now()
+    @staticmethod
+    def is_day_rest_time(now_time: datetime) -> str:
         noon_rest_start = datetime(now_time.year, now_time.month, now_time.day, 11, 30, 0)
         noon_rest_end = datetime(now_time.year, now_time.month, now_time.day, 14, 30, 0)
 
@@ -188,53 +173,26 @@ class TomatoRecordManager:
 
         return ""
 
+    def format_in_tomato_state(self, state: TomatoStatus, now_time: datetime) -> str:
+        work_finish_time = state.start_time + timedelta(minutes=25)
+        rest_finish_time = work_finish_time + timedelta(minutes=5)
+        if now_time < work_finish_time:
+            remain_minutes = (work_finish_time - now_time).total_seconds() / 60
+            return f"工作状态, 番茄钟任务为[{state.name}], 工作时间剩余{remain_minutes:.1f}分钟\n"
+        elif now_time < rest_finish_time:
+            remain_minutes = (rest_finish_time - now_time).total_seconds() / 60
+            return f"休息状态, 休息时间剩余{remain_minutes:.1f}分钟\n"
+        else:
+            elapsed_minutes = (now_time - rest_finish_time).total_seconds() / 60
+            return f"休息状态, 已经休息{elapsed_minutes:.1f}分钟\n"
+
+    def format_not_in_tomato_state(self, now_time: datetime) -> str:
+        # 判断是否为全天的休息时间, 如果是则返回对应的休息状态, 否则都视为规划状态
+        v = self.is_day_rest_time(now_time)
+        return v if v else "规划状态"
+
     def get_tomato_state(self, owner: str) -> str:
-        begin_time, begin_state = self.get_tomato_state_begin_time()
-        # 首先检查是否是番茄钟工作状态, 该状态优先级最高, 因此用户实际上可以在任意时间开始番茄钟
+        now_time = now()
         state = self.tomato_manager.query_task(owner=owner)
-        if state:
-            last_group_cnt, last_tomato_cnt, _ = self.get_tomoto_record_info(owner=owner, begin_time=begin_time)
-            work_finish_time = state.start_time + timedelta(minutes=25)
-            rest_finish_time = work_finish_time + timedelta(minutes=5)
-            now_time = now()
-            if now_time < work_finish_time:
-                remain_minutes = (work_finish_time - now_time).total_seconds() / 60
-                return f"正在进行{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt + 1}个番茄钟, 当前为工作状态, 番茄钟任务为[{state.name}], 工作时间剩余{remain_minutes:.1f}分钟\n"
-            elif now_time < rest_finish_time:
-                remain_minutes = (rest_finish_time - now_time).total_seconds() / 60
-                return f"正在进行{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt + 1}个番茄钟, 当前为休息状态, 番茄钟任务为[{state.name}], 休息时间剩余{remain_minutes:.1f}分钟\n"
-
-        # 其次检查是否为休息时间, 相当于可以覆盖番茄钟的休息和规划状态
-        reset_time = self.check_rest_time()
-        if reset_time != "":
-            return reset_time
-
-        # 当前不是番茄钟状态, 先检查是否为初始状态
-        last_group_cnt, last_tomato_cnt, last_record = self.get_tomoto_record_info(owner=owner, begin_time=begin_time)
-        if last_record is None:
-            # 没有开始任何番茄钟
-            return "还未开始任何番茄钟\n"
-
-        # 不是初始状态, 再检查休息和规划状态
-        elapsed_minutes = (now() - last_record.finish_time).total_seconds() / 60
-        # 如果上一个番茄钟是一组里的最后一个番茄钟, 则需要进行组之间的休息时间判断,
-        if last_tomato_cnt == 0:
-            if elapsed_minutes < 20:
-                # 最后一个番茄钟会让cnt+1所以输出时无需+1了
-                return f"已完成{begin_state}第{last_group_cnt}组番茄钟, 当前为大组之间的休息时间, 剩余{20 - elapsed_minutes:.1f}分钟\n"
-            else:
-                return f"已完成{begin_state}第{last_group_cnt}组番茄钟, 已完成大组之间的休息, 当前进入规划状态, 已持续{elapsed_minutes - 20:.1f}分钟\n"
-
-        # 如果不是最后一个番茄钟
-        return f"已完成{begin_state}第{last_group_cnt + 1}组番茄钟内的第{last_tomato_cnt}个番茄钟, 当前进入规划状态, 已持续{elapsed_minutes:.1f}分钟\n"
-
-    def get_tomoto_record_info(self, owner: str, begin_time: datetime) -> tuple[int, int, TomatoTaskRecord | None]:
-        tomato_records = self.select_record_after(owner=owner, time=begin_time)
-        record_cnt = len(tomato_records)
-
-        if record_cnt == 0:
-            return 0, 0, None
-
-        last_group_cnt = record_cnt // 4
-        last_tomato_cnt = record_cnt % 4
-        return last_group_cnt, last_tomato_cnt, tomato_records[-1]
+        # 判断是否为番茄钟状态, 如果是则展示番茄钟相关信息
+        return self.format_in_tomato_state(state, now_time) if state else self.format_not_in_tomato_state(now_time)

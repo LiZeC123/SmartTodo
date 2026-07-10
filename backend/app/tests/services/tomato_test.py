@@ -1,4 +1,7 @@
+from datetime import datetime, timedelta
+
 from app.models.item import Item, ItemType, TomatoType
+from app.models.tomato import TomatoStatus
 from app.services.event_log_manager import EventManager
 from app.services.item_manager import ItemManager
 from app.services.tomato_manager import TomatoManager, TomatoRecordManager
@@ -112,5 +115,40 @@ def test_tomato_record_base():
     itemB.used_tomato = 1
     item_manager.create(itemB)
 
-    record_manager.get_time_line_summary(owner)
+    assert record_manager.get_time_line_summary(owner)
+    assert record_manager.get_long_term_stat(owner)
+    assert record_manager.get_tomato_state(owner)
 
+
+def test_is_day_rest_time():
+    now_time = datetime(year=2016, month=5, day=1, hour=8)
+    assert not record_manager.is_day_rest_time(now_time)
+
+    now_time = now_time.replace(hour=12)
+    assert record_manager.is_day_rest_time(now_time)
+
+    now_time = now_time.replace(hour=18)
+    assert record_manager.is_day_rest_time(now_time)
+
+    now_time = now_time.replace(hour=22)
+    assert record_manager.is_day_rest_time(now_time)
+
+
+def test_format_in_tomato_state():
+    now_time = datetime(year=2016, month=5, day=1, hour=8)
+    state = TomatoStatus(item_id=1, name="Mock", start_time=now_time, owner=owner)
+    assert "工作状态" in record_manager.format_in_tomato_state(state, now_time)
+
+    now_time += timedelta(minutes=20)
+    assert "工作状态" in record_manager.format_in_tomato_state(state, now_time)
+
+    now_time += timedelta(minutes=9)
+    assert "休息状态" in record_manager.format_in_tomato_state(state, now_time)
+
+    now_time += timedelta(minutes=2)
+    assert "休息状态" in record_manager.format_in_tomato_state(state, now_time)
+
+
+def test_format_not_in_tomato_state():
+    now_time = datetime(year=2016, month=5, day=1, hour=8)
+    assert "规划状态" in record_manager.format_not_in_tomato_state(now_time)
