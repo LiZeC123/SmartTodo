@@ -155,6 +155,7 @@ interface PlanDetailResponse {
     delta_weight: number
     target_line: Record<string, number>
     user_line: Record<string, number>
+    fit_line: Record<string, number>
 }
 
 interface StatsData {
@@ -424,6 +425,7 @@ function renderChart(detail: PlanDetailResponse) {
 
     const targetLine = detail.target_line
     const userLine = detail.user_line
+    const fitLine = detail.fit_line
     const targetDates = Object.keys(targetLine).sort()
     const userDates = Object.keys(userLine).sort()
 
@@ -439,6 +441,10 @@ function renderChart(detail: PlanDetailResponse) {
     const recommendedData = targetDates.map((date) => targetLine[date])
     const targetWeight = detail.target_weight
     const targetLineData = new Array(targetDates.length).fill(targetWeight)
+    const fitData = targetDates.map((date) => {
+        // 如果 fitLine 中有该日期的数据则返回，否则返回 null
+        return fitLine[date] !== undefined ? fitLine[date] : null
+    })
 
     // 找到最后一个有实际数据的索引，用于标记“当前”
     const lastUserDate = userDates.length > 0 ? userDates[userDates.length - 1] : targetDates[0]
@@ -502,6 +508,18 @@ function renderChart(detail: PlanDetailResponse) {
                     fill: false,
                     spanGaps: true,
                     order: 3
+                },
+                {
+                    label: `预测体重趋势`,
+                    data: fitData,
+                    borderColor: '#cdcdcd',
+                    borderWidth: 1.8,
+                    borderDash: [8, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    fill: false,
+                    spanGaps: true,
+                    order: 4
                 }
             ]
         },

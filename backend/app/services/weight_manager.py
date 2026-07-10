@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 import sqlalchemy as sal
 
+from app.algo.fit import least_squares
 from app.models.exception import IllegalArgumentException, UnauthorizedException
 from app.models.weight import WeightLog, WeightPlan
 from app.services.event_log_manager import EventManager
@@ -86,6 +87,7 @@ class WeightManager:
 
         logs = self.query_log_between(owner, plan.start_day, plan.end_day)
         user_line = {the_day_str(log.create_time): log.weight for log in logs}
+        fit_line = self.__gen_fit_line(plan, logs)
         target_line = self.__gen_target_line(plan)
 
         return {
@@ -93,6 +95,7 @@ class WeightManager:
             "delta_weight": self.__get_delta_weight(user_line, target_line),
             "target_line": target_line,
             "user_line": user_line,
+            "fit_line": fit_line,
         }
 
     def __get_delta_weight(self, user_line: dict[str, float], target_line: dict[str, float]) -> float:
@@ -110,6 +113,22 @@ class WeightManager:
         for i in range(days):
             the_day = the_day_str(plan.start_day + timedelta(days=i))
             value = plan.target_weight + args["C"] * math.exp(args["a"] * i)
+            line[the_day] = value
+        return line
+
+    def __gen_fit_line(self, plan: WeightPlan, logs: Sequence[WeightLog]) -> dict[str, float]:
+        if (len(logs)) < 2:
+            # 线性拟合至少需要两个点
+            return {}
+
+        y = [log.weight for log in logs]
+        x = [i for i in range(len(y))]
+        k, b = least_squares(x, y)
+        days = (plan.end_day - plan.start_day).days
+        line = {}
+        for i in range(days):
+            the_day = the_day_str(plan.start_day + timedelta(days=i))
+            value = k * i + b
             line[the_day] = value
         return line
 
