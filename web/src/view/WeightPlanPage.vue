@@ -147,8 +147,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import axios from 'axios'
-import { Chart, registerables } from 'chart.js'
-Chart.register(...registerables)
+import { Chart } from 'chart.js/auto'
 
 // ---------- 类型定义 ----------
 interface PlanDetailResponse {

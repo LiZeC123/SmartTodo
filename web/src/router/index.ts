@@ -7,10 +7,11 @@ import WeightRecordPage from '@/view/WeightRecordPage.vue'
 import Checkin from '@/view/CheckinPage.vue'
 import Assistant from '@/view/AssistantPage.vue'
 import Index from '@/view/IndexPage.vue'
-import WeightPlanPage from '@/view/WeightPlanPage.vue'
 import ExercisePage from '@/view/ExercisePage.vue'
-import TodaySummaryPage from '@/view/TodaySummaryPage.vue'
-import LongSummaryPage from '@/view/LongSummaryPage.vue'
+
+const WeightPlanPage = () => import('@/view/WeightPlanPage.vue')
+const TodaySummaryPage = () => import('@/view/TodaySummaryPage.vue')
+const LongSummaryPage = () => import('@/view/LongSummaryPage.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

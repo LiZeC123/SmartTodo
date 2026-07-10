@@ -2,6 +2,7 @@
   "name": "web2",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
@@ -35,6 +36,7 @@
     "eslint-plugin-vue": "^9.17.0",
     "npm-run-all2": "^6.1.1",
     "prettier": "^3.0.3",
+    "rollup-plugin-visualizer": "^7.0.1",
     "typescript": "~5.2.0",
     "vite": "^8.0.16",
     "vue-tsc": "^2.0.29"
