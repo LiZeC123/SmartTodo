@@ -96,7 +96,7 @@
                                     <span class="vs-separator">vs</span>
                                     <span class="previous-value">{{
                                         formatHours(data.trend.last_7_days_vs_previous_7.previous.focus_hours)
-                                    }}h</span>
+                                        }}h</span>
                                     <span class="change-tag"
                                         :class="getChangeClass(data.trend.last_7_days_vs_previous_7.change_percent.focus_hours)">
                                         {{
@@ -110,11 +110,11 @@
                                 <div class="trend-item-values">
                                     <span class="current-value">{{
                                         formatDecimal(data.trend.last_7_days_vs_previous_7.current.avg_daily_tomato)
-                                    }}</span>
+                                        }}</span>
                                     <span class="vs-separator">vs</span>
                                     <span class="previous-value">{{
                                         formatDecimal(data.trend.last_7_days_vs_previous_7.previous.avg_daily_tomato)
-                                    }}</span>
+                                        }}</span>
                                     <span class="change-tag"
                                         :class="getChangeClass(data.trend.last_7_days_vs_previous_7.change_percent.avg_daily_tomato)">
                                         {{
@@ -128,11 +128,11 @@
                                 <div class="trend-item-values">
                                     <span class="current-value">{{
                                         formatDecimal(data.trend.last_7_days_vs_previous_7.current.avg_daily_hours)
-                                    }}h</span>
+                                        }}h</span>
                                     <span class="vs-separator">vs</span>
                                     <span class="previous-value">{{
                                         formatDecimal(data.trend.last_7_days_vs_previous_7.previous.avg_daily_hours)
-                                    }}h</span>
+                                        }}h</span>
                                     <span class="change-tag"
                                         :class="getChangeClass(data.trend.last_7_days_vs_previous_7.change_percent.avg_daily_hours)">
                                         {{
@@ -175,7 +175,7 @@
                                     <span class="vs-separator">vs</span>
                                     <span class="previous-value">{{
                                         formatHours(data.trend.last_3_days_vs_previous_3.previous.focus_hours)
-                                    }}h</span>
+                                        }}h</span>
                                     <span class="change-tag"
                                         :class="getChangeClass(data.trend.last_3_days_vs_previous_3.change_percent.focus_hours)">
                                         {{
@@ -189,11 +189,11 @@
                                 <div class="trend-item-values">
                                     <span class="current-value">{{
                                         formatDecimal(data.trend.last_3_days_vs_previous_3.current.avg_daily_tomato)
-                                    }}</span>
+                                        }}</span>
                                     <span class="vs-separator">vs</span>
                                     <span class="previous-value">{{
                                         formatDecimal(data.trend.last_3_days_vs_previous_3.previous.avg_daily_tomato)
-                                    }}</span>
+                                        }}</span>
                                     <span class="change-tag"
                                         :class="getChangeClass(data.trend.last_3_days_vs_previous_3.change_percent.avg_daily_tomato)">
                                         {{
@@ -207,11 +207,11 @@
                                 <div class="trend-item-values">
                                     <span class="current-value">{{
                                         formatDecimal(data.trend.last_3_days_vs_previous_3.current.avg_daily_hours)
-                                    }}h</span>
+                                        }}h</span>
                                     <span class="vs-separator">vs</span>
                                     <span class="previous-value">{{
                                         formatDecimal(data.trend.last_3_days_vs_previous_3.previous.avg_daily_hours)
-                                    }}h</span>
+                                        }}h</span>
                                     <span class="change-tag"
                                         :class="getChangeClass(data.trend.last_3_days_vs_previous_3.change_percent.avg_daily_hours)">
                                         {{
@@ -342,7 +342,7 @@ const loading = ref<boolean>(true)
 const error = ref<string | null>(null)
 const data = ref<TomatoTrendData | null>(null)
 const chartCanvas = ref<HTMLCanvasElement | null>(null)
-const chartInstance = ref<Chart<'line'> | null>(null)
+let chartInstance: Chart | null = null
 
 // ==================== 工具函数 ====================
 function formatHours(hours: number): string {
@@ -385,9 +385,9 @@ function createChart(dailySeries: DailySeriesItem[]): void {
     if (!chartCanvas.value) return
 
     // 销毁旧图表实例
-    if (chartInstance.value) {
-        chartInstance.value.destroy()
-        chartInstance.value = null
+    if (chartInstance) {
+        chartInstance.destroy()
+        chartInstance = null
     }
 
     const labels = dailySeries.map((item) => formatDateLabel(item.date))
@@ -545,13 +545,13 @@ function createChart(dailySeries: DailySeriesItem[]): void {
         }
     }
 
-    chartInstance.value = new Chart(ctx, config)
+    chartInstance = new Chart(ctx, config)
 }
 
 function destroyChart(): void {
-    if (chartInstance.value) {
-        chartInstance.value.destroy()
-        chartInstance.value = null
+    if (chartInstance) {
+        chartInstance.destroy()
+        chartInstance = null
     }
 }
 
