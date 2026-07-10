@@ -83,8 +83,6 @@ QueryTodoSystemTool = ChatCompletionFunctionToolParam(
 
 class AssistantTool:
     def __init__(self, m: AssistantManager, owner: str) -> None:
-        if not m:
-            return
         self.item_manager = m.item_manager
         self.role_manager = m.role_manager
         self.llm_manager = m.llm_manager

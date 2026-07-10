@@ -1,6 +1,8 @@
+import json
 from collections.abc import Iterator
 
 from app.models.assistant import AssistantModeType, AssistantType, History
+from app.models.item import Item, ItemType, TomatoType
 from app.services.assistant import AssistantManager
 from app.services.assistant_tool import AssistantTool
 from app.services.config_manager import ConfigManager
@@ -267,6 +269,29 @@ def test_tool_collect():
     metadata_list, method_dict = assistant_tool.collect()
     assert metadata_list
     assert method_dict
+
+
+def test_create_tool():
+    args = json.dumps({"name": "MockToolItem", "deadline": "2006-01-02 15:04:05", "priority": "p0"})
+    assert assistant_tool.create_item(args) == "success"
+    args = json.dumps({"name": "MockToolItem2", "deadline": "", "priority": "p0"})
+    assert "error" in assistant_tool.create_item(args)
+
+
+def test_query_todo_tool():
+    item = Item(name="MockItem01", item_type=ItemType.Single, tomato_type=TomatoType.Today, owner=owner)
+    item_manager.create(item)
+
+    args = json.dumps({"query_type": "NotAType"})
+    assert "未知的查询类型" in assistant_tool.query_todo_system(args)
+
+    args = json.dumps({"query_type": "今日待办"})
+    assert "error" not in assistant_tool.query_todo_system(args)
+
+    args = json.dumps({"query_type": "已逾期任务"})
+    assert "error" not in assistant_tool.query_todo_system(args)
+
+    item_manager.remove(item)
 
 
 def test_call_command():
