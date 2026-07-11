@@ -6,3 +6,7 @@ mkdir data/
 pytest --cov=./ --cov-report=html
 rm -rf data
 mv data_bk data
+
+# 清理日志和临时文件
+rm -rf data/log/*
+rm -rf data/filebase/*
