@@ -130,7 +130,7 @@ class AssistantTool:
 
         try:
             if query_type == "今日待办":
-                groups = self.item_manager.get_item_with_sub_task(owner=self.owner)
+                groups = self.item_manager.get_tomato_item(owner=self.owner)
                 return self.format_group(groups)
             if query_type == "已逾期任务":
                 groups = self.item_manager.get_deadline_item(self.owner)

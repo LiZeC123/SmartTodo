@@ -369,28 +369,18 @@ def test_to_today_task():
 
 def test_get_tomato_item():
     item1 = make_base_item("test_get_tomato_item1")
-    item2 = make_base_item("test_get_tomato_item2")
+    item2 = make_note_item("test_sub_task_note")
     item2.tomato_type = TomatoType.Activate
     manager.create(item1)
     manager.create(item2)
     lst = manager.get_tomato_item(owner)
     assert len(lst) == 1
 
-    manager.remove(item1)
-    manager.remove(item2)
-
-
-def test_sub_task():
-    item1 = make_base_item("test_sub_task_g")
-    manager.create(item1)
-    item2 = make_note_item("test_sub_task_note")
-    manager.create(item2)
-
     item3 = make_base_item("test_sub_task_note_sub")
     item3.parent = item2.id
     manager.create(item3)
 
-    assert manager.get_item_with_sub_task(owner)
+    assert manager.get_tomato_item(owner)
 
     manager.remove(item1)
     manager.remove(item2)

@@ -304,13 +304,6 @@ class ItemManager:
         items = self.db.execute(stmt).scalars().all()
         return self.__group_sub_task(items, owner)
 
-    def get_item_with_sub_task(self, owner: str) -> list[dict]:
-        stmt = sal.select(Item).where(
-            Item.owner == owner, Item.tomato_type == TomatoType.Today, Item.item_type == ItemType.Single
-        )
-        items = self.db.execute(stmt).scalars().all()
-        return self.__group_sub_task(items, owner)
-
     def __group_sub_task(self, items: Iterable[Item], owner):
         groups = []
         globalItem = Item(id=0, name="全局任务", item_type=ItemType.Single, tomato_type=TomatoType.Today, owner=owner)
