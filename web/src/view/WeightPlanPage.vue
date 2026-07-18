@@ -394,13 +394,13 @@ function processStats(detail: PlanDetailResponse) {
     stats.progressBarWidth = Math.min(100, progressPercent) + '%'
     stats.progressLabel = `已减 ${lostWeight.toFixed(2)} / ${(startWeight - targetWeight).toFixed(1)} 斤`
 
-    stats.cumulativeDeviation = (detail.delta_weight >= 0 ? '+' : '') + detail.delta_weight.toFixed(2) + ' 斤·天'
-    if (detail.delta_weight > 5) {
-        stats.cumulativeSub = '整体高于推荐线，需加强'
-    } else if (detail.delta_weight < -5) {
-        stats.cumulativeSub = '整体低于推荐线，表现出色'
+    stats.cumulativeDeviation = (detail.delta_weight >= 0 ? '+' : '') + detail.delta_weight.toFixed(2) + ' 斤/天'
+    if (detail.delta_weight < - 0.2) {
+        stats.cumulativeSub = '体重下降速度高于推荐值，需控制'
+    } else if (detail.delta_weight < -0.1) {
+        stats.cumulativeSub = '体重下降速度接近推荐值，表现出色'
     } else {
-        stats.cumulativeSub = '整体接近推荐轨迹'
+        stats.cumulativeSub = '体重下降速度低于推荐值, 需加强'
     }
 
     // 更新顶部状态

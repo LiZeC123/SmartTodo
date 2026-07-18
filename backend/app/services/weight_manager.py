@@ -87,24 +87,16 @@ class WeightManager:
 
         logs = self.query_log_between(owner, plan.start_day, plan.end_day)
         user_line = {the_day_str(log.create_time): log.weight for log in logs}
-        fit_line = self.__gen_fit_line(plan, logs)
+        fit_line, k = self.__gen_fit_line(plan, logs)
         target_line = self.__gen_target_line(plan)
 
         return {
             "target_weight": plan.target_weight,
-            "delta_weight": self.__get_delta_weight(user_line, target_line),
+            "delta_weight": k, # 线性预测的斜率指示了每天的体重下降情况
             "target_line": target_line,
             "user_line": user_line,
             "fit_line": fit_line,
         }
-
-    def __get_delta_weight(self, user_line: dict[str, float], target_line: dict[str, float]) -> float:
-        # 取交集获得实际有效的数据
-        ckey = user_line.keys() & target_line.keys()
-        acc = 0
-        for day in ckey:
-            acc += user_line[day] - target_line[day]
-        return acc
 
     def __gen_target_line(self, plan: WeightPlan) -> dict[str, float]:
         args = json.loads(plan.args)
@@ -116,10 +108,10 @@ class WeightManager:
             line[the_day] = value
         return line
 
-    def __gen_fit_line(self, plan: WeightPlan, logs: Sequence[WeightLog]) -> dict[str, float]:
+    def __gen_fit_line(self, plan: WeightPlan, logs: Sequence[WeightLog]) -> tuple[dict[str, float], float]:
         if (len(logs)) < 2:
             # 线性拟合至少需要两个点
-            return {}
+            return {}, 0
 
         y = [log.weight for log in logs]
         x = [i for i in range(len(y))]
@@ -130,7 +122,7 @@ class WeightManager:
             the_day = the_day_str(plan.start_day + timedelta(days=i))
             value = k * i + b
             line[the_day] = value
-        return line
+        return line, k
 
     def __fast_get_target_weight(self, plan: WeightPlan) -> float:
         args = json.loads(plan.args)
