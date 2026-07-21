@@ -159,7 +159,7 @@ function createFilePlaceHold(name: string) {
   tTask.value.unshift(item)
 }
 
-function itemClick(event: MouseEvent, item: Item) {
+function itemClick(event: MouseEvent) {
   if (event.button === 2) {
     alertText.value = '链接已复制'
     setTimeout(() => (alertText.value = undefined), 500)
