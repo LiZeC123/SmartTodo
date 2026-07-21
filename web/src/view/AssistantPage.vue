@@ -113,7 +113,6 @@ const COMMANDS = [
 
   { command: '/change_mode', description: '切换助理模式 (参数 [模式名("助理"或"扮演")])', needsSpace: true },
   { command: '/role_list', description: '显示所有角色信息', needsSpace: false },
-  { command: '/da', description: '显示所有会话信息', needsSpace: false },
 
   { command: '/debug_compress', description: '触发自动压缩指令', needsSpace: false },
 ]

@@ -30,46 +30,46 @@ def build_module_pool() -> list[RowingModule]:
     modules = []
 
     # ---- 力量流 (高阻, +1偏移) ----
-    modules.append(RowingModule("短距重锤", [20, 20], +1, ["peak"]))
-    modules.append(RowingModule("力量爬坡", [20, 21, 22], +1, ["peak"]))
-    modules.append(RowingModule("重型间歇", [19, 21, 21, 10], +1, ["peak"]))
+    modules.append(RowingModule("短距重锤", [20, 20], +2, ["peak"]))
+    modules.append(RowingModule("力量爬坡", [20, 21, 22], +2, ["peak"]))
+    modules.append(RowingModule("重型间歇", [19, 21, 21, 10], +2, ["peak"]))
     # 新增力量耐力变种
-    modules.append(RowingModule("力量持久", [19, 21, 21], +1, ["peak"]))
+    modules.append(RowingModule("力量持久", [19, 21, 21], +2, ["peak"]))
 
     # ---- 速度/节奏流 (低阻, -1偏移) ----
-    modules.append(RowingModule("极速双响", [26, 27], -1, ["ascend", "descend"]))
-    modules.append(RowingModule("节奏湍流", [24, 26, 25], -1, ["ascend", "descend"]))
-    modules.append(RowingModule("高速耐力", [22, 24, 26, 24], -1, ["ascend", "descend"]))
-    modules.append(RowingModule("轻快踩踏", [26, 26, 26], -1, ["ascend", "descend"]))
+    modules.append(RowingModule("极速双响", [26, 27], -2, ["ascend", "descend"]))
+    modules.append(RowingModule("节奏湍流", [24, 26, 25], -2, ["ascend", "descend"]))
+    modules.append(RowingModule("高速耐力", [22, 24, 26, 24], -2, ["ascend", "descend"]))
+    modules.append(RowingModule("轻快踩踏", [26, 26, 26], -2, ["ascend", "descend"]))
     # 新增：高频短促
-    modules.append(RowingModule("高频脉冲", [27, 27], -1, ["ascend", "descend"]))
+    modules.append(RowingModule("高频脉冲", [27, 27], -2, ["ascend", "descend"]))
 
     # ---- 耐力/渐变流 (中阻, 0偏移) ----
     modules.append(RowingModule("稳态阶梯", [22, 24, 26], 0, ["ascend", "peak", "descend"]))
     modules.append(RowingModule("长呼吸窗", [22, 24, 24, 22], 0, ["ascend", "peak", "descend"]))
     modules.append(RowingModule("温和金字塔", [21, 23, 25, 21], 0, ["ascend", "peak", "descend"]))
     # 新增低阻耐力（适合上升/下降）
-    modules.append(RowingModule("低阻巡航", [24, 24, 24], -1, ["ascend", "descend"]))
+    modules.append(RowingModule("低阻巡航", [24, 24, 24], -2, ["ascend", "descend"]))
     # 新增高阻耐力（适合峰值）
-    modules.append(RowingModule("高阻巡航", [20, 21, 22, 21], +1, ["peak"]))
+    modules.append(RowingModule("高阻巡航", [20, 21, 22, 21], +2, ["peak"]))
 
     # ---- 技术/特效流 (偏移不定) ----
     modules.append(RowingModule("暂停式冥想", [20, 20], 0, ["peak"]))  # 虽慢但核心紧张
     modules.append(RowingModule("交替发力", [22, 22, 22], 0, ["ascend", "peak", "descend"]))
-    modules.append(RowingModule("闭眼平衡", [24, 24, 24, 24], -1, ["descend"]))
-    modules.append(RowingModule("呼吸控制", [22, 22], -1, ["ascend", "descend"]))
+    modules.append(RowingModule("闭眼平衡", [24, 24, 24, 24], -2, ["descend"]))
+    modules.append(RowingModule("呼吸控制", [22, 22], -2, ["ascend", "descend"]))
 
     return modules
 
 
 def generate_rowing_workout(
     target_minutes: int = 20,
-    base_resistance: int = 12,
+    base_resistance: int = 14,
     warmup_spm: tuple = (20, 20, 22),
-    warmup_resistance_offset: int = -2,  # 热身相对基准的偏移（例如0表示直接用base）
-    ascend_offset: int = -1,  # 上升期相对基准的偏移
-    peak_offset: int = +3,  # 峰值期相对基准的偏移
-    descend_offset: int = -1,  # 下降期相对基准的偏移
+    warmup_resistance_offset: int = -4,  # 热身相对基准的偏移（例如0表示直接用base）
+    ascend_offset: int = -2,  # 上升期相对基准的偏移
+    peak_offset: int = +6,  # 峰值期相对基准的偏移
+    descend_offset: int = -2,  # 下降期相对基准的偏移
     phase_ratios: tuple[float, float, float] = (0.30, 0.40, 0.30),  # 上升/峰值/下降时长比例
 ) -> tuple[list[int], list[int]]:
     """
