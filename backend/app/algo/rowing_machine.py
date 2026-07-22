@@ -32,7 +32,7 @@ def build_module_pool() -> list[RowingModule]:
     # ---- 力量流 (高阻, +1偏移) ----
     modules.append(RowingModule("短距重锤", [20, 20], +2, ["peak"]))
     modules.append(RowingModule("力量爬坡", [20, 21, 22], +2, ["peak"]))
-    modules.append(RowingModule("重型间歇", [19, 21, 21, 10], +2, ["peak"]))
+    modules.append(RowingModule("重型间歇", [19, 21, 21, 20], +2, ["peak"]))
     # 新增力量耐力变种
     modules.append(RowingModule("力量持久", [19, 21, 21], +2, ["peak"]))
 
@@ -68,7 +68,7 @@ def generate_rowing_workout(
     warmup_spm: tuple = (20, 20, 22),
     warmup_resistance_offset: int = -4,  # 热身相对基准的偏移（例如0表示直接用base）
     ascend_offset: int = -2,  # 上升期相对基准的偏移
-    peak_offset: int = +6,  # 峰值期相对基准的偏移
+    peak_offset: int = +4,  # 峰值期相对基准的偏移
     descend_offset: int = -2,  # 下降期相对基准的偏移
     phase_ratios: tuple[float, float, float] = (0.30, 0.40, 0.30),  # 上升/峰值/下降时长比例
 ) -> tuple[list[int], list[int]]:

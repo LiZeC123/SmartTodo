@@ -1,880 +1,855 @@
 <template>
-    <div class="rowing-machine">
-        <!-- 左侧统计面板 -->
-        <div class="stats-panel">
-            <div class="stat-card" id="timerCard">
-                <span class="stat-label">⏱ 运动时长</span>
-                <span class="stat-value timer">{{ formattedTime }}</span>
+  <div class="rowing-page">
+    <div class="rowing-container">
+      <!-- 顶部统计信息栏 -->
+      <header class="stats-header">
+        <div class="stat-card">
+          <div class="stat-label">运动时长</div>
+          <div class="stat-value">{{ formattedTime }}</div>
+          <div class="stat-unit">分钟:秒</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">阻力档位</div>
+          <div class="stat-value resistance-value">
+            <span class="value-num">{{ resistance }}</span>
+          </div>
+          <div class="stat-unit">档位 1-31</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">划桨频率</div>
+          <div class="stat-value frequency-value">
+            <span class="value-num">{{ frequency }}</span>
+          </div>
+          <div class="stat-unit">次/分钟</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">拉桨次数</div>
+          <div class="stat-value">{{ strokeCount }}</div>
+          <div class="stat-unit">次</div>
+        </div>
+        <div v-if="planData && planData.resistance.length > 0" class="stat-card plan-progress">
+          <div class="stat-label">计划进度</div>
+          <div class="stat-value">{{ currentPlanMinute + 1 }} / {{ planData.resistance.length }}</div>
+          <div class="stat-unit">分钟</div>
+        </div>
+      </header>
+
+      <!-- 中部动画区域 -->
+      <section class="animation-area">
+        <!-- 呼吸圆形 -->
+        <div class="breath-circle-wrapper">
+          <div class="breath-circle-container">
+            <div
+              class="breath-circle"
+              :style="breathCircleStyle"
+            >
+              <div class="circle-inner"></div>
+              <div class="circle-glow"></div>
             </div>
-            <div class="stat-card resistance-card" id="resistanceCard">
-                <span class="stat-label">⚙ 阻力档位</span>
-                <div class="stat-controls">
-                    <button class="btn-adjust decrement" @pointerdown.prevent="startLongPress(-1, changeResistance)"
-                        @pointerup="stopLongPress" @pointerleave="stopLongPress" @pointercancel="stopLongPress"
-                        @click.prevent>−</button>
-                    <span class="value-display">{{ resistance }}</span>
-                    <button class="btn-adjust increment" @pointerdown.prevent="startLongPress(1, changeResistance)"
-                        @pointerup="stopLongPress" @pointerleave="stopLongPress" @pointercancel="stopLongPress"
-                        @click.prevent>+</button>
-                </div>
-            </div>
-            <div class="stat-card frequency-card" id="frequencyCard">
-                <span class="stat-label">🔄 划桨频率 <span class="unit">(次/分)</span></span>
-                <div class="stat-controls">
-                    <button class="btn-adjust decrement" @pointerdown.prevent="startLongPress(-1, changeFrequency)"
-                        @pointerup="stopLongPress" @pointerleave="stopLongPress" @pointercancel="stopLongPress"
-                        @click.prevent>−</button>
-                    <span class="value-display">{{ Math.round(displayFrequency) }}</span>
-                    <button class="btn-adjust increment" @pointerdown.prevent="startLongPress(1, changeFrequency)"
-                        @pointerup="stopLongPress" @pointerleave="stopLongPress" @pointercancel="stopLongPress"
-                        @click.prevent>+</button>
-                </div>
-            </div>
-            <button v-if="!exerciseEnded && elapsedSeconds > 0" class="end-btn" @click="endExercise">结束运动</button>
+            <div class="circle-ring ring-1" :style="ringStyle1"></div>
+            <div class="circle-ring ring-2" :style="ringStyle2"></div>
+          </div>
         </div>
 
-        <!-- 右侧动画面板 -->
-        <div class="animation-panel">
-            <div class="breath-circle-wrapper">
-                <div class="glow-layer glow-outer" ref="glowOuterRef"></div>
-                <div class="glow-layer glow-mid" ref="glowMidRef"></div>
-                <div class="breath-circle" ref="breathCircleRef">
-                    <span class="breath-text" :class="currentBreathStage">{{ breathText }}</span>
-                </div>
+        <!-- 滑动滑块 -->
+        <div class="slider-track-wrapper">
+          <div class="slider-track">
+            <div class="track-line"></div>
+            <div class="track-mark track-mark-left"></div>
+            <div class="track-mark track-mark-right"></div>
+            <div
+              class="slider-thumb"
+              :style="sliderThumbStyle"
+            >
+              <div class="thumb-inner"></div>
             </div>
+            <div class="track-end track-end-left">
+              <div class="end-dot"></div>
+            </div>
+            <div class="track-end track-end-right">
+              <div class="end-dot"></div>
+            </div>
+          </div>
         </div>
+      </section>
 
-        <!-- 完成提示弹窗 -->
-        <div v-if="showCompleteDialog" class="complete-overlay">
-            <div class="complete-dialog">
-                <p class="complete-title">🎉 运动计划已完成！</p>
-                <p class="complete-desc">您已完成 {{ planTotalMinutes }} 分钟的训练</p>
-                <div class="complete-actions">
-                    <button class="dialog-btn continue-btn" @click="continueExercise">继续运动</button>
-                    <button class="dialog-btn end-btn-dialog" @click="endExercise">结束运动</button>
-                </div>
-            </div>
+      <!-- 底部完成提示（仅在计划完成后显示） -->
+      <footer class="controls-area" v-if="planComplete">
+        <div class="complete-banner">
+          <span class="complete-icon">🎉</span>
+          <span>运动计划已完成，数据已自动提交</span>
         </div>
-
-        <!-- 结束提示 -->
-        <div v-if="showEndedMessage" class="complete-overlay">
-            <div class="complete-dialog">
-                <p class="complete-title">✅ 运动已记录</p>
-                <p class="complete-desc">拉桨 {{ submittedStrokeCount }} 次 | 时长 {{ submittedTime }} 秒</p>
-                <button class="dialog-btn continue-btn" @click="restartExercise">重新开始</button>
-            </div>
-        </div>
+      </footer>
     </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import axios from 'axios';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import axios from 'axios'
 
-// ---------- 类型定义 ----------
-interface ExerciseRecord {
-    type: string;
-    time: number;
-    extra: {
-        stroke_count: number;
-    };
-}
-
+// ============ 类型定义 ============
 interface PlanData {
-    resistance: number[];
-    frequency: number[];
+  resistance: number[]
+  frequency: number[]
 }
 
-// ---------- 响应式状态 ----------
-const resistance = ref<number>(10);
-const targetFrequency = ref<number>(20);
-const displayFrequency = ref<number>(20);
-const elapsedSeconds = ref<number>(0);
-const strokeCount = ref<number>(0);
-const currentBreathStage = ref<string>('inhale');
-const breathText = ref<string>('吸气');
-const showCompleteDialog = ref<boolean>(false);
-const isCompleted = ref<boolean>(false);
-const exerciseEnded = ref<boolean>(false);
-const showEndedMessage = ref<boolean>(false);
-const submittedStrokeCount = ref<number>(0);
-const submittedTime = ref<number>(0);
+interface ExerciseRecord {
+  type: string
+  time: number
+  extra: {
+    stroke_count: number
+  }
+}
 
-// 计划数据
-const planResistance = ref<number[]>([]);
-const planFrequency = ref<number[]>([]);
-const planTotalMinutes = computed(() => planResistance.value.length);
-const planTotalSeconds = computed(() => planTotalMinutes.value * 60);
+// ============ 常量 ============
+const DRIVE_RATIO = 0.35
+const RECOVERY_RATIO = 1 - DRIVE_RATIO
+const MIN_SCALE = 0.55
+const MAX_SCALE = 1.0
+const SLIDER_MIN_PERCENT = 8
+const SLIDER_MAX_PERCENT = 92
+const DEFAULT_RESISTANCE = 10
+const DEFAULT_FREQUENCY = 20
+const DEFAULT_PLAN_DURATION_MINUTES = 30 // 无计划时的默认时长
 
-// 动画参数（非响应式提升性能，但需通过闭包访问）
-let currentPeriod = 60 / 20; // 初始周期
-let paramS = 0;
-let prevBreathStage: string | null = null;
-let animFrameId: number | null = null;
-let lastFrameTime: number | null = null;
-const PERIOD_SMOOTH_FACTOR = 6.5;
-const FREQ_DISPLAY_SMOOTH = 5.0;
-const ASYMMETRY_A = 0.40;
-const SCALE_MIN = 0.38;
-const SCALE_MAX = 1.0;
-const GLOW_SCALE_MIN = 0.55;
-const GLOW_SCALE_MAX = 1.0;
-const GLOW_OPACITY_MIN = 0.35;
-const GLOW_OPACITY_MAX = 0.85;
+// ============ 响应式状态 ============
+const elapsedTime = ref(0)
+const resistance = ref(DEFAULT_RESISTANCE)
+const frequency = ref(DEFAULT_FREQUENCY)
+const strokeCount = ref(0)
+const planData = ref<PlanData | null>(null)
+const planComplete = ref(false)
 
-// DOM 引用
-const breathCircleRef = ref<HTMLElement | null>(null);
-const glowMidRef = ref<HTMLElement | null>(null);
-const glowOuterRef = ref<HTMLElement | null>(null);
+// 动画相关
+const accumulatedProgress = ref(0)
+const animationFrameId = ref<number | null>(null)
+const lastFrameTime = ref<number | null>(null)
+const timerIntervalId = ref<number | null>(null)
+let autoSubmitted = false // 防止重复提交
 
-// 定时器
-let timerInterval: ReturnType<typeof setInterval> | null = null;
+// ============ 计算属性 ============
+const currentPlanMinute = computed(() => {
+  if (!planData.value || planData.value.resistance.length === 0) return 0
+  return Math.min(Math.floor(elapsedTime.value / 60), planData.value.resistance.length - 1)
+})
 
-// 长按相关
-let longPressTimer: ReturnType<typeof setTimeout> | null = null;
-let longPressInterval: ReturnType<typeof setInterval> | null = null;
-
-// ---------- 计算属性 ----------
 const formattedTime = computed(() => {
-    const totalSec = Math.floor(elapsedSeconds.value);
-    const hours = Math.floor(totalSec / 3600);
-    const minutes = Math.floor((totalSec % 3600) / 60);
-    const seconds = totalSec % 60;
-    if (hours > 0) {
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    }
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-});
+  const minutes = Math.floor(elapsedTime.value / 60)
+  const seconds = elapsedTime.value % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+})
 
-// ---------- 辅助函数 ----------
-const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+const cycleProgress = computed(() => {
+  return accumulatedProgress.value % 1
+})
 
-const mapSToPhase = (s: number): number => {
-    const twoPiS = 2 * Math.PI * s;
-    return twoPiS + ASYMMETRY_A * Math.sin(twoPiS);
-};
+const breathCircleStyle = computed(() => {
+  const progress = cycleProgress.value
+  let scale: number
 
-// ---------- 计划与记录请求 ----------
-async function fetchPlan() {
-    try {
-        const response = await axios.get<PlanData>('exercise/plan/rowing');
-        const data = response.data;
-        if (data && Array.isArray(data.resistance) && Array.isArray(data.frequency) && data.resistance.length === data.frequency.length) {
-            planResistance.value = data.resistance;
-            planFrequency.value = data.frequency;
-            // 初始化阻力与频率为第一分钟的计划值（如果计划存在）
-            if (planResistance.value.length > 0) {
-                resistance.value = planResistance.value[0];
-                targetFrequency.value = planFrequency.value[0];
-                currentPeriod = 60 / targetFrequency.value;
-                displayFrequency.value = targetFrequency.value;
-            }
-        } else {
-            planResistance.value = [];
-            planFrequency.value = [];
-        }
-    } catch (error) {
-        console.error('获取运动计划失败:', error);
-        planResistance.value = [];
-        planFrequency.value = [];
-    }
+  if (progress < DRIVE_RATIO) {
+    const norm = progress / DRIVE_RATIO
+    const eased = easeInOutSine(norm)
+    scale = MAX_SCALE - (MAX_SCALE - MIN_SCALE) * eased
+  } else {
+    const norm = (progress - DRIVE_RATIO) / RECOVERY_RATIO
+    const eased = easeInOutSine(norm)
+    scale = MIN_SCALE + (MAX_SCALE - MIN_SCALE) * eased
+  }
+
+  return {
+    transform: `scale(${scale})`,
+    transition: 'none',
+  }
+})
+
+const ringStyle1 = computed(() => {
+  const progress = cycleProgress.value
+  let scale: number
+
+  if (progress < DRIVE_RATIO) {
+    const norm = progress / DRIVE_RATIO
+    const eased = easeInOutSine(norm)
+    scale = MAX_SCALE - 0.15 - (MAX_SCALE - MIN_SCALE - 0.1) * eased
+  } else {
+    const norm = (progress - DRIVE_RATIO) / RECOVERY_RATIO
+    const eased = easeInOutSine(norm)
+    scale = MIN_SCALE + 0.05 + (MAX_SCALE - MIN_SCALE - 0.15) * eased
+  }
+
+  return {
+    transform: `scale(${scale})`,
+    opacity: 0.35 + 0.2 * (1 - Math.abs(scale - (MAX_SCALE + MIN_SCALE) / 2) / ((MAX_SCALE - MIN_SCALE) / 2)),
+    transition: 'none',
+  }
+})
+
+const ringStyle2 = computed(() => {
+  const progress = cycleProgress.value
+  let scale: number
+
+  if (progress < DRIVE_RATIO) {
+    const norm = progress / DRIVE_RATIO
+    const eased = easeInOutSine(norm)
+    scale = MAX_SCALE - 0.3 - (MAX_SCALE - MIN_SCALE - 0.25) * eased
+  } else {
+    const norm = (progress - DRIVE_RATIO) / RECOVERY_RATIO
+    const eased = easeInOutSine(norm)
+    scale = MIN_SCALE + 0.15 + (MAX_SCALE - MIN_SCALE - 0.3) * eased
+  }
+
+  return {
+    transform: `scale(${scale})`,
+    opacity: 0.2 + 0.15 * (1 - Math.abs(scale - (MAX_SCALE + MIN_SCALE) / 2) / ((MAX_SCALE - MIN_SCALE) / 2)),
+    transition: 'none',
+  }
+})
+
+const sliderThumbStyle = computed(() => {
+  const progress = cycleProgress.value
+  let positionPercent: number
+
+  if (progress < DRIVE_RATIO) {
+    const norm = progress / DRIVE_RATIO
+    const eased = easeInOutSine(norm)
+    positionPercent = SLIDER_MIN_PERCENT + (SLIDER_MAX_PERCENT - SLIDER_MIN_PERCENT) * eased
+  } else {
+    const norm = (progress - DRIVE_RATIO) / RECOVERY_RATIO
+    const eased = easeInOutSine(norm)
+    positionPercent = SLIDER_MAX_PERCENT - (SLIDER_MAX_PERCENT - SLIDER_MIN_PERCENT) * eased
+  }
+
+  return {
+    left: `${positionPercent}%`,
+    transition: 'none',
+  }
+})
+
+// ============ 方法 ============
+
+function easeInOutSine(t: number): number {
+  return (1 - Math.cos(Math.PI * t)) / 2
 }
 
-async function submitRecord() {
-    // 取整拉桨次数
-    const strokes = Math.round(strokeCount.value);
-    const time = Math.floor(elapsedSeconds.value);
-    const payload: ExerciseRecord = {
-        type: 'RowingMachine',
-        time: time,
-        extra: {
-            stroke_count: strokes,
-        },
-    };
-    try {
-        await axios.post('exercise/record', payload);
-        return { strokes, time };
-    } catch (error) {
-        console.error('提交运动记录失败:', error);
-        // 仍然返回本地数据用于显示
-        return { strokes, time };
+function animateLoop(timestamp: number) {
+  if (lastFrameTime.value === null) {
+    lastFrameTime.value = timestamp
+    animationFrameId.value = requestAnimationFrame(animateLoop)
+    return
+  }
+
+  const deltaTime = (timestamp - lastFrameTime.value) / 1000
+  lastFrameTime.value = timestamp
+
+  const clampedDelta = Math.min(deltaTime, 0.1)
+
+  if (clampedDelta > 0) {
+    const periodSeconds = 60 / frequency.value
+    const progressIncrement = clampedDelta / periodSeconds
+    accumulatedProgress.value += progressIncrement
+
+    const newStrokeCount = Math.floor(accumulatedProgress.value)
+    if (newStrokeCount > strokeCount.value) {
+      strokeCount.value = newStrokeCount
     }
-}
+  }
 
-// ---------- 动画循环 ----------
-function animate(timestamp: number) {
-    if (lastFrameTime === null) {
-        lastFrameTime = timestamp;
-        animFrameId = requestAnimationFrame(animate);
-        return;
-    }
-    let dt = (timestamp - lastFrameTime) / 1000;
-    dt = Math.min(dt, 0.15);
-    if (dt <= 0) dt = 0.001;
-    lastFrameTime = timestamp;
-
-    // 更新运动时长
-    elapsedSeconds.value += dt;
-
-    // 计划进度检查：自动按计划调整阻力/频率（基于当前分钟）
-    const currentMinute = Math.floor(elapsedSeconds.value / 60);
-    if (planResistance.value.length > 0 && currentMinute < planResistance.value.length) {
-        const planR = planResistance.value[currentMinute];
-        const planF = planFrequency.value[currentMinute];
-        if (resistance.value !== planR) resistance.value = planR;
-        if (targetFrequency.value !== planF) targetFrequency.value = planF;
-    }
-
-    // 周期平滑
-    const targetPeriod = 60 / targetFrequency.value;
-    const smoothFactor = 1 - Math.exp(-PERIOD_SMOOTH_FACTOR * dt);
-    currentPeriod = lerp(currentPeriod, targetPeriod, smoothFactor);
-
-    const actualFreq = 60 / currentPeriod;
-    const freqSmooth = 1 - Math.exp(-FREQ_DISPLAY_SMOOTH * dt);
-    displayFrequency.value = lerp(displayFrequency.value, actualFreq, freqSmooth);
-
-    // 推进参数 s 并累计拉桨次数
-    const ds = dt / currentPeriod;
-    paramS += ds;
-    strokeCount.value += ds; // 小数累加，提交时取整
-    paramS = paramS - Math.floor(paramS);
-
-    // 计算相位
-    let phase = mapSToPhase(paramS);
-    if (phase >= 2 * Math.PI) phase -= 2 * Math.PI;
-    if (phase < 0) phase += 2 * Math.PI;
-
-    // 呼吸因子 (1+cos)/2 : 0=收缩，1=扩张
-    const cosPhase = Math.cos(phase);
-    const breathFactor = (1 + cosPhase) / 2;
-    const currentScale = SCALE_MIN + (SCALE_MAX - SCALE_MIN) * breathFactor;
-
-    // 判断阶段
-    const newStage = (phase > 0 && phase < Math.PI) ? 'exhale' : 'inhale';
-    if (newStage !== prevBreathStage) {
-        currentBreathStage.value = newStage;
-        breathText.value = newStage === 'exhale' ? '呼气' : '吸气';
-        prevBreathStage = newStage;
-    }
-
-    // 更新 DOM 元素样式
-    if (breathCircleRef.value) {
-        breathCircleRef.value.style.transform = `scale(${currentScale})`;
-    }
-    if (glowMidRef.value) {
-        const glowScale = GLOW_SCALE_MIN + (GLOW_SCALE_MAX - GLOW_SCALE_MIN) * breathFactor;
-        const glowOpacity = GLOW_OPACITY_MIN + (GLOW_OPACITY_MAX - GLOW_OPACITY_MIN) * breathFactor;
-        glowMidRef.value.style.transform = `scale(${glowScale})`;
-        glowMidRef.value.style.opacity = String(glowOpacity);
-        if (glowOuterRef.value) {
-            glowOuterRef.value.style.transform = `scale(${glowScale * 0.85 + 0.15})`;
-            glowOuterRef.value.style.opacity = String(glowOpacity * 0.7);
-        }
-    }
-
-    // 计划完成检测
-    if (planTotalSeconds.value > 0 && elapsedSeconds.value >= planTotalSeconds.value && !isCompleted.value && !exerciseEnded.value) {
-        isCompleted.value = true;
-        showCompleteDialog.value = true;
-    }
-
-    animFrameId = requestAnimationFrame(animate);
+  animationFrameId.value = requestAnimationFrame(animateLoop)
 }
 
 function startAnimation() {
-    if (animFrameId !== null) return;
-    lastFrameTime = null;
-    animFrameId = requestAnimationFrame(animate);
+  if (animationFrameId.value !== null) return
+  lastFrameTime.value = null
+  animationFrameId.value = requestAnimationFrame(animateLoop)
 }
 
 function stopAnimation() {
-    if (animFrameId !== null) {
-        cancelAnimationFrame(animFrameId);
-        animFrameId = null;
+  if (animationFrameId.value !== null) {
+    cancelAnimationFrame(animationFrameId.value)
+    animationFrameId.value = null
+  }
+  lastFrameTime.value = null
+}
+
+function startTimer() {
+  if (timerIntervalId.value !== null) return
+  timerIntervalId.value = window.setInterval(() => {
+    elapsedTime.value += 1
+    checkPlanProgress()
+  }, 1000)
+}
+
+function stopTimer() {
+  if (timerIntervalId.value !== null) {
+    clearInterval(timerIntervalId.value)
+    timerIntervalId.value = null
+  }
+}
+
+function checkPlanProgress() {
+  if (!planData.value || planData.value.resistance.length === 0) {
+    // 无计划时持续运行，不自动结束
+    return
+  }
+  if (planComplete.value) return
+
+  const totalPlanSeconds = planData.value.resistance.length * 60
+  if (elapsedTime.value >= totalPlanSeconds) {
+    planComplete.value = true
+    // 保持最后的阻力和频率
+    const lastIndex = planData.value.resistance.length - 1
+    resistance.value = planData.value.resistance[lastIndex]
+    frequency.value = planData.value.frequency[lastIndex]
+    // 自动提交数据
+    if (!autoSubmitted) {
+      autoSubmitted = true
+      submitExerciseRecord(elapsedTime.value, strokeCount.value)
     }
-    lastFrameTime = null;
+    stopTimer()
+    return
+  }
+
+  // 根据当前时间更新阻力和频率
+  const minuteIndex = Math.floor(elapsedTime.value / 60)
+  if (minuteIndex < planData.value.resistance.length) {
+    resistance.value = planData.value.resistance[minuteIndex]
+    frequency.value = planData.value.frequency[minuteIndex]
+  }
 }
 
-// ---------- 控制方法 ----------
-function changeResistance(delta: number) {
-    const newVal = clamp(resistance.value + delta, 1, 31);
-    if (newVal !== resistance.value) {
-        resistance.value = newVal;
-        if (navigator.vibrate) navigator.vibrate(8);
+async function submitExerciseRecord(time: number, strokes: number) {
+  try {
+    const record: ExerciseRecord = {
+      type: 'RowingMachine',
+      time: time,
+      extra: {
+        stroke_count: strokes,
+      },
     }
+    await axios.post('exercise/record', record)
+    console.log('运动记录已提交:', record)
+  } catch (error) {
+    console.error('提交运动记录失败:', error)
+  }
 }
 
-function changeFrequency(delta: number) {
-    const newVal = clamp(targetFrequency.value + delta, 20, 28);
-    if (newVal !== targetFrequency.value) {
-        targetFrequency.value = newVal;
-        if (navigator.vibrate) navigator.vibrate(6);
+function buildDefaultPlan(): PlanData {
+  const res: PlanData = {
+    resistance: new Array(DEFAULT_PLAN_DURATION_MINUTES).fill(DEFAULT_RESISTANCE),
+    frequency: new Array(DEFAULT_PLAN_DURATION_MINUTES).fill(DEFAULT_FREQUENCY),
+  }
+  return res
+}
+
+async function fetchPlanAndStart() {
+  try {
+    const response = await axios.get<PlanData>('exercise/plan/rowing')
+    if (response.data && response.data.resistance && response.data.frequency && response.data.resistance.length > 0) {
+      planData.value = response.data
+    } else {
+      // 数据无效，使用默认计划
+      planData.value = buildDefaultPlan()
     }
+  } catch (error) {
+    console.error('获取运动计划失败，使用默认计划:', error)
+    planData.value = buildDefaultPlan()
+  }
+
+  // 设置初始值
+  if (planData.value && planData.value.resistance.length > 0) {
+    resistance.value = planData.value.resistance[0]
+    frequency.value = planData.value.frequency[0]
+  }
+
+  // 启动计时与动画
+  startTimer()
 }
 
-function startLongPress(delta: number, fn: (d: number) => void) {
-    fn(delta);
-    stopLongPress(); // 清除之前的
-    longPressTimer = setTimeout(() => {
-        longPressInterval = setInterval(() => fn(delta), 80);
-    }, 350);
-}
-
-function stopLongPress() {
-    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
-    if (longPressInterval) { clearInterval(longPressInterval); longPressInterval = null; }
-}
-
-// ---------- 运动结束与重置 ----------
-async function endExercise() {
-    showCompleteDialog.value = false;
-    stopAnimation();
-    if (timerInterval) clearInterval(timerInterval);
-    exerciseEnded.value = true;
-    const { strokes, time } = await submitRecord();
-    submittedStrokeCount.value = strokes;
-    submittedTime.value = time;
-    showEndedMessage.value = true;
-}
-
-function continueExercise() {
-    showCompleteDialog.value = false;
-    isCompleted.value = false; // 允许再次触发
-}
-
-async function restartExercise() {
-    // 重置所有状态
-    stopAnimation();
-    if (timerInterval) clearInterval(timerInterval);
-    elapsedSeconds.value = 0;
-    strokeCount.value = 0;
-    paramS = 0;
-    currentBreathStage.value = 'inhale';
-    breathText.value = '吸气';
-    prevBreathStage = null;
-    exerciseEnded.value = false;
-    showEndedMessage.value = false;
-    showCompleteDialog.value = false;
-    isCompleted.value = false;
-
-    // 重新获取计划
-    await fetchPlan();
-
-    // 启动动画与计时器
-    timerInterval = setInterval(() => { }, 500); // 计时器仅用于强制更新视图？实际上动画循环中更新elapsedSeconds会触发响应式，不需要额外定时器，但保留之前逻辑也无妨
-    startAnimation();
-}
-
-// ---------- 生命周期 ----------
-onMounted(async () => {
-    // 适配移动端横屏
-    updateCircleBaseSize();
-    window.addEventListener('resize', handleResize);
-
-    // 获取计划并启动
-    await fetchPlan();
-    // 启动动画循环
-    startAnimation();
-});
+// 生命周期
+onMounted(() => {
+  startAnimation()
+  fetchPlanAndStart()
+})
 
 onUnmounted(() => {
-    stopAnimation();
-    if (timerInterval) clearInterval(timerInterval);
-    stopLongPress();
-    window.removeEventListener('resize', handleResize);
-});
-
-// 响应式尺寸适配
-function updateCircleBaseSize() {
-    const vh = window.innerHeight;
-    const vw = window.innerWidth;
-    const isLandscape = vw > vh;
-    let baseSize = isLandscape ? Math.min(vh * 0.55, vw * 0.38, 260) : Math.min(vh * 0.35, vw * 0.55, 200);
-    baseSize = Math.max(baseSize, 90);
-    if (breathCircleRef.value) {
-        breathCircleRef.value.style.width = baseSize + 'px';
-        breathCircleRef.value.style.height = baseSize + 'px';
-    }
-    if (glowMidRef.value) {
-        glowMidRef.value.style.width = (baseSize * 1.2) + 'px';
-        glowMidRef.value.style.height = (baseSize * 1.2) + 'px';
-    }
-    if (glowOuterRef.value) {
-        glowOuterRef.value.style.width = (baseSize * 1.6) + 'px';
-        glowOuterRef.value.style.height = (baseSize * 1.6) + 'px';
-    }
-}
-
-let resizeDebounce: ReturnType<typeof setTimeout>;
-function handleResize() {
-    clearTimeout(resizeDebounce);
-    resizeDebounce = setTimeout(updateCircleBaseSize, 200);
-}
+  stopAnimation()
+  stopTimer()
+})
 </script>
 
 <style scoped>
-.rowing-machine {
-    width: 100%;
-    height: 100%;
-    max-width: 900px;
-    max-height: 500px;
-    display: flex;
-    flex-direction: row;
-    gap: 20px;
-    padding: 18px;
-    position: relative;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', sans-serif;
-    background: linear-gradient(160deg, #faf7f3 0%, #f3f0ea 30%, #f7f4f0 60%, #faf8f5 100%);
-    margin: 0 auto;
+/* ============ 全局页面样式 ============ */
+.rowing-page {
+  --bg-primary: #f8fafc;
+  --bg-card: #ffffff;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --accent: #0ea5e9;
+  --accent-light: #e0f2fe;
+  --accent-dark: #0284c7;
+  --breath-inner: #38bdf8;
+  --breath-outer: #7dd3fc;
+  --breath-glow: #bae6fd;
+  --slider-track: #e2e8f0;
+  --slider-thumb: #0ea5e9;
+  --slider-thumb-glow: #38bdf8;
+  --btn-start-bg: #0ea5e9;
+  --btn-start-hover: #0284c7;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.08), 0 4px 10px -4px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 30px rgba(14, 165, 233, 0.25);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-full: 50%;
+
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: linear-gradient(160deg, #f0f7ff 0%, #f8fafc 30%, #f1f5f9 70%, #e8f4fd 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* 左侧统计面板 */
-.stats-panel {
-    flex: 0 0 auto;
-    width: 220px;
-    min-width: 200px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    z-index: 2;
+.rowing-container {
+  width: 100%;
+  max-width: 900px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+/* ============ 顶部统计信息栏 ============ */
+.stats-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
 }
 
 .stat-card {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 16px 18px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    position: relative;
-    overflow: hidden;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  flex: 1 1 auto;
+  min-width: 80px;
+  max-width: 140px;
+  border: 1px solid #f1f5f9;
+  transition: box-shadow 0.3s ease;
 }
 
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    border-radius: 0 4px 4px 0;
-    opacity: 0.7;
-}
-
-.resistance-card::before {
-    background: #e8917e;
-}
-
-.frequency-card::before {
-    background: #5b9cb8;
+.stat-card:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .stat-label {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #6b6b6b;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
 }
 
 .stat-value {
-    font-size: 28px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: #2c2c2c;
-    font-family: 'SF Mono', Menlo, Consolas, monospace;
-    line-height: 1;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
-.stat-value.timer {
-    font-size: 30px;
-    letter-spacing: 0.03em;
+.stat-unit {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 2px;
 }
 
-.stat-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+.resistance-value,
+.frequency-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.stat-controls .value-display {
-    font-size: 24px;
-    font-weight: 700;
-    font-family: monospace;
-    min-width: 40px;
-    text-align: center;
-    color: #2c2c2c;
+.value-num {
+  min-width: 32px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
 }
 
-.btn-adjust {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    border: 2px solid #e8e5e0;
-    background: #fafaf8;
-    color: #2c2c2c;
-    font-size: 20px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s;
-    outline: none;
-    line-height: 1;
-    flex-shrink: 0;
+.plan-progress {
+  border-left: 3px solid var(--accent);
 }
 
-.btn-adjust:active {
-    background: #e8e5e0;
-    border-color: #d5d1ca;
-    transform: scale(0.93);
+/* ============ 动画区域 ============ */
+.animation-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 20px 0;
 }
 
-.btn-adjust.decrement {
-    color: #888;
-}
-
-.btn-adjust.increment {
-    color: #3d7d99;
-}
-
-.unit {
-    font-weight: 400;
-    font-size: 10px;
-}
-
-/* 结束运动按钮 */
-.end-btn {
-    margin-top: 8px;
-    background: #e8917e;
-    color: white;
-    border: none;
-    border-radius: 20px;
-    padding: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.end-btn:active {
-    background: #d47d6b;
-}
-
-/* 右侧动画面板 */
-.animation-panel {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    min-width: 280px;
-    z-index: 1;
-}
-
+/* --- 呼吸圆形 --- */
 .breath-circle-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 16px 0;
 }
 
-.glow-layer {
-    position: absolute;
-    border-radius: 50%;
-    pointer-events: none;
-}
-
-.glow-outer {
-    background: radial-gradient(circle, rgba(139, 190, 210, 0.25) 0%, rgba(139, 190, 210, 0.06) 50%, transparent 70%);
-    width: 320px;
-    height: 320px;
-    z-index: 0;
-}
-
-.glow-mid {
-    background: radial-gradient(circle, rgba(160, 210, 225, 0.35) 0%, rgba(160, 210, 225, 0.10) 45%, transparent 65%);
-    width: 240px;
-    height: 240px;
-    z-index: 1;
+.breath-circle-container {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .breath-circle {
-    position: relative;
-    z-index: 2;
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 38% 35%, #c5e8f5 0%, #8ecde5 18%, #5ba8c9 45%, #3d8aaa 70%, #2d708f 100%);
-    box-shadow: 0 0 60px rgba(120, 185, 210, 0.35), 0 0 120px rgba(120, 185, 210, 0.15), 0 8px 32px rgba(0, 0, 0, 0.10), inset 0 -3px 8px rgba(0, 0, 0, 0.08), inset 0 3px 8px rgba(255, 255, 255, 0.30);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #7dd3fc 0%, #38bdf8 40%, #0ea5e9 100%);
+  box-shadow: var(--shadow-glow), 0 0 60px rgba(14, 165, 233, 0.15);
+  z-index: 3;
+  will-change: transform;
 }
 
-.breath-text {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: rgba(255, 255, 255, 0.92);
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-    transition: opacity 0.15s;
-    pointer-events: none;
-    z-index: 3;
+.circle-inner {
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 45% 40%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.15) 50%, transparent 70%);
+  pointer-events: none;
 }
 
-.breath-text.exhale {
-    color: rgba(255, 240, 235, 0.95);
-    text-shadow: 0 1px 6px rgba(180, 70, 50, 0.35);
+.circle-glow {
+  position: absolute;
+  inset: -15%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(186, 230, 253, 0.4) 0%, transparent 70%);
+  pointer-events: none;
+  animation: glowPulse 3s ease-in-out infinite;
 }
 
-.breath-text.inhale {
-    color: rgba(240, 250, 255, 0.95);
-    text-shadow: 0 1px 6px rgba(60, 130, 170, 0.35);
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
-/* 弹窗样式 */
-.complete-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
-    border-radius: inherit;
+.circle-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(14, 165, 233, 0.25);
+  pointer-events: none;
+  will-change: transform, opacity;
 }
 
-.complete-dialog {
-    background: white;
-    border-radius: 24px;
-    padding: 30px 24px;
-    text-align: center;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-    max-width: 280px;
+.ring-1 {
+  width: 160px;
+  height: 160px;
+  z-index: 2;
 }
 
-.complete-title {
-    font-size: 20px;
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: #2c2c2c;
+.ring-2 {
+  width: 200px;
+  height: 200px;
+  border-width: 1.5px;
+  border-color: rgba(14, 165, 233, 0.15);
+  z-index: 1;
 }
 
-.complete-desc {
-    font-size: 14px;
-    color: #6b6b6b;
-    margin-bottom: 20px;
+/* --- 滑动滑块 --- */
+.slider-track-wrapper {
+  width: 100%;
+  max-width: 500px;
+  padding: 10px 30px;
+  box-sizing: border-box;
 }
 
-.complete-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
+.slider-track {
+  position: relative;
+  height: 50px;
+  display: flex;
+  align-items: center;
 }
 
-.dialog-btn {
-    border: none;
-    border-radius: 20px;
-    padding: 12px 20px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
+.track-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, #e2e8f0 0%, #cbd5e1 50%, #e2e8f0 100%);
+  border-radius: 3px;
+  transform: translateY(-50%);
 }
 
-.continue-btn {
-    background: #5b9cb8;
-    color: white;
+.track-mark {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 16px;
+  background: #cbd5e1;
+  border-radius: 1px;
+  transform: translateY(-50%);
 }
 
-.continue-btn:active {
-    background: #4a8aa3;
+.track-mark-left {
+  left: 6%;
 }
 
-.end-btn-dialog {
-    background: #e8917e;
-    color: white;
+.track-mark-right {
+  right: 6%;
 }
 
-.end-btn-dialog:active {
-    background: #d47d6b;
+.track-end {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
-/* 响应式 */
-@media (min-width: 768px) and (min-height: 500px) {
-    .rowing-machine {
-        max-height: 600px;
-        gap: 28px;
-        padding: 24px;
-    }
-
-    .stats-panel {
-        width: 240px;
-        gap: 14px;
-    }
-
-    .stat-card {
-        padding: 18px 20px;
-    }
-
-    .stat-value {
-        font-size: 32px;
-    }
-
-    .stat-value.timer {
-        font-size: 34px;
-    }
-
-    .breath-circle {
-        width: 240px;
-        height: 240px;
-    }
-
-    .breath-text {
-        font-size: 26px;
-    }
-
-    .glow-outer {
-        width: 380px;
-        height: 380px;
-    }
-
-    .glow-mid {
-        width: 290px;
-        height: 290px;
-    }
-
-    .btn-adjust {
-        width: 42px;
-        height: 42px;
-        font-size: 22px;
-    }
+.track-end-left {
+  left: -2px;
 }
 
-@media (max-width: 520px) or (max-height: 380px) {
-    .rowing-machine {
-        flex-direction: column;
-        gap: 10px;
-        padding: 10px;
-        max-height: 100vh;
-    }
-
-    .stats-panel {
-        flex-direction: row;
-        width: 100%;
-        flex-wrap: wrap;
-        gap: 8px;
-        justify-content: center;
-    }
-
-    .stat-card {
-        flex: 1;
-        min-width: 90px;
-        padding: 10px 12px;
-        gap: 4px;
-        border-radius: 10px;
-    }
-
-    .stat-value {
-        font-size: 20px;
-    }
-
-    .stat-value.timer {
-        font-size: 22px;
-    }
-
-    .stat-controls {
-        gap: 6px;
-    }
-
-    .stat-controls .value-display {
-        font-size: 18px;
-        min-width: 30px;
-    }
-
-    .btn-adjust {
-        width: 30px;
-        height: 30px;
-        font-size: 16px;
-    }
-
-    .breath-circle {
-        width: 140px;
-        height: 140px;
-    }
-
-    .breath-text {
-        font-size: 17px;
-    }
-
-    .glow-outer {
-        width: 220px;
-        height: 220px;
-    }
-
-    .glow-mid {
-        width: 170px;
-        height: 170px;
-    }
-
-    .stat-label {
-        font-size: 10px;
-    }
-
-    .animation-panel {
-        min-width: auto;
-        flex: 1;
-    }
+.track-end-right {
+  right: -2px;
 }
 
-@media (max-height: 340px) {
-    .breath-circle {
-        width: 100px;
-        height: 100px;
-    }
+.end-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  border: 2px solid #e2e8f0;
+}
 
-    .breath-text {
-        font-size: 14px;
-    }
+.slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4), 0 0 0 4px rgba(14, 165, 233, 0.1);
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  will-change: left;
+  transition: box-shadow 0.3s ease;
+}
 
-    .glow-outer {
-        width: 160px;
-        height: 160px;
-    }
+.thumb-inner {
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, rgba(255, 255, 255, 0.6), transparent);
+  pointer-events: none;
+}
 
-    .glow-mid {
-        width: 125px;
-        height: 125px;
-    }
+/* ============ 底部完成提示 ============ */
+.controls-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0 16px;
+}
 
-    .stat-value {
-        font-size: 16px;
-    }
+.complete-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-md);
+  padding: 10px 20px;
+  color: #166534;
+  font-weight: 600;
+  font-size: 0.95rem;
+  animation: bannerSlideIn 0.4s ease-out;
+}
 
-    .stat-value.timer {
-        font-size: 18px;
-    }
+@keyframes bannerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
-    .stat-controls .value-display {
-        font-size: 15px;
-    }
+.complete-icon {
+  font-size: 1.3rem;
+}
 
-    .btn-adjust {
-        width: 26px;
-        height: 26px;
-        font-size: 14px;
-    }
+/* ============ 响应式设计 ============ */
+@media (max-width: 600px) {
+  .rowing-container {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .stats-header {
+    gap: 6px;
+  }
+
+  .stat-card {
+    padding: 8px 10px;
+    min-width: 60px;
+    max-width: 100px;
+    border-radius: var(--radius-sm);
+  }
+
+  .stat-label {
+    font-size: 0.6rem;
+  }
+
+  .stat-value {
+    font-size: 1.2rem;
+  }
+
+  .value-num {
+    font-size: 1.2rem;
+    min-width: 24px;
+  }
+
+  .breath-circle-container {
+    width: 140px;
+    height: 140px;
+  }
+
+  .breath-circle {
+    width: 90px;
+    height: 90px;
+  }
+
+  .ring-1 {
+    width: 120px;
+    height: 120px;
+  }
+
+  .ring-2 {
+    width: 150px;
+    height: 150px;
+  }
+
+  .slider-track-wrapper {
+    padding: 10px 20px;
+    max-width: 100%;
+  }
+
+  .slider-track {
+    height: 40px;
+  }
+
+  .slider-thumb {
+    width: 28px;
+    height: 28px;
+  }
+
+  .track-line {
+    height: 4px;
+  }
+}
+
+@media (max-width: 380px) {
+  .stats-header {
+    gap: 4px;
+  }
+
+  .stat-card {
+    padding: 6px 7px;
+    min-width: 50px;
+    max-width: 80px;
+    border-radius: 6px;
+  }
+
+  .stat-value {
+    font-size: 1rem;
+  }
+
+  .value-num {
+    font-size: 1rem;
+    min-width: 20px;
+  }
+
+  .breath-circle-container {
+    width: 110px;
+    height: 110px;
+  }
+
+  .breath-circle {
+    width: 70px;
+    height: 70px;
+  }
+
+  .ring-1 {
+    width: 95px;
+    height: 95px;
+  }
+
+  .ring-2 {
+    width: 120px;
+    height: 120px;
+  }
+
+  .slider-track-wrapper {
+    padding: 8px 14px;
+  }
+
+  .slider-thumb {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* 暗色模式适配（保持亮色为主） */
+@media (prefers-color-scheme: dark) {
+  .rowing-page {
+    --bg-primary: #1a1f2e;
+    --bg-card: #252b3b;
+    --text-primary: #e2e8f0;
+    --text-secondary: #a0aec0;
+    --text-muted: #718096;
+    --slider-track: #3a4055;
+  }
+
+  .rowing-page {
+    background: linear-gradient(160deg, #1a1f2e 0%, #1e2435 30%, #1a1f2e 70%, #1d2333 100%);
+  }
+
+  .stat-card {
+    border-color: #2d3548;
+  }
+
+  .track-line {
+    background: linear-gradient(90deg, #3a4055 0%, #4a5068 50%, #3a4055 100%);
+  }
+
+  .complete-banner {
+    background: #1a2e1a;
+    border-color: #2d5a2d;
+    color: #86efac;
+  }
 }
 </style>
