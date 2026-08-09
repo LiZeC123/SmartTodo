@@ -39,7 +39,6 @@ from app.tools.time import (
     get_hour_str_from,
     get_str_from_datetime,
     now,
-    now_str,
     parse_befeore_time_str,
     today_begin,
 )
@@ -274,26 +273,14 @@ class AssistantManager:
         self.history_manager.add_user_prompt("", inject, owner, tag=AssistantTagType.NewTopic)
         yield from self.generate(owner)
 
-    def set_memory(self, memory_type: str, content: str, owner: str) -> Iterator[str]:
-        status = self.history_manager.query_or_init_status(owner)
-        if memory_type == "设定":
-            self.memory_manager.stabilize_role_setting(
-                content=content, assistant_name=status.assistant_name, owner=owner
-            )
-        elif memory_type == "偏好":
-            self.memory_manager.stabilize_preference(content=content, assistant_name=status.assistant_name, owner=owner)
-
-        yield from self.show_memory(owner)
-
     def set_time(self, time_str: str, owner: str) -> Iterator[str]:
         """设置原始聊天上下文起始时间, 支持待办事项截止日期相同格式的时间, 或者字符串'now'表示设置为当前时间"""
         if time_str == "now":
-            content = now_str()
+            process_time = now()
         else:
-            t = parse_befeore_time_str(time_str)
-            content = get_str_from_datetime(t)
+            process_time = parse_befeore_time_str(time_str)
         status = self.history_manager.query_or_init_status(owner)
-        self.memory_manager.set_process_time(content=content, assistant_name=status.assistant_name, owner=owner)
+        self.memory_manager.set_process_time(process_time, assistant_name=status.assistant_name, owner=owner)
         yield from self.show_memory(owner)
 
     def dump_memory(self, owner: str) -> Iterator[str]:

@@ -296,8 +296,6 @@ def test_query_todo_tool():
 
 def test_call_command():
     am = assistant_manager
-    _consume(am.set_memory("设定", "123", owner))
-    _consume(am.set_memory("偏好", "123", owner))
 
     _consume(am.set_time("now", owner))
 
