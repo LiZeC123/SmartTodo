@@ -8,8 +8,7 @@
     "user": {
       "password": "123456",
       "email": "user@example.com",
-      "role": ["ROLE_USER"],
-      "qw_hook": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx-xxxx"
+      "role": ["ROLE_USER"]
     }
   },
   "LLM_INFO": {
