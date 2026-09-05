@@ -58,7 +58,10 @@ def test_create_item_with_attr():
     multi_tomato_item = make_base_item("multi_tomato_item")
     multi_tomato_item.expected_tomato = 3
 
-    items = [deadline_item, repeatable_item, specific_item, activate_item, multi_tomato_item]
+    p0_item = make_base_item("p0_item")
+    p0_item.priority = "p0"
+
+    items = [deadline_item, repeatable_item, specific_item, activate_item, multi_tomato_item, p0_item]
 
     # Test Base Insert
     for item in items:

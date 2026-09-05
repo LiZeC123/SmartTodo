@@ -33,6 +33,12 @@ def download_file_handler(_: DataBase, item: Item):
         item.url = create_download_file(item.name)
 
 
+# 优先级为p0的任务预期今日完成, 因此直接进入今日列表
+def today_finish_item_handler(_: DataBase, item: Item):
+    if item.priority == "p0":
+        item.tomato_type = TomatoType.Today
+
+
 def remove_file_handler(_: DataBase, item: Item):
     if item.item_type == ItemType.File and item.url is not None:
         delete_file_from_url(item.url)
@@ -61,7 +67,7 @@ class ItemManager:
         self.db = em.db
         self.event_manager = em
 
-        self.before_create_event: list[ItemEvent] = [http_url_handler, download_file_handler]
+        self.before_create_event: list[ItemEvent] = [http_url_handler, download_file_handler, today_finish_item_handler]
         self.after_create_event: list[ItemEvent] = [create_note_handler]
         self.on_done_event: list[ItemEvent] = []
         self.on_delete_event: list[ItemEvent] = [remove_file_handler, remove_note_handler]
