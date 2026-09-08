@@ -15,7 +15,7 @@ from app.models.memory import (
 from app.models.role import RoleConfig
 from app.services.assistant_history import AssistantHistoryManager
 from app.services.role_manager import RoleManager
-from app.template.prompt import LongTermMemoryPrompt
+from app.template.prompt import DiaryQueryPrompt, LongTermMemoryPrompt
 from app.tools.llm import LLMClient
 from app.tools.log import logger
 from app.tools.time import get_datetime_from_str, get_str_from_datetime, now, the_day_begin, today_begin
@@ -75,6 +75,14 @@ class AssistantMemoryManager:
         content.extend([f"{r.content_time.strftime('%Y-%m-%d')}\n{r.content}\n" for r in self.db.scalars(stmt)])
         total = "\n".join(reversed(content))
         return total
+
+    def query_diary_with(self, query: str, assistant_name: str, owner: str) -> str:
+        end_time = now()
+        diary: str = self.query_diary(30, end_time, assistant_name, owner)
+        prompt = DiaryQueryPrompt.format(query=query, diary=diary)
+        reason, content = self.client.generate_one_shot(prompt, thinking=True, simple_client=True)
+        logger.info(f"{assistant_name}查询{query}得到{content}\n思考过程{reason}")
+        return content
 
     def query_last_reason(self, assistant_name: str, owner: str) -> str:
         _, items = self.__query_watermark(assistant_name, owner, MemoryDetailType.Thinking)

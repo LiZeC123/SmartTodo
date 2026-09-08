@@ -75,7 +75,23 @@ QueryTodoSystemTool = ChatCompletionFunctionToolParam(
             "properties": {
                 "query_type": {"type": "string", "description": "要查询的数据的类别", "enum": SupportQueryTyep},
             },
-            "required": ['query_type'],
+            "required": ["query_type"],
+        },
+    ),
+)
+
+
+QueryDiaryMemoryTool = ChatCompletionFunctionToolParam(
+    type="function",
+    function=FunctionDefinition(
+        name="{}",
+        description="当用户提到的事情在当前上下文以及当前的日记中不存在时, 可使用此工具查询你更早之前写的日记",
+        parameters={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "需要查询的事件的描述"},
+            },
+            "required": ["query"],
         },
     ),
 )
@@ -83,9 +99,9 @@ QueryTodoSystemTool = ChatCompletionFunctionToolParam(
 
 class AssistantTool:
     def __init__(self, m: AssistantManager, owner: str) -> None:
+        self.assistant_manager = m
+        self.history_manager = m.history_manager
         self.item_manager = m.item_manager
-        self.role_manager = m.role_manager
-        self.llm_manager = m.llm_manager
         self.owner = owner
 
     def collect(self) -> tuple[Sequence[ChatCompletionToolUnionParam], dict[str, Callable[[str], str]]]:
@@ -174,3 +190,12 @@ class AssistantTool:
                 idx += 1
             lines.append("")
         return "\n".join(lines)
+
+    @with_metadata(QueryDiaryMemoryTool)
+    def query_diary_memory(self, arg_json: str) -> str:
+        args: dict[str, str] = json.loads(arg_json)
+        query = args.get("query")
+        if query is None:
+            return "query is empty"
+
+        return self.assistant_manager.query_diary_with(query, self.owner)

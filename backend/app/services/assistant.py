@@ -394,3 +394,7 @@ class AssistantManager:
             for role in self.history_manager.get_recent_assistant_list(user):
                 config = self.role_manager.get_role(name=role)
                 self.memory_manager.update_long_term_memory(config=config, owner=user)
+
+    def query_diary_with(self, query: str, owner: str) -> str:
+        status = self.history_manager.query_or_init_status(owner)
+        return self.memory_manager.query_diary_with(query, status.assistant_name, owner)
