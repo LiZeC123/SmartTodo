@@ -33,8 +33,8 @@ def create_item(owner: str):
     if "parent" in f:
         item.parent = int(f["parent"])
 
-    if "tags" in f:
-        item.tags = ",".join(f["tags"])
+    if "tomato_count" in f:
+        item.expected_tomato = int(f["tomato_count"])
 
     item_manager.create(item)
 

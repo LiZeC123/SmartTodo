@@ -63,17 +63,16 @@ function commitTodo() {
     const data: FuncData = { cmd: match[1], data: match[2] }
     emit('commit', 'func', data)
   } else {
-    // 创建待办事项时, 如果显示优先级选择器，则必须选择有效优先级
-    if (props.enableSubmit && !priority.value) {
-      alert('请先选择优先级')
+    const res = parseTitleToData(todoContent.value, priority.value)
+    if (!res.ok) {
+      alert(res.error.message)
       return
     }
 
-    const data = parseTitleToData(todoContent.value, priority.value)
-    if (data.itemType === 'file') {
-      emit('commit', 'file', data)
+    if (res.data.itemType === 'file') {
+      emit('commit', 'file', res.data)
     } else {
-      emit('commit', 'create', data)
+      emit('commit', 'create', res.data)
     }
   }
 
@@ -137,10 +136,10 @@ input:focus {
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-  .header #form>div {
-    float:right;
-    width: 60%;
-  }
+.header #form>div {
+  float: right;
+  width: 60%;
+}
 
 /* ========= 手机窄屏适配 ========= */
 @media (max-width: 600px) {
@@ -172,7 +171,7 @@ input:focus {
 
   /* 保证右侧容器布局不乱 (原有 float:right 宽度 60% 保持不变) */
   .header #form>div {
-    float:right;
+    float: right;
     width: 80%;
   }
 }

@@ -1,10 +1,13 @@
 import type { TodoType, CreateItem, TodoPriority } from './types'
 
-// 解析输入的待办事项文本, 根据文本内容附带必要的属性
-export function parseTitleToData(todoContent: string, priority: TodoPriority) {
-  const values = todoContent.split(' ')
+type OkResult<T> = { ok: true; data: T }
+type ErrResult = { ok: false; error: Error }
+type Result<T> = OkResult<T> | ErrResult
 
+// 解析输入的待办事项文本, 根据文本内容附带必要的属性
+export function parseTitleToData(todoContent: string, priority: TodoPriority): Result<CreateItem> {
   // 分析任务名称
+  const values = todoContent.split(' ')
   let name = todoContent
   if (values.length > 1) {
     name = values[0]
@@ -16,14 +19,29 @@ export function parseTitleToData(todoContent: string, priority: TodoPriority) {
     itemType: inferType(name),
     priority: priority,
     repeatable: inferRepeatable(name),
-    deadline: parsePriority(priority),
-    tags: []
+    deadline: parsePriority(priority)
   }
 
-  // 解决一些冲突情况
-  // 每日任务没有截止日期, note类型没有截止日期
+  // 逻辑校验
   if (data.repeatable || data.itemType == 'note') {
+    // 每日任务没有截止日期, note类型没有截止日期
     data.deadline = undefined
+  } else if (!data.priority) {
+    // 其他情况下必须指定优先级, 否则无法创建
+    return { ok: false, error: new Error(`请先选择优先级`) }
+  }
+
+  // 如果只有两个部分, 且第二部分为数字, 则视为该任务的番茄钟数量
+  if (values.length == 2) {
+    const tc = parseInt(values[1])
+    if (!isNaN(tc)) {
+      if (tc < 1 || tc > 4) {
+        return { ok: false, error: new Error(`单一任务的番茄钟数量取值为[1, 4]`) }
+      } else {
+        data.tomato_count = tc
+        return { ok: true, data }
+      }
+    }
   }
 
   // 分析参数
@@ -36,13 +54,10 @@ export function parseTitleToData(todoContent: string, priority: TodoPriority) {
     } else if (values[i] === '-sp' && i + 1 < values.length) {
       data.specific = values[i + 1]
       i++
-    } else if (values[i] === '-tag' && i + 1 < values.length) {
-      data.tags.push(values[i + 1])
-      i++
     }
   }
 
-  return data
+  return { ok: true, data }
 }
 
 function inferType(name: string): TodoType {
@@ -129,6 +144,9 @@ function parsePriority(priority: TodoPriority): number {
     case 'p1':
       return time.getTime() + 3 * DayMillisecond
     case 'p2':
+      return time.getTime() + 7 * DayMillisecond
+    case '':
+      // 未指定优先级时, 先按照p2返回
       return time.getTime() + 7 * DayMillisecond
     default:
       throw new Error('未知的优先级类型')

@@ -16,7 +16,7 @@ export interface CreateItem {
     parent?: string
     deadline?: number
     specific?: string
-    tags: string[]
+    tomato_count?: number
 }
 
 export type CreateType = "func" | 'file' | 'create'
