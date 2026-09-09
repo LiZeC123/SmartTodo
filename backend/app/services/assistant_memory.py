@@ -140,7 +140,7 @@ class AssistantMemoryManager:
     def update_long_term_memory(self, /, config: RoleConfig, owner: str) -> bool:
         # 判断记忆压缩策略
         if config.memory_policy == "None":
-            logger.info(f"[{owner}:{config.name}]: 跳过压缩, 该角色记忆压缩策略为不压缩")
+            # logger.info(f"[{owner}:{config.name}]: 跳过压缩, 该角色记忆压缩策略为不压缩")
             return False
 
         # 查询需要压缩的记录, 判断是否满足记忆压缩策略
@@ -148,9 +148,9 @@ class AssistantMemoryManager:
         records = self.history_manager.select_record_between(config.name, start_time, today_begin(), owner)
         cost = sum(len(s) for r in records if (s := r.to_dump()) is not None)
         if cost < MinCompressionSize:
-            logger.info(
-                f"[{owner}:{config.name}]: 跳过压缩, 当前待压缩对话长度 {cost / KB:.2f} KB < 最小压缩长度 {MinCompressionSize / KB:.2f} KB"
-            )
+            # logger.info(
+            #     f"[{owner}:{config.name}]: 跳过压缩, 当前待压缩对话长度 {cost / KB:.2f} KB < 最小压缩长度 {MinCompressionSize / KB:.2f} KB"
+            # )
             return False
 
         # 执行压缩操作
