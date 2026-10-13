@@ -300,7 +300,7 @@ class AssistantHistoryManager:
                 History.owner == owner, History.create_time < end_time, History.assistant_name == status.assistant_name
             )
             .order_by(History.id.desc())
-            .limit(20)
+            .limit(50)
         )
         records = reversed(self.db.scalars(stmt).all())
         return self.to_web_json_list(records)
