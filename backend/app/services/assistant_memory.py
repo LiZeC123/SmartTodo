@@ -1,6 +1,4 @@
-import json
 import random
-import re
 from collections.abc import Sequence
 from datetime import datetime, timedelta
 
@@ -15,7 +13,7 @@ from app.models.memory import (
 from app.models.role import RoleConfig
 from app.services.assistant_history import AssistantHistoryManager
 from app.services.role_manager import RoleManager
-from app.template.prompt import DiaryQueryPrompt, LongTermMemoryPrompt
+from app.template.prompt import DiaryQueryPrompt
 from app.tools.llm import LLMClient
 from app.tools.log import logger
 from app.tools.time import get_datetime_from_str, get_str_from_datetime, now, the_day_begin, today_begin
@@ -137,64 +135,19 @@ class AssistantMemoryManager:
         # 否则直接返回记录的时间, 在执行记忆压缩时会重新计算时间
         return get_datetime_from_str(details[0].content)
 
-    def update_long_term_memory(self, /, config: RoleConfig, owner: str) -> bool:
-        # 判断记忆压缩策略
-        if config.memory_policy == "None":
-            # logger.info(f"[{owner}:{config.name}]: 跳过压缩, 该角色记忆压缩策略为不压缩")
-            return False
-
-        # 查询需要压缩的记录, 判断是否满足记忆压缩策略
-        start_time = self.get_lastest_diary_day(config.name, owner) + timedelta(days=1)
-        records = self.history_manager.select_record_between(config.name, start_time, today_begin(), owner)
-        cost = sum(len(s) for r in records if (s := r.to_dump()) is not None)
-        if cost < MinCompressionSize:
-            # logger.info(
-            #     f"[{owner}:{config.name}]: 跳过压缩, 当前待压缩对话长度 {cost / KB:.2f} KB < 最小压缩长度 {MinCompressionSize / KB:.2f} KB"
-            # )
-            return False
-
-        # 执行压缩操作
-        new_content = "\n".join([json.dumps(r.to_openai(), ensure_ascii=False) for r in records])
-        prompt = LongTermMemoryPrompt.format(role_desc=config.get_self_desc(), new_content=new_content)
-        reason, content = self.client.generate_one_shot(prompt)
-        if content is None:
-            logger.error(f"[{owner}:{config.name}]: 模型返回记忆为空")
-            return False
-
-        # 更新记忆
+    def update_memory_item(self, config: RoleConfig, content: str, owner: str):
         content_time = today_begin() - timedelta(days=1)
         item = make_memory_detail(
             content, assistant_name=config.name, owner=owner, tag=MemoryDetailType.Diary, content_time=content_time
         )
         self.db.add(item)
 
-        if reason:
-            item = make_memory_detail(
-                reason,
-                assistant_name=config.name,
-                owner=owner,
-                tag=MemoryDetailType.Thinking,
-                content_time=now(),
-            )
-            self.db.add(item)
-
         policy = config.get_memory_policy()
         old_start_time = self.query_msg_start_time(config.name, owner)
         new_start_time = self.history_manager.evalute_first_memory_datetime(policy.raw_content_size, config.name, owner)
         if new_start_time > old_start_time:
-            self.set_process_time(
-                new_start_time,
-                assistant_name=config.name,
-                owner=owner,
-                reason="自动更新",
-            )
-
+            self.set_process_time(new_start_time, assistant_name=config.name, owner=owner, reason="自动更新")
         self.db.flush()
-
-        logger.info(
-            f"[{owner}:{config.name}] 记忆压缩完毕, 新对话起始时间为 {get_str_from_datetime(new_start_time)}, 新增记忆长度为 {len(content) / KB:.2f} KB, 思考长度为 {len(reason) / KB:.2f} KB"
-        )
-        return True
 
     def query_rumor_diary(self, owner: str) -> MemoryDetail | None:
         stmt = (

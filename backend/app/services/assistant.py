@@ -19,8 +19,9 @@ from app.models.exception import LLMIllegalStatusException
 from app.models.memory import (
     KB,
 )
+from app.models.role import RoleConfig
 from app.services.assistant_history import AssistantHistoryManager
-from app.services.assistant_memory import AssistantMemoryManager
+from app.services.assistant_memory import AssistantMemoryManager, MinCompressionSize
 from app.services.config_manager import ConfigManager
 from app.services.role_manager import RoleManager
 from app.services.tomato_manager import TomatoRecordManager
@@ -29,6 +30,7 @@ from app.template.prompt import (
     AutoAnswerPrompt,
     ContinueWritingPrompt,
     InjectRumorPrompt,
+    LongTermMemoryPrompt,
     RolePalyingSp,
 )
 from app.tools.llm import LLMClient
@@ -391,9 +393,41 @@ class AssistantManager:
         users = self.config_manager.get_all_users()
         for user in users:
             # 检查该用户所有助理的历史对话长度, 更新满足要求的助理的记忆
+            origin_name = self.history_manager.query_or_init_status(user).assistant_name
             for role in self.history_manager.get_recent_assistant_list(user):
                 config = self.role_manager.get_role(name=role)
-                self.memory_manager.update_long_term_memory(config=config, owner=user)
+                self.update_long_term_memory(config=config, owner=user)
+            self.auto_switch(role_keyword=origin_name, owner=user)
+
+    def update_long_term_memory(self, /, config: RoleConfig, owner: str) -> bool:
+        # 判断记忆压缩策略
+        if config.memory_policy == "None":
+            return False
+
+        # 查询需要压缩的记录, 判断是否满足记忆压缩策略
+        start_time = self.memory_manager.get_lastest_diary_day(config.name, owner) + timedelta(days=1)
+        records = self.history_manager.select_record_between(config.name, start_time, today_begin(), owner)
+        cost = sum(len(s) for r in records if (s := r.to_dump()) is not None)
+        if cost < MinCompressionSize:
+            return False
+
+        # 执行压缩操作
+        self.history_manager.switch(config, owner)
+        self.history_manager.add_user_prompt("", LongTermMemoryPrompt, owner)
+        for _ in self.generate(owner):
+            # 消耗输出
+            continue
+
+        try:
+            content = self.history_manager.remove_anto_answer_msg(owner)
+        except LLMIllegalStatusException as e:
+            logger.error(f"[{owner}:{config.name}] 记忆压缩失败: {e}")
+            return False
+
+        # 更新记忆
+        self.memory_manager.update_memory_item(config, content, owner)
+        logger.info(f"[{owner}:{config.name}] 记忆压缩完毕")
+        return True
 
     def query_diary_with(self, query: str, owner: str) -> str:
         status = self.history_manager.query_or_init_status(owner)

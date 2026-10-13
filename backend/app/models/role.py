@@ -5,11 +5,11 @@ from app.models.memory import KB, MemoryPolicy
 MemoryPolicyDict = {
     # 角色设定优先, 适合人设与故事背景会缓慢变化, 但对于对话连续性要求一般的场景
     "S1": MemoryPolicy(
-        enable_role_setting=True, enable_preference=False, max_topic_num=0, max_diary_num=2, raw_content_size=9 * KB
+        enable_role_setting=True, enable_preference=False, max_topic_num=0, max_diary_num=5, raw_content_size=9 * KB
     ),
     # 角色设定优先, 类似于S1, 但对于对话连续性要求更低
     "S2": MemoryPolicy(
-        enable_role_setting=True, enable_preference=False, max_topic_num=0, max_diary_num=1, raw_content_size=6 * KB
+        enable_role_setting=True, enable_preference=False, max_topic_num=0, max_diary_num=3, raw_content_size=6 * KB
     ),
     # 对话连续性优先, 适合人设几乎不变, 话题快速更换的场景, 但需要对整体一致性要求较高的场景
     "D1": MemoryPolicy(
