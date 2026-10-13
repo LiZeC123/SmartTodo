@@ -127,6 +127,7 @@ class AssistantTool:
                 name=args.get("name"),
                 item_type="single",
                 owner=self.owner,
+                expected_tomato=int(args.get("expected_tomato", "1")),
                 deadline=get_datetime_from_str(args.get("deadline", "")),
                 priority=args.get("priority"),
             )
