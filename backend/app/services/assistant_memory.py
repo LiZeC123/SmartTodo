@@ -175,3 +175,21 @@ class AssistantMemoryManager:
         )
         self.db.add(detail)
         self.db.flush()
+
+    def set_diary_milestone(self, assistant_name: str, owner: str):
+        content = ""
+        reason = "重置记忆"
+        detail = make_memory_detail(
+            content,
+            reason=reason,
+            assistant_name=assistant_name,
+            owner=owner,
+            tag=MemoryDetailType.Milestone,
+            content_time=now(),
+        )
+        self.db.add(detail)
+        self.db.flush()
+
+    def hard_reset(self, assistant_name: str, owner: str):
+        self.set_diary_milestone(assistant_name, owner)
+        self.set_process_time(now(), assistant_name=assistant_name, owner=owner)

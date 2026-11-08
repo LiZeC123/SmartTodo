@@ -275,13 +275,20 @@ class AssistantManager:
         self.history_manager.add_user_prompt("", inject, owner, tag=AssistantTagType.NewTopic)
         yield from self.generate(owner)
 
-    def set_time(self, time_str: str, owner: str) -> Iterator[str]:
+    def set_time(self, arg: str, owner: str) -> Iterator[str]:
         """设置原始聊天上下文起始时间, 支持待办事项截止日期相同格式的时间, 或者字符串'now'表示设置为当前时间"""
-        if time_str == "now":
+        status = self.history_manager.query_or_init_status(owner)
+        # 硬重置所有记忆
+        if arg == "hard":
+            self.memory_manager.hard_reset(assistant_name=status.assistant_name, owner=owner)
+            yield from self.show_memory(owner)
+
+        # 重置对话的开始时间
+        if arg == "now":
             process_time = now()
         else:
-            process_time = parse_befeore_time_str(time_str)
-        status = self.history_manager.query_or_init_status(owner)
+            process_time = parse_befeore_time_str(arg)
+
         self.memory_manager.set_process_time(process_time, assistant_name=status.assistant_name, owner=owner)
         yield from self.show_memory(owner)
 
