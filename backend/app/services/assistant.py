@@ -282,13 +282,10 @@ class AssistantManager:
         if arg == "hard":
             self.memory_manager.hard_reset(assistant_name=status.assistant_name, owner=owner)
             yield from self.show_memory(owner)
+            return
 
         # 重置对话的开始时间
-        if arg == "now":
-            process_time = now()
-        else:
-            process_time = parse_befeore_time_str(arg)
-
+        process_time = now() if arg == "now" else parse_befeore_time_str(arg)
         self.memory_manager.set_process_time(process_time, assistant_name=status.assistant_name, owner=owner)
         yield from self.show_memory(owner)
 
